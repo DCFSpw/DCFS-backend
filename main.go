@@ -1,6 +1,7 @@
 package main
 
 import (
+	"dcfs/controllers"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"flag"
@@ -39,4 +40,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+
+	controllers.ServeBackend()
 }
