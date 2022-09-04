@@ -1,13 +1,11 @@
 package SFTPDisk
 
 import (
-	"bytes"
+	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"io"
-	"os"
 )
 
 type SFTPDisk struct {
@@ -15,69 +13,63 @@ type SFTPDisk struct {
 	credentials  *credentials.SFTPCredentials
 }
 
-func (d *SFTPDisk) Connect(c credentials.Credentials) error {
-	// Authenticate and connect to SFTP server
-	err := c.Authenticate(nil)
-	if err != nil {
-		return err
-	}
-
-	// Save credentials
-	d.credentials = c.(*credentials.SFTPCredentials)
-
+func (d *SFTPDisk) Connect(c *gin.Context) error {
+	// unpack gin context
+	// d.connect(credentials)
+	panic("Unimplemented")
 	return nil
 }
 
-func (d *SFTPDisk) Upload(fileName uuid.UUID, fileContents *[]byte) error {
-	// Create remote file
-	remoteFile, err := d.credentials.Client.OpenFile(fileName.String(), (os.O_WRONLY | os.O_CREATE | os.O_TRUNC))
-	if err != nil {
-		return fmt.Errorf("Cannot o open remote file: %v", err)
-	}
-	defer remoteFile.Close()
-
-	_, err = io.Copy(remoteFile, bytes.NewReader(*fileContents))
-	if err != nil {
-		return fmt.Errorf("Cannot upload local file: %v", err)
-	}
-
+func (d *SFTPDisk) Upload(c *gin.Context) error {
+	// unpack gin context
+	// d.upload(fileName, fileContents)
+	panic("Unimplemented")
 	return nil
 }
 
-func (d *SFTPDisk) Download(fileName uuid.UUID, fileContents *[]byte) error {
-	// Open remote file
-	remoteFile, err := d.credentials.Client.OpenFile(fileName.String(), (os.O_RDONLY))
-	if err != nil {
-		return fmt.Errorf("Cannot open remote file: %v", err)
-	}
-	defer remoteFile.Close()
-
-	// Download remote file
-	buff := bytes.NewBuffer(*fileContents)
-	_, err = io.Copy(buff, remoteFile)
-	if err != nil {
-		return fmt.Errorf("Cannot download remote file: %v", err)
-	}
-
+func (d *SFTPDisk) Download(c *gin.Context) error {
+	// unpack gin context
+	// d.download(fileName, fileContents)
+	panic("Unimplemented")
 	return nil
 }
 
-func (d *SFTPDisk) Rename(oldName uuid.UUID, newName uuid.UUID) error {
-	err := d.credentials.Client.Rename(oldName.String(), newName.String())
-	if err != nil {
-		return err
-	}
-
+func (d *SFTPDisk) Rename(c *gin.Context) error {
+	// unpack gin context
+	// d.rename(oldName, newName)
+	panic("Unimplemented")
 	return nil
 }
 
-func (d *SFTPDisk) Remove(fileName uuid.UUID) error {
-	err := d.credentials.Client.Remove(fileName.String())
-	if err != nil {
-		return err
-	}
-
+func (d *SFTPDisk) Remove(c *gin.Context) error {
+	// unpack gin context
+	// d.remove(fileName)
+	panic("Unimplemented")
 	return nil
+}
+
+func (d *SFTPDisk) SetUUID(uuid uuid.UUID) {
+	d.abstractDisk.SetUUID(uuid)
+}
+
+func (d *SFTPDisk) GetUUID() uuid.UUID {
+	return d.abstractDisk.GetUUID()
+}
+
+func (d *SFTPDisk) GetCredentials() credentials.Credentials {
+	return d.abstractDisk.GetCredentials()
+}
+
+func (d *SFTPDisk) SetCredentials(credentials credentials.Credentials) {
+	d.abstractDisk.SetCredentials(credentials)
+}
+
+func (d *SFTPDisk) CreateCredentials(c string) {
+	d.abstractDisk.Credentials = credentials.NewSFTPCredentials(c)
+}
+
+func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
+	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
 func NewSFTPDisk() *SFTPDisk {

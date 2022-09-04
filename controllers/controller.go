@@ -42,6 +42,7 @@ func ServeBackend() {
 		authorized.PUT("/disk/:DiskUUID", DiskUpdate)
 		authorized.DELETE("/disk/:DiskUUID", DiskDelete)
 		authorized.GET("/disk/:DiskUUID", DiskGet)
+		authorized.POST("/disk/oauth", DiskOAuth)
 
 		authorized.GET("/disk/disks", GetDisks)
 

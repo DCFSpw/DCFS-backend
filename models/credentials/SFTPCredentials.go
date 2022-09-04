@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -65,4 +66,21 @@ func (credentials *SFTPCredentials) Authenticate(ctx context.Context) error {
 
 	log.Printf("Connected to %s ...\n", credentials.Host)
 	return nil
+}
+
+func (credentials *SFTPCredentials) ToString() string {
+	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port
+}
+
+func NewSFTPCredentials(cred string) *SFTPCredentials {
+	// string format: user:password:host:port
+	parsed := strings.Split(cred, ":")
+	credentials := SFTPCredentials{
+		User:     parsed[0],
+		Password: parsed[1],
+		Host:     parsed[2],
+		Port:     parsed[3],
+	}
+
+	return &credentials
 }
