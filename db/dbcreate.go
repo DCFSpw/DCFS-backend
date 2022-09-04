@@ -8,7 +8,7 @@ import (
 // MigrateAll - performs AutoMigrate() for every dbo model in this project (needs to be updated for every new dbo model)
 func (db *DatabaseConnection) MigrateAll() error {
 	for _, value := range db.Tables {
-		err := db.databaseHandle.AutoMigrate(value)
+		err := db.DatabaseHandle.AutoMigrate(value)
 		if err != nil {
 			fmt.Println("Failed to migrate the table: ", reflect.TypeOf(value).Name())
 			return err
@@ -20,8 +20,8 @@ func (db *DatabaseConnection) MigrateAll() error {
 
 // Respawn - drop the entire database and create everything anew
 func (db *DatabaseConnection) Respawn() error {
-	db.databaseHandle.Exec("DROP DATABASE IF EXISTS " + db.connectionInfo.DbName)
-	db.databaseHandle.Exec("CREATE DATABASE " + db.connectionInfo.DbName)
+	db.DatabaseHandle.Exec("DROP DATABASE IF EXISTS " + db.connectionInfo.DbName)
+	db.DatabaseHandle.Exec("CREATE DATABASE " + db.connectionInfo.DbName)
 
 	err := db.MigrateAll()
 	if err != nil {

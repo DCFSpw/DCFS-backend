@@ -21,10 +21,10 @@ type connection struct {
 // DatabaseConnection - object handling connecting to and querying the database
 //
 // fields:
-//   - databaseHandle
+//   - DatabaseHandle
 //   - connectionInfo: contains connection string required to connect to a db
 type DatabaseConnection struct {
-	databaseHandle *gorm.DB
+	DatabaseHandle *gorm.DB
 	connectionInfo connection
 	Tables         []dbo.DatabaseObject
 }
@@ -84,7 +84,7 @@ func (db *DatabaseConnection) Connect(filepath string) error {
 			db.connectionInfo.DbName +
 			"?charset=utf8mb4&parseTime=True&loc=Local"
 
-	db.databaseHandle, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db.DatabaseHandle, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		fmt.Println("Could not connect to the database with the error: ", err)
 		return err
@@ -94,6 +94,7 @@ func (db *DatabaseConnection) Connect(filepath string) error {
 }
 
 // PerformOperation - perform a db operation on the database handle
+// DEPRECATED - TO BE DELETED - db handle is made public instead
 //
 // params:
 //   - operation func(handle *gorm.DB) error: a function that performs the desired operation on the db handle
@@ -101,7 +102,7 @@ func (db *DatabaseConnection) Connect(filepath string) error {
 // return type:
 //   - error (nil on success)
 func (db *DatabaseConnection) PerformOperation(operation func(handle *gorm.DB) error) error {
-	err := operation(db.databaseHandle)
+	err := operation(db.DatabaseHandle)
 	if err != nil {
 		fmt.Println("Could not perform a database operation with error: ", err)
 		return err
