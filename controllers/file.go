@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"dcfs/apicalls"
-	"dcfs/models/disk/SFTPDisk"
+	"dcfs/models/disk/FTPDisk"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,7 +37,7 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 
-	// Prepeare block for upload
+	// Prepare block for upload
 	contents := make([]uint8, blockHeader.Size)
 	readSize, err := block.Read(contents)
 
@@ -52,8 +52,8 @@ func FileUpload(c *gin.Context) {
 	blockMetadata.Content = &contents
 
 	// [TEMP] Upload block using SFTP
-	var sftpDisk = SFTPDisk.NewSFTPDisk()
-	sftpDisk.CreateCredentials("tester:password:192.168.1.176:2222")
+	var sftpDisk = FTPDisk.NewFTPDisk()
+	sftpDisk.CreateCredentials("tester:password:192.168.1.176:21")
 	err = sftpDisk.Connect(nil)
 	if err != nil {
 		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP connection failed"})
