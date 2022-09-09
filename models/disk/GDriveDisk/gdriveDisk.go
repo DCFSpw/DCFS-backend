@@ -1,6 +1,7 @@
 package GDriveDisk
 
 import (
+	"dcfs/apicalls"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
@@ -21,7 +22,7 @@ func (d *GDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *GDriveDisk) Upload(c *gin.Context) error {
+func (d *GDriveDisk) Upload(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 

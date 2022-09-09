@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"dcfs/responses"
+	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,6 +11,12 @@ func FileRequest(c *gin.Context) {
 }
 
 func FileUpload(c *gin.Context) {
+	uuid := c.PostForm("blockUUID")
+	file, _ := c.FormFile("block")
+
+	fmt.Print(uuid)
+	fmt.Print(file.Filename)
+
 	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Upload Endpoint"})
 }
 
