@@ -62,7 +62,7 @@ func (credentials *SFTPCredentials) Authenticate(ctx context.Context) error {
 		return err
 	}
 	credentials.Client = sftpClient
-	defer credentials.Client.Close()
+	//defer credentials.Client.Close()
 
 	log.Printf("Connected to %s ...\n", credentials.Host)
 	return nil
