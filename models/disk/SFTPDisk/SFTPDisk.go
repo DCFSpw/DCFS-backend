@@ -1,12 +1,16 @@
 package SFTPDisk
 
 import (
+	"bytes"
 	"dcfs/apicalls"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"io"
+	"os"
 )
 
 type SFTPDisk struct {
@@ -15,16 +19,32 @@ type SFTPDisk struct {
 }
 
 func (d *SFTPDisk) Connect(c *gin.Context) error {
-	// unpack gin context
-	// d.connect(credentials)
-	panic("Unimplemented")
+	// Import generic credentials
+	d.credentials = d.abstractDisk.Credentials.(*credentials.SFTPCredentials)
+
+	// Authenticate and connect to SFTP server
+	err := d.credentials.Authenticate(nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (d *SFTPDisk) Upload(bm *apicalls.BlockMetadata) error {
-	// unpack gin context
-	// d.upload(fileName, fileContents)
-	panic("Unimplemented")
+	// Create remote file
+	remoteFile, err := d.credentials.Client.OpenFile(bm.UUID.String(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if err != nil {
+		return fmt.Errorf("Cannot o open remote file: %v", err)
+	}
+	defer remoteFile.Close()
+
+	// Upload file content
+	_, err = io.Copy(remoteFile, bytes.NewReader(*bm.Content))
+	if err != nil {
+		return fmt.Errorf("Cannot upload local file: %v", err)
+	}
+
 	return nil
 }
 

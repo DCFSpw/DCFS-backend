@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"dcfs/apicalls"
+	"dcfs/models/disk/SFTPDisk"
 	"dcfs/responses"
-	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func FileRequest(c *gin.Context) {
@@ -11,11 +13,57 @@ func FileRequest(c *gin.Context) {
 }
 
 func FileUpload(c *gin.Context) {
-	uuid := c.PostForm("blockUUID")
-	file, _ := c.FormFile("block")
+	// Get data from request
+	uuidString := c.PostForm("blockUUID")
+	blockHeader, blockHeaderError := c.FormFile("block")
+	if blockHeaderError != nil {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing block"})
+		return
+	}
+	block, blockError := blockHeader.Open()
+	if blockError != nil {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Block opening failed"})
+		return
+	}
 
-	fmt.Print(uuid)
-	fmt.Print(file.Filename)
+	// Validate data
+	if uuidString == "" {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing blockUUID"})
+		return
+	}
+	blockUUID, uuidError := uuid.Parse(uuidString)
+	if uuidError != nil {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Invalid blockUUID"})
+		return
+	}
+
+	// Prepeare block for upload
+	contents := make([]uint8, blockHeader.Size)
+	readSize, err := block.Read(contents)
+
+	if err != nil || readSize != int(blockHeader.Size) {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Block loading failed"})
+		return
+	}
+
+	var blockMetadata = apicalls.BlockMetadata{}
+	blockMetadata.UUID = blockUUID
+	blockMetadata.Size = blockHeader.Size
+	blockMetadata.Content = &contents
+
+	// [TEMP] Upload block using SFTP
+	var sftpDisk = SFTPDisk.NewSFTPDisk()
+	sftpDisk.CreateCredentials("tester:password:192.168.1.176:2222")
+	err = sftpDisk.Connect(nil)
+	if err != nil {
+		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP connection failed"})
+		return
+	}
+	err = sftpDisk.Upload(&blockMetadata)
+	if err != nil {
+		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP upload failed"})
+		return
+	}
 
 	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Upload Endpoint"})
 }
