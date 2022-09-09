@@ -1,6 +1,7 @@
 package OneDriveDisk
 
 import (
+	"dcfs/apicalls"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
@@ -21,7 +22,7 @@ func (d *OneDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *OneDriveDisk) Upload(c *gin.Context) error {
+func (d *OneDriveDisk) Upload(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 

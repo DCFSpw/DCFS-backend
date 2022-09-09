@@ -1,6 +1,7 @@
 package SFTPDisk
 
 import (
+	"dcfs/apicalls"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
@@ -20,7 +21,7 @@ func (d *SFTPDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *SFTPDisk) Upload(c *gin.Context) error {
+func (d *SFTPDisk) Upload(bm *apicalls.BlockMetadata) error {
 	// unpack gin context
 	// d.upload(fileName, fileContents)
 	panic("Unimplemented")
