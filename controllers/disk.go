@@ -143,8 +143,8 @@ func DiskOAuth(c *gin.Context) {
 	}
 
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: *tok})
-	db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-
+	//db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
+	db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	// TODO: update return value
 	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Success"})
 }

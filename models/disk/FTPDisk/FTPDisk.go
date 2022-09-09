@@ -29,9 +29,11 @@ func (d *FTPDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *FTPDisk) Upload(bm *apicalls.BlockMetadata) error {
+func (d *FTPDisk) Upload(bm apicalls.BlockMetadata) error {
+	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
+
 	// Create and upload remote file
-	err := d.credentials.Client.Stor(bm.UUID.String(), bytes.NewReader(*bm.Content))
+	err := d.credentials.Client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
 		return fmt.Errorf("Cannot o open remote file: %v", err)
 	}

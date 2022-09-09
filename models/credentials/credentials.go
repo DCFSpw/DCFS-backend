@@ -1,6 +1,9 @@
 package credentials
 
-import "golang.org/x/net/context"
+import (
+	"dcfs/apicalls"
+	"net/http"
+)
 
 const (
 	CREDENTIALS_SFTP  int = 0
@@ -8,6 +11,6 @@ const (
 )
 
 type Credentials interface {
-	Authenticate(ctx context.Context) error
+	Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client
 	ToString() string
 }
