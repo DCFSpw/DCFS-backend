@@ -23,24 +23,23 @@ func (d *SFTPDisk) Connect(c *gin.Context) error {
 	d.credentials = d.abstractDisk.Credentials.(*credentials.SFTPCredentials)
 
 	// Authenticate and connect to SFTP server
-	err := d.credentials.Authenticate(nil)
-	if err != nil {
-		return err
-	}
+	d.credentials.Authenticate(nil)
 
 	return nil
 }
 
-func (d *SFTPDisk) Upload(bm *apicalls.BlockMetadata) error {
+func (d *SFTPDisk) Upload(bm apicalls.BlockMetadata) error {
+	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
+
 	// Create remote file
-	remoteFile, err := d.credentials.Client.OpenFile(bm.UUID.String(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	remoteFile, err := d.credentials.Client.OpenFile(blockMetadata.UUID.String(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return fmt.Errorf("Cannot o open remote file: %v", err)
 	}
 	defer remoteFile.Close()
 
 	// Upload file content
-	_, err = io.Copy(remoteFile, bytes.NewReader(*bm.Content))
+	_, err = io.Copy(remoteFile, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
 		return fmt.Errorf("Cannot upload local file: %v", err)
 	}

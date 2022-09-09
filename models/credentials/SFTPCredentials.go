@@ -1,10 +1,11 @@
 package credentials
 
 import (
+	"dcfs/apicalls"
 	"fmt"
-	"golang.org/x/net/context"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ type SFTPCredentials struct {
 	Client   *sftp.Client
 }
 
-func (credentials *SFTPCredentials) Authenticate(ctx context.Context) error {
+func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
 	log.Printf("Connecting to %s ...\n", credentials.Host)
 
 	// Try to use $SSH_AUTH_SOCK which contains the path of the unix file socket that the sshd agent uses
@@ -52,14 +53,14 @@ func (credentials *SFTPCredentials) Authenticate(ctx context.Context) error {
 	conn, err := ssh.Dial("tcp", addr, &config)
 	if err != nil {
 		log.Fatalf("Failed to connect to SFTP server [%s]: %v", addr, err)
-		return err
+		return nil
 	}
 
 	// Create new SFTP client
 	sftpClient, err := sftp.NewClient(conn)
 	if err != nil {
 		log.Fatalf("Unable to create SFTP client: %v", err)
-		return err
+		return nil
 	}
 	credentials.Client = sftpClient
 	//defer credentials.Client.Close()

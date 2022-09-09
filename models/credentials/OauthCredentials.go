@@ -1,16 +1,19 @@
 package credentials
 
 import (
-	"golang.org/x/net/context"
+	"dcfs/apicalls"
 	"golang.org/x/oauth2"
+	"net/http"
+	"strings"
 )
 
 type OauthCredentials struct {
 	Token oauth2.Token
 }
 
-func (credentials *OauthCredentials) Authenticate(ctx context.Context) error {
-	panic("Unimplemented")
+func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+	var config *oauth2.Config = md.Config
+	return config.Client(md.Ctx, &credentials.Token)
 
 	//if credentials.Token.Valid() {
 	//	return nil
@@ -31,15 +34,16 @@ func (credentials *OauthCredentials) Authenticate(ctx context.Context) error {
 		}
 	*/
 
-	return nil
+	//return nil
 }
 
 func (credentials *OauthCredentials) ToString() string {
-	return credentials.Token.AccessToken
+	return credentials.Token.AccessToken + ":" + credentials.Token.RefreshToken
 }
 
-func NewOauthCredentials(token string) *OauthCredentials {
+func NewOauthCredentials(str string) *OauthCredentials {
 	var credentials *OauthCredentials = new(OauthCredentials)
-	credentials.Token = oauth2.Token{AccessToken: token}
+	tokens := strings.Split(str, ":")
+	credentials.Token = oauth2.Token{AccessToken: tokens[0], RefreshToken: tokens[1]}
 	return credentials
 }

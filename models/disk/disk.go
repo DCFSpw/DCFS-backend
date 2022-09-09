@@ -15,7 +15,7 @@ var RootUUID uuid.UUID
 
 type Disk interface {
 	Connect(c *gin.Context) error
-	Upload(bm *apicalls.BlockMetadata) error
+	Upload(bm apicalls.BlockMetadata) error
 	Download(c *gin.Context) error
 	Rename(c *gin.Context) error
 	Remove(c *gin.Context) error

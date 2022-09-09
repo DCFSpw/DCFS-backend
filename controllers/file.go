@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"dcfs/apicalls"
-	"dcfs/models/disk/FTPDisk"
+	"dcfs/db"
+	"dcfs/db/dbo"
+	"dcfs/models/disk/GDriveDisk"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -37,6 +39,15 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 
+	// get disk from transport - to be implemented
+	var _disk dbo.Disk = dbo.Disk{}
+	var disk *GDriveDisk.GDriveDisk = GDriveDisk.NewGDriveDisk()
+	var blockMetadata *apicalls.GDriveBlockMetadata = new(apicalls.GDriveBlockMetadata)
+
+	db.DB.DatabaseHandle.Where("uuid = ?", "c91515a7-6c3c-4fb2-a82c-d3960d667ea3").Last(&_disk)
+	disk.CreateCredentials(_disk.Credentials)
+	disk.SetUUID(_disk.UUID)
+
 	// Prepare block for upload
 	contents := make([]uint8, blockHeader.Size)
 	readSize, err := block.Read(contents)
@@ -46,10 +57,19 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 
-	var blockMetadata = apicalls.BlockMetadata{}
+	blockMetadata.Ctx = c
+	blockMetadata.Content = &contents
 	blockMetadata.UUID = blockUUID
 	blockMetadata.Size = blockHeader.Size
-	blockMetadata.Content = &contents
+
+	disk.Upload(blockMetadata)
+
+	/* SFTP demo
+	var blockMetadata = apicalls.SFTPBlockMetadata{
+		AbstractBlockMetadata: apicalls.AbstractBlockMetadata{
+			UUID:    blockUUID,
+			Size:    blockHeader.Size,
+			Content: &contents}}
 
 	// [TEMP] Upload block using SFTP
 	var sftpDisk = FTPDisk.NewFTPDisk()
@@ -64,6 +84,7 @@ func FileUpload(c *gin.Context) {
 		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP upload failed"})
 		return
 	}
+	*/
 
 	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Upload Endpoint"})
 }

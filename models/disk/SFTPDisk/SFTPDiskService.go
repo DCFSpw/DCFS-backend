@@ -11,10 +11,7 @@ import (
 
 func (d *SFTPDisk) connect(c credentials.Credentials) error {
 	// Authenticate and connect to SFTP server
-	err := c.Authenticate(nil)
-	if err != nil {
-		return err
-	}
+	c.Authenticate(nil)
 
 	// Save credentials
 	d.credentials = c.(*credentials.SFTPCredentials)

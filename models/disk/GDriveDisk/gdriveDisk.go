@@ -1,16 +1,20 @@
 package GDriveDisk
 
 import (
+	"bytes"
 	"dcfs/apicalls"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 	"log"
+	"net/http"
 	"os"
 )
 
@@ -22,7 +26,27 @@ func (d *GDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *GDriveDisk) Upload(bm *apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
+	var blockMetadata *apicalls.GDriveBlockMetadata = bm.(*apicalls.GDriveBlockMetadata)
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig()})
+	var fileCreate *drive.FilesCreateCall
+	var err error
+
+	srv, err := drive.NewService(blockMetadata.Ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Fatalf("Unable to retrieve Drive client: %v", err)
+	}
+
+	fileCreate = srv.Files.
+		Create(&(drive.File{Size: blockMetadata.Size, Name: blockMetadata.UUID.String()})).
+		Media(bytes.NewReader(*blockMetadata.Content)).
+		ProgressUpdater(func(now, size int64) { fmt.Printf("%d, %d\r", now, size) })
+	_, err = fileCreate.Do()
+	if err != nil {
+		// TODO: error handling
+	}
+
 	return nil
 }
 
@@ -75,7 +99,7 @@ func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, drive.DriveMetadataReadonlyScope)
+	config, err := google.ConfigFromJSON(b, drive.DriveScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
