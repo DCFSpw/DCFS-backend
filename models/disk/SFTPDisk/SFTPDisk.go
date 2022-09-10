@@ -48,9 +48,23 @@ func (d *SFTPDisk) Upload(bm apicalls.BlockMetadata) error {
 }
 
 func (d *SFTPDisk) Download(bm apicalls.BlockMetadata) error {
-	// unpack gin context
-	// d.download(fileName, fileContents)
-	panic("Unimplemented")
+	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
+
+	// Open remote file
+	remoteFile, err := d.credentials.Client.OpenFile(blockMetadata.UUID.String(), os.O_RDONLY)
+	if err != nil {
+		return fmt.Errorf("Cannot open remote file: %v", err)
+	}
+	defer remoteFile.Close()
+
+	// Download remote file
+	buff, err := io.ReadAll(remoteFile)
+	if err != nil {
+		return fmt.Errorf("Cannot download remote file: %v", err)
+	}
+	blockMetadata.Content = &buff
+	blockMetadata.Size = int64(len(buff))
+
 	return nil
 }
 
