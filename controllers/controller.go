@@ -2,12 +2,20 @@ package controllers
 
 import (
 	"dcfs/middleware"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"log"
 )
 
 func ServeBackend() {
 	r := gin.New()
+
+	// Cors
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	r.Use(cors.New(config))
+
+	r.Run()
 
 	// TODO: rethink logger here
 	r.Use(gin.Logger())
