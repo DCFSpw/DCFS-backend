@@ -11,11 +11,7 @@ func ServeBackend() {
 	r := gin.New()
 
 	// Cors
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	r.Use(cors.New(config))
-
-	r.Run()
+	r.Use(cors.Default())
 
 	// TODO: rethink logger here
 	r.Use(gin.Logger())
