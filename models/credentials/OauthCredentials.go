@@ -2,19 +2,28 @@ package credentials
 
 import (
 	"dcfs/apicalls"
+	"dcfs/db"
+	"dcfs/db/dbo"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type OauthCredentials struct {
-	Token oauth2.Token
+	Token *oauth2.Token
 }
 
 func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
 	var config *oauth2.Config = md.Config
-	return config.Client(md.Ctx, &credentials.Token)
-
+	var ret *http.Client
+	credentials.PerformOp(
+		func(token *oauth2.Token) {
+			ret = config.Client(md.Ctx, credentials.Token)
+		}, md.DiskUUID)
+	//return config.Client(md.Ctx, credentials.Token)
+	return ret
 	//if credentials.Token.Valid() {
 	//	return nil
 	//}
@@ -37,6 +46,20 @@ func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthen
 	//return nil
 }
 
+// PerformOp
+//
+// Performs an operation on the token handle and updates the token in the DB if needed
+func (credentials *OauthCredentials) PerformOp(operator func(token *oauth2.Token), diskUUID uuid.UUID) {
+	var _disk dbo.Disk = dbo.Disk{}
+	operator(credentials.Token)
+
+	db.DB.DatabaseHandle.Where("uuid = ?", diskUUID.String()).First(&_disk)
+	if _disk.Credentials != credentials.ToString() {
+		_disk.Credentials = credentials.ToString()
+		db.DB.DatabaseHandle.Save(&_disk)
+	}
+}
+
 func (credentials *OauthCredentials) ToString() string {
 	return credentials.Token.AccessToken + ":" + credentials.Token.RefreshToken
 }
@@ -44,6 +67,9 @@ func (credentials *OauthCredentials) ToString() string {
 func NewOauthCredentials(str string) *OauthCredentials {
 	var credentials *OauthCredentials = new(OauthCredentials)
 	tokens := strings.Split(str, ":")
-	credentials.Token = oauth2.Token{AccessToken: tokens[0], RefreshToken: tokens[1]}
+	credentials.Token = &oauth2.Token{AccessToken: tokens[0], RefreshToken: tokens[1]}
+
+	// invalidate token
+	credentials.Token.Expiry = time.Now()
 	return credentials
 }
