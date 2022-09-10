@@ -55,7 +55,7 @@ func ServeBackend() {
 
 		authorized.PUT("/file/:FileUUID", FileRename)
 		authorized.DELETE("/file/:FileUUID", FileRemove)
-		authorized.GET("/file/:FileUUID", FileGet)
+		//authorized.GET("/file/:FileUUID", FileGet)
 
 		authorized.GET("/file/request", FileRequest)
 		authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
