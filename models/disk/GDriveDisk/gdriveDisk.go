@@ -50,7 +50,7 @@ func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *GDriveDisk) Download(c *gin.Context) error {
+func (d *GDriveDisk) Download(bm apicalls.BlockMetadata) error {
 	return nil
 }
 

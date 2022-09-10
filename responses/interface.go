@@ -8,6 +8,12 @@ type SuccessResponse struct {
 	Msg     string
 }
 
+type BlockDownloadResponse struct {
+	Success bool
+	Msg     string
+	Block   []uint8
+}
+
 type DiskOAuthCodeResponse struct {
 	SuccessResponse
 	DiskUUID string

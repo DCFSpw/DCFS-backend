@@ -4,6 +4,7 @@ import (
 	"dcfs/apicalls"
 	"dcfs/db"
 	"dcfs/db/dbo"
+	"dcfs/models/disk/FTPDisk"
 	"dcfs/models/disk/GDriveDisk"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
@@ -102,7 +103,41 @@ func FileGet(c *gin.Context) {
 }
 
 func FileDownload(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Download Endpoint"})
+	// Get data from request
+	uuidString := c.Param("BlockUUID")
+
+	// Validate data
+	if uuidString == "" {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing blockUUID"})
+		return
+	}
+
+	blockUUID, uuidError := uuid.Parse(uuidString)
+	if uuidError != nil {
+		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Invalid blockUUID"})
+		return
+	}
+
+	// FTP demo
+	var blockMetadata = apicalls.SFTPBlockMetadata{
+		AbstractBlockMetadata: apicalls.AbstractBlockMetadata{
+			UUID: blockUUID}}
+
+	var ftpDisk = FTPDisk.NewFTPDisk()
+	ftpDisk.CreateCredentials("...")
+	err := ftpDisk.Connect(nil)
+	if err != nil {
+		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "FTP connection failed"})
+		return
+	}
+
+	err = ftpDisk.Download(&blockMetadata)
+	if err != nil {
+		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "FTP download failed"})
+		return
+	}
+
+	c.JSON(200, responses.BlockDownloadResponse{Success: true, Msg: "File Download Endpoint", Block: *blockMetadata.Content})
 }
 
 func FileShare(c *gin.Context) {

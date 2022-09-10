@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"io"
 )
 
 type FTPDisk struct {
@@ -23,7 +24,7 @@ func (d *FTPDisk) Connect(c *gin.Context) error {
 	// Authenticate and connect to SFTP server
 	err := d.credentials.Authenticate(nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Cannot connect to FTP server: %v", err)
 	}
 
 	return nil
@@ -35,16 +36,29 @@ func (d *FTPDisk) Upload(bm apicalls.BlockMetadata) error {
 	// Create and upload remote file
 	err := d.credentials.Client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
-		return fmt.Errorf("Cannot o open remote file: %v", err)
+		return fmt.Errorf("Cannot open remote file: %v", err)
 	}
 
 	return nil
 }
 
-func (d *FTPDisk) Download(c *gin.Context) error {
-	// unpack gin context
-	// d.download(fileName, fileContents)
-	panic("Unimplemented")
+func (d *FTPDisk) Download(bm apicalls.BlockMetadata) error {
+	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
+
+	// Download remote file
+	reader, err := d.credentials.Client.Retr(blockMetadata.UUID.String())
+	if err != nil {
+		return fmt.Errorf("Cannot open remote file: %v", err)
+	}
+	//defer reader.Close()
+
+	buff, err := io.ReadAll(reader)
+	if err != nil {
+		return fmt.Errorf("Cannot read remote file: %v", err)
+	}
+	blockMetadata.Content = &buff
+	blockMetadata.Size = int64(len(buff))
+
 	return nil
 }
 

@@ -47,7 +47,7 @@ func (d *SFTPDisk) Upload(bm apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *SFTPDisk) Download(c *gin.Context) error {
+func (d *SFTPDisk) Download(bm apicalls.BlockMetadata) error {
 	// unpack gin context
 	// d.download(fileName, fileContents)
 	panic("Unimplemented")
