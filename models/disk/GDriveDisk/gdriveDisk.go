@@ -29,7 +29,7 @@ func (d *GDriveDisk) Connect(c *gin.Context) error {
 func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
 	var blockMetadata *apicalls.GDriveBlockMetadata = bm.(*apicalls.GDriveBlockMetadata)
 	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
-	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig()})
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	var fileCreate *drive.FilesCreateCall
 	var err error
 
@@ -38,8 +38,10 @@ func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
 		log.Fatalf("Unable to retrieve Drive client: %v", err)
 	}
 
+	//cred.Token.AccessToken
+
 	fileCreate = srv.Files.
-		Create(&(drive.File{Size: blockMetadata.Size, Name: blockMetadata.UUID.String()})).
+		Create(&(drive.File{Name: blockMetadata.UUID.String()})).
 		Media(bytes.NewReader(*blockMetadata.Content)).
 		ProgressUpdater(func(now, size int64) { fmt.Printf("%d, %d\r", now, size) })
 	_, err = fileCreate.Do()

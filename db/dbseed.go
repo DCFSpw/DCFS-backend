@@ -1,12 +1,7 @@
 package db
 
-import (
-	"dcfs/db/dbo"
-	"dcfs/models/disk"
-	"github.com/google/uuid"
-)
-
-func Seed() {
+// TODO: move seeding to another package to avoid cyclic imports
+/*func Seed() {
 	rootUUID := disk.RootUUID
 	volume := dbo.Volume{}
 	provider := dbo.Provider{}
@@ -30,4 +25,4 @@ func Seed() {
 
 		DB.DatabaseHandle.Create(&provider)
 	}
-}
+}*/

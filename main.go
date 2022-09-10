@@ -47,7 +47,7 @@ func main() {
 		}
 	}
 
-	db.Seed()
+	//db.Seed()
 
 	controllers.ServeBackend()
 }
