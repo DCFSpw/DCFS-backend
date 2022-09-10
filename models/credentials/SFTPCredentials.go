@@ -52,14 +52,14 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 	// Connect to SFTP server
 	conn, err := ssh.Dial("tcp", addr, &config)
 	if err != nil {
-		log.Fatalf("Failed to connect to SFTP server [%s]: %v", addr, err)
+		log.Printf("Failed to connect to SFTP server [%s]: %v", addr, err)
 		return nil
 	}
 
 	// Create new SFTP client
 	sftpClient, err := sftp.NewClient(conn)
 	if err != nil {
-		log.Fatalf("Unable to create SFTP client: %v", err)
+		log.Printf("Unable to create SFTP client: %v", err)
 		return nil
 	}
 	credentials.Client = sftpClient

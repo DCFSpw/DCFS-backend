@@ -27,14 +27,14 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 	// Connect to FTP server
 	conn, err := ftp.Dial(addr, ftp.DialWithTimeout(5*time.Second))
 	if err != nil {
-		log.Fatalf("Failed to connect to FTP server [%s]: %v", addr, err)
+		log.Printf("Failed to connect to FTP server [%s]: %v", addr, err)
 		return nil
 	}
 
 	// Login to FTP server
 	err = conn.Login(credentials.User, credentials.Password)
 	if err != nil {
-		log.Fatalf("Unable to login to FTP: %v", err)
+		log.Printf("Unable to login to FTP: %v", err)
 		return nil
 	}
 	credentials.Client = conn

@@ -4,8 +4,8 @@ import (
 	"dcfs/apicalls"
 	"dcfs/db"
 	"dcfs/db/dbo"
-	"dcfs/models/disk/FTPDisk"
 	"dcfs/models/disk/GDriveDisk"
+	"dcfs/models/disk/SFTPDisk"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -123,7 +123,7 @@ func FileDownload(c *gin.Context) {
 		AbstractBlockMetadata: apicalls.AbstractBlockMetadata{
 			UUID: blockUUID}}
 
-	var ftpDisk = FTPDisk.NewFTPDisk()
+	var ftpDisk = SFTPDisk.NewSFTPDisk()
 	ftpDisk.CreateCredentials("...")
 	err := ftpDisk.Connect(nil)
 	if err != nil {
