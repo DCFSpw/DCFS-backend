@@ -15,8 +15,8 @@ var RootUUID uuid.UUID
 
 type Disk interface {
 	Connect(c *gin.Context) error
-	Upload(bm apicalls.BlockMetadata) error
-	Download(bm apicalls.BlockMetadata) error
+	Upload(bm *apicalls.BlockMetadata) error
+	Download(bm *apicalls.BlockMetadata) error
 	Rename(c *gin.Context) error
 	Remove(c *gin.Context) error
 
@@ -39,6 +39,7 @@ type AbstractDisk struct {
 	Disk
 	UUID        uuid.UUID
 	Credentials credentials.Credentials
+	BlockSize   int
 }
 
 func (d *AbstractDisk) Connect(ctx context.Context) error {

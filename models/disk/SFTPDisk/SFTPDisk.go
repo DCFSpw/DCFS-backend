@@ -28,9 +28,7 @@ func (d *SFTPDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *SFTPDisk) Upload(bm apicalls.BlockMetadata) error {
-	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
-
+func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	// Create remote file
 	remoteFile, err := d.credentials.Client.OpenFile(blockMetadata.UUID.String(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
@@ -44,12 +42,11 @@ func (d *SFTPDisk) Upload(bm apicalls.BlockMetadata) error {
 		return fmt.Errorf("Cannot upload local file: %v", err)
 	}
 
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 	return nil
 }
 
-func (d *SFTPDisk) Download(bm apicalls.BlockMetadata) error {
-	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
-
+func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	// Open remote file
 	remoteFile, err := d.credentials.Client.OpenFile(blockMetadata.UUID.String(), os.O_RDONLY)
 	if err != nil {

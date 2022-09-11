@@ -67,6 +67,10 @@ func (credentials *OauthCredentials) ToString() string {
 func NewOauthCredentials(str string) *OauthCredentials {
 	var credentials *OauthCredentials = new(OauthCredentials)
 	tokens := strings.Split(str, ":")
+	if len(tokens) < 2 {
+		return nil
+	}
+
 	credentials.Token = &oauth2.Token{AccessToken: tokens[0], RefreshToken: tokens[1]}
 
 	// invalidate token
