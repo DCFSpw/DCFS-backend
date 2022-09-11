@@ -8,6 +8,16 @@ type SuccessResponse struct {
 	Msg     string
 }
 
+type ValidationErrorResponse struct {
+	Success bool
+	Msg     string
+}
+
+type OperationFailureResponse struct {
+	Success bool
+	Msg     string
+}
+
 type BlockDownloadResponse struct {
 	Success bool
 	Msg     string

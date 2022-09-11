@@ -17,26 +17,27 @@ func FileRequest(c *gin.Context) {
 
 func FileUpload(c *gin.Context) {
 	// Get data from request
-	uuidString := c.PostForm("blockUUID")
+	//fileUUIDString := c.Param("FileUUID")
+	blockUUIDString := c.PostForm("blockUUID")
 	blockHeader, blockHeaderError := c.FormFile("block")
 	if blockHeaderError != nil {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing block"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing block"})
 		return
 	}
 	block, blockError := blockHeader.Open()
 	if blockError != nil {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Block opening failed"})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block opening failed: " + blockError.Error()})
 		return
 	}
 
 	// Validate data
-	if uuidString == "" {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing blockUUID"})
+	if blockUUIDString == "" {
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing blockUUID"})
 		return
 	}
-	blockUUID, uuidError := uuid.Parse(uuidString)
+	blockUUID, uuidError := uuid.Parse(blockUUIDString)
 	if uuidError != nil {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Invalid blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Invalid blockUUID"})
 		return
 	}
 
@@ -54,7 +55,7 @@ func FileUpload(c *gin.Context) {
 	readSize, err := block.Read(contents)
 
 	if err != nil || readSize != int(blockHeader.Size) {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Block loading failed"})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block loading failed: " + err.Error()})
 		return
 	}
 
@@ -63,7 +64,11 @@ func FileUpload(c *gin.Context) {
 	blockMetadata.UUID = blockUUID
 	blockMetadata.Size = blockHeader.Size
 
-	disk.Upload(blockMetadata)
+	err = disk.Upload(blockMetadata)
+	if err != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block uploading failed: " + err.Error()})
+		return
+	}
 
 	/* SFTP demo
 	var blockMetadata = apicalls.SFTPBlockMetadata{
@@ -104,17 +109,18 @@ func FileGet(c *gin.Context) {
 
 func FileDownload(c *gin.Context) {
 	// Get data from request
-	uuidString := c.Param("BlockUUID")
+	//fileUUIDString := c.Param("FileUUID")
+	blockUUIDString := c.PostForm("blockUUID")
 
 	// Validate data
-	if uuidString == "" {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Missing blockUUID"})
+	if blockUUIDString == "" {
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing blockUUID"})
 		return
 	}
 
-	blockUUID, uuidError := uuid.Parse(uuidString)
+	blockUUID, uuidError := uuid.Parse(blockUUIDString)
 	if uuidError != nil {
-		c.JSON(400, responses.SuccessResponse{Success: false, Msg: "Invalid blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Invalid blockUUID"})
 		return
 	}
 
@@ -127,13 +133,13 @@ func FileDownload(c *gin.Context) {
 	ftpDisk.CreateCredentials("...")
 	err := ftpDisk.Connect(nil)
 	if err != nil {
-		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "FTP connection failed"})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "FTP connection failed: " + err.Error()})
 		return
 	}
 
 	err = ftpDisk.Download(&blockMetadata)
 	if err != nil {
-		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "FTP download failed"})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block download failed: " + err.Error()})
 		return
 	}
 

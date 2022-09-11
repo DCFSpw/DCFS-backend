@@ -54,8 +54,8 @@ func ServeBackend() {
 		authorized.DELETE("/disk/associate/:DiskUUID", DiskDissociate)
 
 		// file
-		authorized.POST("/file/io/:BlockUUID", FileUpload)
-		authorized.GET("/file/io/:BlockUUID", FileDownload)
+		authorized.POST("/file/io/:FileUUID", FileUpload)
+		authorized.GET("/file/io/:FileUUID", FileDownload)
 
 		authorized.PUT("/file/manage/:FileUUID", FileRename)
 		authorized.DELETE("/file/manage/:FileUUID", FileRemove)
