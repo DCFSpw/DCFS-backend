@@ -31,9 +31,10 @@ func main() {
 
 	// Register all needed tables
 	db.DB.RegisterTable(dbo.Volume{})
+	db.DB.RegisterTable(dbo.Provider{})
 	db.DB.RegisterTable(dbo.File{})
 	db.DB.RegisterTable(dbo.Disk{})
-	db.DB.RegisterTable(dbo.Provider{})
+	db.DB.RegisterTable(dbo.Block{})
 
 	if *rspw {
 		err = db.DB.Respawn()
