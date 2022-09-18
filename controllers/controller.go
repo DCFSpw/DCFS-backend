@@ -42,16 +42,17 @@ func ServeBackend() {
 		authorized.GET("/volume/volumes", GetVolumes)
 
 		// disk
-		authorized.POST("/disk/manage", DiskCreate)
-		authorized.PUT("/disk/manage/:DiskUUID", DiskUpdate)
-		authorized.DELETE("/disk/manage/:DiskUUID", DiskDelete)
-		authorized.GET("/disk/manage/:DiskUUID", DiskGet)
-		authorized.POST("/disk/oauth", DiskOAuth)
+		authorized.POST("/disks/manage", DiskCreate)
+		authorized.GET("/disks/manage", GetDisks)
 
-		authorized.GET("/disk/disks", GetDisks)
+		authorized.GET("/disks/manage/:DiskUUID", DiskGet)
+		authorized.PUT("/disks/manage/:DiskUUID", DiskUpdate)
+		authorized.DELETE("/disks/manage/:DiskUUID", DiskDelete)
 
-		authorized.PUT("/disk/associate/:DiskUUID", DiskAssociate)
-		authorized.DELETE("/disk/associate/:DiskUUID", DiskDissociate)
+		authorized.POST("/disks/association/:DiskUUID", DiskAssociate)
+		authorized.DELETE("/disks/association/:DiskUUID", DiskDissociate)
+
+		authorized.POST("/disks/oauth/:DiskUUID", DiskOAuth)
 
 		// file
 		authorized.POST("/file/io/:FileUUID", FileUpload)
