@@ -2,6 +2,8 @@ package constants
 
 // List of error codes returned by the server in the failed responses body
 const (
+	SUCCESS = "ACC-000"
+
 	VAL_MISSING_FIRST_NAME = "VAL-001"
 	VAL_MISSING_LAST_NAME  = "VAL-002"
 	VAL_MISSING_EMAIL      = "VAL-003"
@@ -13,4 +15,6 @@ const (
 	VAL_INVALID_PASSWORD   = "VAL-014"
 
 	VAL_EMAIL_ALREADY_EXISTS = "VAL-023"
+
+	DATABASE_ERROR = "DBE-001"
 )

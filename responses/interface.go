@@ -16,6 +16,7 @@ type ValidationErrorResponse struct {
 
 type OperationFailureResponse struct {
 	Success bool
+	Code    string
 	Msg     string
 }
 
