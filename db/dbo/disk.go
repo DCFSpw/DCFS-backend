@@ -8,6 +8,9 @@ type Disk struct {
 	VolumeUUID   uuid.UUID
 	ProviderUUID uuid.UUID
 	Credentials  string
+
+	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID"`
+	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID"`
 }
 
 func NewDisk() *Disk {
