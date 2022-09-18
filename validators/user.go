@@ -4,6 +4,7 @@ import (
 	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
+	"golang.org/x/crypto/bcrypt"
 	"net/mail"
 )
 
@@ -76,5 +77,13 @@ func ValidatePassword(password string) string {
 	}
 
 	// Return success
+	return constants.SUCCESS
+}
+
+func ValidateUserPassword(hashedPassword string, providedPassword string) string {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(providedPassword))
+	if err != nil {
+		return constants.VAL_INVALID_PASSWORD
+	}
 	return constants.SUCCESS
 }

@@ -9,5 +9,5 @@ type DatabaseObject interface {
 
 type AbstractDatabaseObject struct {
 	DatabaseObject `gorm:"-"`
-	UUID           uuid.UUID `gorm:"primaryKey;type:varchar(32)"`
+	UUID           uuid.UUID `gorm:"primaryKey;type:varchar(36)"`
 }

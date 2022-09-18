@@ -4,29 +4,34 @@ type Response interface {
 }
 
 type SuccessResponse struct {
-	Success bool
-	Msg     string
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+type FailureResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
 type ValidationErrorResponse struct {
-	Success bool
-	Code    string
-	Msg     string
+	Success bool   `json:"success"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type OperationFailureResponse struct {
-	Success bool
-	Code    string
-	Msg     string
+	Success bool   `json:"success"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type BlockDownloadResponse struct {
-	Success bool
-	Msg     string
-	Block   []uint8
+	Success bool    `json:"success"`
+	Message string  `json:"message"`
+	Block   []uint8 `json:"block"`
 }
 
 type DiskOAuthCodeResponse struct {
 	SuccessResponse
-	DiskUUID string
+	DiskUUID string `json:"diskUUID"`
 }

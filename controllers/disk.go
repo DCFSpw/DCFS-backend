@@ -53,7 +53,7 @@ func DiskCreate(c *gin.Context) {
 
 	disk := DriveFactory.NewDisk(provider.ProviderType)
 	if disk == nil {
-		c.JSON(401, responses.SuccessResponse{Success: true, Msg: "Provider not supported"})
+		c.JSON(401, responses.SuccessResponse{Success: true, Message: "Provider not supported"})
 		return
 	}
 
@@ -69,7 +69,7 @@ func DiskCreate(c *gin.Context) {
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 
 		// TODO: update return value
-		c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Success"})
+		c.JSON(200, responses.SuccessResponse{Success: true, Message: "Success"})
 		return
 	}
 
@@ -77,7 +77,7 @@ func DiskCreate(c *gin.Context) {
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 
 		config := disk.(disk2.OAuthDisk).GetConfig()
-		c.JSON(200, responses.DiskOAuthCodeResponse{SuccessResponse: responses.SuccessResponse{Success: true, Msg: config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)}, DiskUUID: disk.GetUUID().String()})
+		c.JSON(200, responses.DiskOAuthCodeResponse{SuccessResponse: responses.SuccessResponse{Success: true, Message: config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)}, DiskUUID: disk.GetUUID().String()})
 		return
 	}
 }
@@ -145,29 +145,29 @@ func DiskOAuth(c *gin.Context) {
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
 	db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	// TODO: update return value
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Success"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Success"})
 }
 
 func DiskGet(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Disk Get Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Get Endpoint"})
 }
 
 func DiskUpdate(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Disk Update Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Update Endpoint"})
 }
 
 func DiskDelete(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Disk Delete Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Delete Endpoint"})
 }
 
 func GetDisks(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Get Disks Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Disks Endpoint"})
 }
 
 func DiskAssociate(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Disk Associate Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Associate Endpoint"})
 }
 
 func DiskDissociate(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Disk Dissociate Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Dissociate Endpoint"})
 }

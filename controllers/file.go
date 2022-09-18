@@ -12,7 +12,7 @@ import (
 )
 
 func FileRequest(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Request Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Request Endpoint"})
 }
 
 func FileUpload(c *gin.Context) {
@@ -21,23 +21,23 @@ func FileUpload(c *gin.Context) {
 	blockUUIDString := c.PostForm("blockUUID")
 	blockHeader, blockHeaderError := c.FormFile("block")
 	if blockHeaderError != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing block"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing block"})
 		return
 	}
 	block, blockError := blockHeader.Open()
 	if blockError != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block opening failed: " + blockError.Error()})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block opening failed: " + blockError.Error()})
 		return
 	}
 
 	// Validate data
 	if blockUUIDString == "" {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing blockUUID"})
 		return
 	}
 	blockUUID, uuidError := uuid.Parse(blockUUIDString)
 	if uuidError != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Invalid blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Invalid blockUUID"})
 		return
 	}
 
@@ -55,7 +55,7 @@ func FileUpload(c *gin.Context) {
 	readSize, err := block.Read(contents)
 
 	if err != nil || readSize != int(blockHeader.Size) {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block loading failed: " + err.Error()})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block loading failed: " + err.Error()})
 		return
 	}
 
@@ -66,7 +66,7 @@ func FileUpload(c *gin.Context) {
 
 	err = disk.Upload(blockMetadata)
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block uploading failed: " + err.Error()})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block uploading failed: " + err.Error()})
 		return
 	}
 
@@ -82,29 +82,29 @@ func FileUpload(c *gin.Context) {
 	sftpDisk.CreateCredentials("tester:password:192.168.1.176:21")
 	err = sftpDisk.Connect(nil)
 	if err != nil {
-		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP connection failed"})
+		c.JSON(404, responses.SuccessResponse{Success: false, Message: "SFTP connection failed"})
 		return
 	}
 	err = sftpDisk.Upload(&blockMetadata)
 	if err != nil {
-		c.JSON(404, responses.SuccessResponse{Success: false, Msg: "SFTP upload failed"})
+		c.JSON(404, responses.SuccessResponse{Success: false, Message: "SFTP upload failed"})
 		return
 	}
 	*/
 
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Upload Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Upload Endpoint"})
 }
 
 func FileRename(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Rename Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Rename Endpoint"})
 }
 
 func FileRemove(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Remove Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Remove Endpoint"})
 }
 
 func FileGet(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Get Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Get Endpoint"})
 }
 
 func FileDownload(c *gin.Context) {
@@ -114,13 +114,13 @@ func FileDownload(c *gin.Context) {
 
 	// Validate data
 	if blockUUIDString == "" {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Missing blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing blockUUID"})
 		return
 	}
 
 	blockUUID, uuidError := uuid.Parse(blockUUIDString)
 	if uuidError != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Msg: "Invalid blockUUID"})
+		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Invalid blockUUID"})
 		return
 	}
 
@@ -133,31 +133,31 @@ func FileDownload(c *gin.Context) {
 	ftpDisk.CreateCredentials("...")
 	err := ftpDisk.Connect(nil)
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "FTP connection failed: " + err.Error()})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "FTP connection failed: " + err.Error()})
 		return
 	}
 
 	err = ftpDisk.Download(&blockMetadata)
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Msg: "Block download failed: " + err.Error()})
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + err.Error()})
 		return
 	}
 
-	c.JSON(200, responses.BlockDownloadResponse{Success: true, Msg: "File Download Endpoint", Block: *blockMetadata.Content})
+	c.JSON(200, responses.BlockDownloadResponse{Success: true, Message: "File Download Endpoint", Block: *blockMetadata.Content})
 }
 
 func FileShare(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Share Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Endpoint"})
 }
 
 func FileShareRemove(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Share Remove Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Remove Endpoint"})
 }
 
 func FileRequestComplete(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "File Request Complete Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Request Complete Endpoint"})
 }
 
 func GetFiles(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Msg: "Get Files Endpoint"})
+	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Files Endpoint"})
 }
