@@ -11,18 +11,13 @@ type SuccessResponse struct {
 type FailureResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
-}
-
-type ValidationErrorResponse struct {
-	Success bool   `json:"success"`
 	Code    string `json:"code"`
-	Message string `json:"message"`
 }
 
 type OperationFailureResponse struct {
 	Success bool   `json:"success"`
-	Code    string `json:"code"`
 	Message string `json:"message"`
+	Code    string `json:"code"`
 }
 
 type BlockDownloadResponse struct {
