@@ -12,15 +12,26 @@ type UserDataResponse struct {
 	Email     string    `json:"email"`
 }
 
+type UserAuthDataResponse struct {
+	UserDataResponse
+	Token string `json:"token"`
+}
+
+type InvalidCredentialsResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
+}
+
 type RegisterUserSuccessResponse struct {
 	Success bool             `json:"success"`
 	Data    UserDataResponse `json:"data"`
 }
 
 type LoginSuccessResponse struct {
-	Success bool             `json:"success"`
-	Token   string           `json:"token"`
-	Data    UserDataResponse `json:"data"`
+	Success bool                 `json:"success"`
+	Token   string               `json:"token"`
+	Data    UserAuthDataResponse `json:"data"`
 }
 
 func NewRegisterUserSuccessResponse(userData *dbo.User) *RegisterUserSuccessResponse {
@@ -36,7 +47,7 @@ func NewRegisterUserSuccessResponse(userData *dbo.User) *RegisterUserSuccessResp
 func NewLoginSuccessResponse(userData *dbo.User, token string) *LoginSuccessResponse {
 	var r *LoginSuccessResponse = new(LoginSuccessResponse)
 	r.Success = true
-	r.Token = token
+	r.Data.Token = token
 	r.Data.UUID = userData.UUID
 	r.Data.FirstName = userData.FirstName
 	r.Data.LastName = userData.LastName
