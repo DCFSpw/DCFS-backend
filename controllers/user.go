@@ -13,43 +13,26 @@ import (
 
 func RegisterUser(c *gin.Context) {
 	var requestBody requests.RegisterUserRequest
+	var user *dbo.User
 
-	// Get data from request
-	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "JSON validation failed: " + err.Error(), Code: constants.REQ_JSON_BIND})
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
 
-	// Validate data
-	errCode := validators.ValidateFirstName(requestBody.FirstName)
-	if errCode != constants.SUCCESS {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Validation error", Code: errCode})
-		return
-	}
-
-	errCode = validators.ValidateLastName(requestBody.LastName)
-	if errCode != constants.SUCCESS {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Validation error", Code: errCode})
-		return
-	}
-
-	errCode = validators.ValidateEmail(requestBody.Email)
-	if errCode != constants.SUCCESS {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Validation error", Code: errCode})
-		return
-	}
-
-	errCode = validators.ValidatePassword(requestBody.Password)
-	if errCode != constants.SUCCESS {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Validation error", Code: errCode})
+	// Check if e-mail exists
+	result := db.DB.DatabaseHandle.Where("email = ?", requestBody.Email).First(&dbo.User{})
+	if result.RowsAffected > 0 {
+		c.JSON(422, responses.FailureResponse{Success: false, Message: "Specified e-mail already exists.", Code: constants.VAL_EMAIL_ALREADY_EXISTS})
 		return
 	}
 
 	// Create a new user
-	var user *dbo.User = dbo.NewUserFromRequest(&requestBody)
+	user = dbo.NewUserFromRequest(&requestBody)
 
 	// Save user to database
-	result := db.DB.DatabaseHandle.Create(&user)
+	result = db.DB.DatabaseHandle.Create(&user)
 	if result.Error != nil {
 		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
 		return
@@ -59,12 +42,12 @@ func RegisterUser(c *gin.Context) {
 }
 
 func LoginUser(c *gin.Context) {
-	var requestBody requests.RegisterUserRequest
+	var requestBody requests.LoginUserRequest
 	var user dbo.User
 
-	// Get data from request
-	if err := c.BindJSON(&requestBody); err != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "JSON validation failed: " + err.Error(), Code: constants.REQ_JSON_BIND})
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
 
