@@ -59,7 +59,7 @@ func RegisterUser(c *gin.Context) {
 }
 
 func LoginUser(c *gin.Context) {
-	var requestBody requests.RegisterUserRequest
+	var requestBody requests.LoginUserRequest
 	var user dbo.User
 
 	// Get data from request
