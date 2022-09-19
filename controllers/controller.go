@@ -19,7 +19,11 @@ func ServeBackend() {
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	r.Use(gin.Recovery())
 
-	// unauthorized requests
+	// Unauthorized requests
+	// 	User
+	unauthorized := r.Group("/")
+	unauthorized.POST("/auth/register", RegisterUser)
+	unauthorized.POST("/auth/login", LoginUser)
 
 	// volume
 
@@ -27,11 +31,11 @@ func ServeBackend() {
 
 	// file
 
-	// authorized requests
+	// Authorized requests
 	authorized := r.Group("/")
 	authorized.Use(middleware.Authenticate())
 	{
-		// volume
+		// Volume
 		authorized.POST("/volume/manage", CreateVolume)
 		authorized.PUT("/volume/manage/:VolumeUUID", UpdateVolume)
 		authorized.DELETE("/volume/manage/:VolumeUUID", DeleteVolume)
@@ -41,7 +45,7 @@ func ServeBackend() {
 
 		authorized.GET("/volume/volumes", GetVolumes)
 
-		// disk
+		// Disk
 		authorized.POST("/disks/manage", DiskCreate)
 		authorized.GET("/disks/manage", GetDisks)
 
@@ -54,7 +58,7 @@ func ServeBackend() {
 
 		authorized.POST("/disks/oauth/:DiskUUID", DiskOAuth)
 
-		// file
+		// File
 		authorized.POST("/file/io/:FileUUID", FileUpload)
 		authorized.GET("/file/io/:FileUUID", FileDownload)
 

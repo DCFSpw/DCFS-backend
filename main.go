@@ -35,6 +35,7 @@ func main() {
 	db.DB.RegisterTable(dbo.File{})
 	db.DB.RegisterTable(dbo.Disk{})
 	db.DB.RegisterTable(dbo.Block{})
+	db.DB.RegisterTable(dbo.User{})
 
 	if *rspw {
 		err = db.DB.Respawn()
