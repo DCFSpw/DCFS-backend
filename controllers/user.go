@@ -75,6 +75,20 @@ func LoginUser(c *gin.Context) {
 	c.JSON(200, responses.NewLoginSuccessResponse(&user, signedToken))
 }
 
+func GetUserProfile(c *gin.Context) {
+	var user *dbo.User
+
+	// Retrieve user account
+	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		return
+	}
+
+	// Return user profile
+	c.JSON(200, responses.NewRegisterUserSuccessResponse(user))
+}
+
 func ChangeUserPassword(c *gin.Context) {
 	var requestBody requests.ChangeUserPasswordRequest
 	var user *dbo.User

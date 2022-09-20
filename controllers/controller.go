@@ -44,7 +44,7 @@ func ServeBackend() {
 	authorized.Use(middleware.Authenticate())
 	{
 		// Account settings
-		//authorized.GET("/user/profile", GetUserProfile)
+		authorized.GET("/user/profile", GetUserProfile)
 		//authorized.PUT("/user/profile", UpdateUserProfile)
 		authorized.PUT("/user/password", ChangeUserPassword)
 
