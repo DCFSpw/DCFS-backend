@@ -38,7 +38,7 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, responses.NewRegisterUserSuccessResponse(user))
+	c.JSON(200, responses.NewUserDataSuccessResponse(user))
 }
 
 func LoginUser(c *gin.Context) {
@@ -86,7 +86,38 @@ func GetUserProfile(c *gin.Context) {
 	}
 
 	// Return user profile
-	c.JSON(200, responses.NewRegisterUserSuccessResponse(user))
+	c.JSON(200, responses.NewUserDataSuccessResponse(user))
+}
+
+func UpdateUserProfile(c *gin.Context) {
+	var requestBody requests.UpdateUserProfileRequest
+	var user *dbo.User
+
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	// Retrieve user account
+	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		return
+	}
+
+	// Update user profile
+	user.FirstName = requestBody.FirstName
+	user.LastName = requestBody.LastName
+
+	result := db.DB.DatabaseHandle.Save(&user)
+	if result.Error != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		return
+	}
+
+	// Return updated user profile
+	c.JSON(200, responses.NewUserDataSuccessResponse(user))
 }
 
 func ChangeUserPassword(c *gin.Context) {

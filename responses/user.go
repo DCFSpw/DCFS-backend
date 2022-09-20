@@ -23,7 +23,7 @@ type InvalidCredentialsResponse struct {
 	Code    string `json:"code"`
 }
 
-type RegisterUserSuccessResponse struct {
+type UserDataSuccessResponse struct {
 	Success bool             `json:"success"`
 	Data    UserDataResponse `json:"data"`
 }
@@ -33,8 +33,8 @@ type LoginSuccessResponse struct {
 	Data    UserAuthDataResponse `json:"data"`
 }
 
-func NewRegisterUserSuccessResponse(userData *dbo.User) *RegisterUserSuccessResponse {
-	var r *RegisterUserSuccessResponse = new(RegisterUserSuccessResponse)
+func NewUserDataSuccessResponse(userData *dbo.User) *UserDataSuccessResponse {
+	var r *UserDataSuccessResponse = new(UserDataSuccessResponse)
 	r.Success = true
 	r.Data.UUID = userData.UUID
 	r.Data.FirstName = userData.FirstName

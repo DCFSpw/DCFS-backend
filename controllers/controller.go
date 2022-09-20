@@ -45,7 +45,7 @@ func ServeBackend() {
 	{
 		// Account settings
 		authorized.GET("/user/profile", GetUserProfile)
-		//authorized.PUT("/user/profile", UpdateUserProfile)
+		authorized.PUT("/user/profile", UpdateUserProfile)
 		authorized.PUT("/user/password", ChangeUserPassword)
 
 		// Volume
