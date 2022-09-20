@@ -30,7 +30,6 @@ type RegisterUserSuccessResponse struct {
 
 type LoginSuccessResponse struct {
 	Success bool                 `json:"success"`
-	Token   string               `json:"token"`
 	Data    UserAuthDataResponse `json:"data"`
 }
 

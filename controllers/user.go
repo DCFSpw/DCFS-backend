@@ -74,3 +74,39 @@ func LoginUser(c *gin.Context) {
 
 	c.JSON(200, responses.NewLoginSuccessResponse(&user, signedToken))
 }
+
+func ChangeUserPassword(c *gin.Context) {
+	var requestBody requests.ChangeUserPasswordRequest
+	var user *dbo.User
+
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	// Retrieve user account
+	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		return
+	}
+
+	// Check if password is correct
+	errCode := validators.ValidateUserPassword(user.Password, requestBody.OldPassword)
+	if errCode != constants.SUCCESS {
+		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Invalid credentials", Code: constants.AUTH_INVALID_PASSWORD})
+		return
+	}
+
+	// Change password
+	user.Password = dbo.HashPassword(requestBody.NewPassword)
+
+	result := db.DB.DatabaseHandle.Save(&user)
+	if result.Error != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		return
+	}
+
+	c.JSON(200, responses.NewEmptySuccessResponse())
+}

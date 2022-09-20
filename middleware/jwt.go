@@ -10,7 +10,7 @@ import (
 )
 
 type UserData struct {
-	UserUUID string
+	UserUUID uuid.UUID
 }
 
 type JWTClaim struct {
@@ -86,6 +86,6 @@ func Authenticate() gin.HandlerFunc {
 		}
 
 		// Set the user data in the context
-		c.Set("UserData", UserData{UserUUID: claims.UUID.String()})
+		c.Set("UserData", UserData{UserUUID: claims.UUID})
 	}
 }
