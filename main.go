@@ -4,6 +4,7 @@ import (
 	"dcfs/controllers"
 	"dcfs/db"
 	"dcfs/db/dbo"
+	"dcfs/db/seeder"
 	"dcfs/models/disk"
 	"flag"
 	"github.com/google/uuid"
@@ -50,7 +51,7 @@ func main() {
 		}
 	}
 
-	//db.Seed()
+	seeder.Seed()
 
 	controllers.ServeBackend()
 }
