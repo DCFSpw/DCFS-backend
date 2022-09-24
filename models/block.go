@@ -5,13 +5,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	BLOCK_STATUS_QUEUED      int = 0
-	BLOCK_STATUS_IN_PROGRESS int = 1
-	BLOCK_STATUS_TRANSFERRED int = 2
-	BLOCK_STATUS_FAILED      int = 3
-)
-
 type Block struct {
 	UUID     uuid.UUID
 	UserUUID uuid.UUID

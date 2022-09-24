@@ -32,7 +32,7 @@ func Seed() {
 		// create a new volume
 		volume.UUID = uuid.New()
 		volume.UserUUID = rootUUID
-		volume.VolumeSettings = dbo.VolumeSettings{Backup: dbo.NO_BACKUP, Encryption: dbo.NO_ENCRYPTION, FilePartition: dbo.BALANCED}
+		volume.VolumeSettings = dbo.VolumeSettings{Backup: constants.BACKUP_TYPE_NO_BACKUP, Encryption: constants.ENCRYPTION_TYPE_NO_ENCRYPTION, FilePartition: constants.PARTITION_TYPE_BALANCED}
 
 		db.DB.DatabaseHandle.Create(&volume)
 	}

@@ -2,7 +2,7 @@ package models
 
 import (
 	"dcfs/apicalls"
-	"dcfs/db/dbo"
+	"dcfs/constants"
 	"github.com/google/uuid"
 )
 
@@ -118,7 +118,7 @@ func (file *RegularFile) SetName(newName string) {
 }
 
 func (file *RegularFile) GetType() int {
-	return dbo.FILE_TYPE_REGULAR
+	return constants.FILE_TYPE_REGULAR
 }
 
 func (file *RegularFile) SetType(newType int) {
@@ -127,7 +127,7 @@ func (file *RegularFile) SetType(newType int) {
 
 func (file *RegularFile) IsCompleted() bool {
 	for _, _block := range file.Blocks {
-		if _block.Status != BLOCK_STATUS_TRANSFERRED {
+		if _block.Status != constants.BLOCK_STATUS_TRANSFERRED {
 			return false
 		}
 	}
@@ -203,7 +203,7 @@ func (d *Directory) SetVolume(v *Volume) {
 
 func NewFile(filetype int) File {
 	var f File
-	if filetype == dbo.FILE_TYPE_REGULAR {
+	if filetype == constants.FILE_TYPE_REGULAR {
 		f = new(RegularFile)
 	} else {
 		f = new(Directory)
