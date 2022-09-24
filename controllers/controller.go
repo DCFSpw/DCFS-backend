@@ -28,7 +28,7 @@ func ServeBackend() {
 	r.Use(gin.Recovery())
 
 	// Unauthorized requests
-	// 	User
+	// 	Authorization
 	unauthorized := r.Group("/")
 	unauthorized.POST("/auth/register", RegisterUser)
 	unauthorized.POST("/auth/login", LoginUser)
@@ -43,6 +43,11 @@ func ServeBackend() {
 	authorized := r.Group("/")
 	authorized.Use(middleware.Authenticate())
 	{
+		// Account settings
+		authorized.GET("/user/profile", GetUserProfile)
+		authorized.PUT("/user/profile", UpdateUserProfile)
+		authorized.PUT("/user/password", ChangeUserPassword)
+
 		// Volume
 		authorized.POST("/volume/manage", CreateVolume)
 		authorized.PUT("/volume/manage/:VolumeUUID", UpdateVolume)

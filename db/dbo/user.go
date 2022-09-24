@@ -17,7 +17,6 @@ type User struct {
 func NewUser() *User {
 	var u *User = new(User)
 	u.AbstractDatabaseObject.DatabaseObject = u
-	u.UUID, _ = uuid.NewUUID()
 	return u
 }
 
@@ -27,7 +26,7 @@ func HashPassword(password string) string {
 }
 
 func NewUserFromRequest(request *requests.RegisterUserRequest) *User {
-	var u *User = new(User)
+	var u *User = NewUser()
 	u.AbstractDatabaseObject.DatabaseObject = u
 	u.UUID, _ = uuid.NewUUID()
 	u.FirstName = request.FirstName
