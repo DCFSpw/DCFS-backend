@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/middleware"
@@ -142,7 +143,7 @@ func FileUpload(c *gin.Context) {
 		return
 	}
 
-	file.Blocks[blockUUID].Status = models.BLOCK_STATUS_IN_PROGRESS
+	file.Blocks[blockUUID].Status = constants.BLOCK_STATUS_IN_PROGRESS
 
 	// Prepare block for upload
 	contents := make([]uint8, blockHeader.Size)
@@ -161,7 +162,7 @@ func FileUpload(c *gin.Context) {
 	blockMetadata.Size = blockHeader.Size
 	blockMetadata.Status = &file.Blocks[blockUUID].Status
 	blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
-		*status = models.BLOCK_STATUS_TRANSFERRED
+		*status = constants.BLOCK_STATUS_TRANSFERRED
 		models.Transport.MarkAsCompleted(UUID)
 	}
 
@@ -296,7 +297,7 @@ func FileRequestComplete(c *gin.Context) {
 
 		var _file *models.RegularFile = file.(*models.RegularFile)
 		for _, _block := range _file.Blocks {
-			if _block.Status == models.BLOCK_STATUS_TRANSFERRED {
+			if _block.Status == constants.BLOCK_STATUS_TRANSFERRED {
 				continue
 			}
 
