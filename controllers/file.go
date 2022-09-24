@@ -30,14 +30,10 @@ func FileRequest(c *gin.Context) {
 	var fileUploadRequest apicalls.FileUploadRequest = apicalls.FileUploadRequest{}
 	var file models.File
 	var volume *models.Volume
+	var err error
 
 	userData, _ := c.Get("UserData")
-	_userUUID := userData.(middleware.UserData).UserUUID
-	userUUID, err := uuid.Parse(_userUUID)
-	if err != nil {
-		// TODO
-		panic("Unimplemented")
-	}
+	userUUID := userData.(middleware.UserData).UserUUID
 
 	err = c.BindJSON(&req)
 	if err != nil {
@@ -266,7 +262,6 @@ func FileRequestComplete(c *gin.Context) {
 	var body FileRequestCompleteBody = FileRequestCompleteBody{}
 	var _fileUUID string
 	var fileUUID uuid.UUID
-	var _userUUID string
 	var userUUID uuid.UUID
 	var err error
 	var file models.File
@@ -274,8 +269,7 @@ func FileRequestComplete(c *gin.Context) {
 	var code int
 
 	userData, _ := c.Get("UserData")
-	_userUUID = userData.(middleware.UserData).UserUUID
-	userUUID, err = uuid.Parse(_userUUID)
+	userUUID = userData.(middleware.UserData).UserUUID
 
 	_fileUUID = c.Param("FileUUID")
 	fileUUID, err = uuid.Parse(_fileUUID)
