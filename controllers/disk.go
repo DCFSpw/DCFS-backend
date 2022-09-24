@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/middleware"
@@ -25,6 +26,7 @@ type diskCreateBody struct {
 func DiskCreate(c *gin.Context) {
 	var body diskCreateBody = diskCreateBody{}
 	var provider *dbo.Provider = dbo.NewProvider()
+	var authCode string = ""
 	userData, _ := c.Get("UserData")
 	_userUUID := userData.(middleware.UserData).UserUUID
 
@@ -60,22 +62,26 @@ func DiskCreate(c *gin.Context) {
 	volume.AddDisk(disk.GetUUID(), disk)
 	providerUUID, _ := uuid.Parse(body.ProviderUUID)
 
-	if provider.ProviderType == dbo.SFTP {
+	if provider.ProviderType == constants.PROVIDER_TYPE_SFTP {
 		disk.SetCredentials(credentials2.NewSFTPCredentials(body.Credentials))
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-
-		// TODO: update return value
-		c.JSON(200, responses.SuccessResponse{Success: true, Message: "Success"})
-		return
 	}
 
-	if provider.ProviderType == dbo.ONEDRIVE || provider.ProviderType == dbo.GDRIVE {
+	if provider.ProviderType == constants.PROVIDER_TYPE_ONEDRIVE || provider.ProviderType == constants.PROVIDER_TYPE_GDRIVE {
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-
 		config := disk.(disk2.OAuthDisk).GetConfig()
-		c.JSON(200, responses.DiskOAuthCodeResponse{SuccessResponse: responses.SuccessResponse{Success: true, Message: config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)}, DiskUUID: disk.GetUUID().String()})
-		return
+		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	}
+
+	c.JSON(200, responses.DiskCreateResponse{
+		SuccessResponse: responses.SuccessResponse{Success: true, Message: "Successfully started the procedure of adding a disk"},
+		Response: responses.DiskOAuthCodeResponse{
+			UUID:         disk.GetUUID().String(),
+			Name:         body.Name,
+			ProviderUUID: providerUUID.String(),
+			Link:         authCode,
+		},
+	})
 }
 
 type oauthBody struct {

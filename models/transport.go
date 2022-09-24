@@ -3,14 +3,21 @@ package models
 import (
 	"dcfs/db"
 	"dcfs/db/dbo"
-	"dcfs/models/disk/DriveFactory"
+	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"sync"
 	"time"
 )
 
+// TODO: transform to an abstract object
 type VolumeContainer struct {
 	Volume  *Volume
+	Counter int64
+}
+
+type FileContainer struct {
+	File    File
 	Counter int64
 }
 
@@ -32,6 +39,9 @@ func (transport *transport) updateCounter(vc *VolumeContainer, userUUID uuid.UUI
 type transport struct {
 	ActiveVolumesMutex sync.Mutex
 	ActiveVolumes      map[uuid.UUID]map[uuid.UUID]*VolumeContainer
+
+	FileUploadQueueMutex sync.Mutex
+	FileUploadQueue      map[uuid.UUID]*FileContainer
 }
 
 func (transport *transport) KeepAlive(userUUID uuid.UUID, volumeUUID uuid.UUID) {
@@ -68,26 +78,97 @@ func (transport *transport) getVolumeContainer(userUUID uuid.UUID, volumeUUID uu
 		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
 
 		container = new(VolumeContainer)
-		container.Volume = new(Volume)
-
-		if _volume.UUID == volumeUUID {
-			// TODO: add volume fields
-
-			for _, _d := range _disks {
-				provider := dbo.Provider{}
-				db.DB.DatabaseHandle.Where("uuid = ?", _d.ProviderUUID).First(&provider)
-
-				d := DriveFactory.NewDisk(provider.ProviderType)
-				d.SetUUID(_d.UUID)
-				d.CreateCredentials(_d.Credentials)
-				container.Volume.AddDisk(d.GetUUID(), d)
-			}
-		}
+		container.Volume = NewVolume(&_volume, _disks)
 	}
 
 	transport.ActiveVolumes[userUUID][volumeUUID] = container
 	transport.updateCounter(container, userUUID, volumeUUID)
 	return container
+}
+
+func (transport *transport) _updateCounter(UUID uuid.UUID) {
+	var fc *FileContainer = transport.FileUploadQueue[UUID]
+	fc.Counter++
+
+	time.AfterFunc(6*time.Minute, func() {
+		transport.FileUploadQueueMutex.Lock()
+		defer transport.FileUploadQueueMutex.Unlock()
+
+		var _fc *FileContainer = transport.FileUploadQueue[UUID]
+		if _fc == nil {
+			return
+		}
+
+		_fc.Counter--
+		if _fc.Counter <= 0 {
+			delete(transport.FileUploadQueue, UUID)
+		}
+	})
+}
+
+func (transport *transport) MarkAsUsed(UUID uuid.UUID) error {
+	transport.FileUploadQueueMutex.Lock()
+	defer transport.FileUploadQueueMutex.Unlock()
+
+	var fc *FileContainer = transport.FileUploadQueue[UUID]
+	if fc == nil {
+		return errors.New(fmt.Sprintf("file with UUID: %s is not enqueued", UUID.String()))
+	}
+
+	fc.Counter++
+	return nil
+}
+
+func (transport *transport) MarkAsCompleted(UUID uuid.UUID) {
+	time.AfterFunc(6*time.Minute, func() {
+		transport.FileUploadQueueMutex.Lock()
+		defer transport.FileUploadQueueMutex.Unlock()
+
+		var _fc *FileContainer = transport.FileUploadQueue[UUID]
+		if _fc == nil {
+			return
+		}
+
+		_fc.Counter--
+		if _fc.Counter <= 0 {
+			delete(transport.FileUploadQueue, UUID)
+		}
+	})
+}
+
+func (transport *transport) EnqueueFileUpload(UUID uuid.UUID, file File) {
+	transport.FileUploadQueueMutex.Lock()
+	defer transport.FileUploadQueueMutex.Unlock()
+
+	if transport.FileUploadQueue == nil {
+		transport.FileUploadQueue = make(map[uuid.UUID]*FileContainer)
+	}
+
+	var fc *FileContainer = new(FileContainer)
+	fc.File = file
+	transport.FileUploadQueue[UUID] = fc
+	transport._updateCounter(UUID)
+}
+
+func (transport *transport) GetEnqueuedFileUpload(UUID uuid.UUID) File {
+	transport.FileUploadQueueMutex.Lock()
+	defer transport.FileUploadQueueMutex.Unlock()
+
+	if transport.FileUploadQueue == nil {
+		return nil
+	}
+
+	return transport.FileUploadQueue[UUID].File
+}
+
+func (transport *transport) RemoveEnqueuedFileUpload(UUID uuid.UUID) {
+	transport.FileUploadQueueMutex.Lock()
+	defer transport.FileUploadQueueMutex.Unlock()
+
+	if transport.FileUploadQueue == nil {
+		return
+	}
+	delete(transport.FileUploadQueue, UUID)
 }
 
 // Transport - global variable

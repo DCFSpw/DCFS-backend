@@ -22,11 +22,11 @@ func (d *OneDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *OneDriveDisk) Upload(bm apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Upload(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *OneDriveDisk) Download(bm apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Download(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 

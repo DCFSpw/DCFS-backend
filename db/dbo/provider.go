@@ -1,11 +1,5 @@
 package dbo
 
-const (
-	SFTP     int = 0
-	GDRIVE   int = 1
-	ONEDRIVE int = 2
-)
-
 type Provider struct {
 	AbstractDatabaseObject
 	ProviderType int
