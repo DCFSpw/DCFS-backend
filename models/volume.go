@@ -2,6 +2,7 @@ package models
 
 import (
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models/disk"
@@ -38,7 +39,7 @@ func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 	var f File = NewFileFromReq(req)
 	f.SetVolume(v)
 
-	if req.Type == dbo.FILE_TYPE_REGULAR {
+	if req.Type == constants.FILE_TYPE_REGULAR {
 		var _f *RegularFile = f.(*RegularFile)
 		var blockCount int = int(math.Ceil(float64(req.Size / v.BlockSize)))
 		var cumulativeSize int = 0
@@ -51,7 +52,7 @@ func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 				currentSize = v.BlockSize - (cumulativeSize - f.GetSize())
 			}
 
-			var block *Block = NewBlock(uuid.New(), req.UserUUID, &f, v.partitioner.AssignDisk(currentSize), currentSize, 0, BLOCK_STATUS_QUEUED, i)
+			var block *Block = NewBlock(uuid.New(), req.UserUUID, &f, v.partitioner.AssignDisk(currentSize), currentSize, 0, constants.BLOCK_STATUS_QUEUED, i)
 			_f.Blocks[block.UUID] = block
 		}
 	} else {

@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-// FileType types
-const (
-	FILE_TYPE_REGULAR   int = 1
-	FILE_TYPE_DIRECTORY int = 0
-)
-
 type File struct {
 	AbstractDatabaseObject
 	UserUUID         uuid.UUID
