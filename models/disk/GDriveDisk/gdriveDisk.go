@@ -26,8 +26,7 @@ func (d *GDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
-	var blockMetadata *apicalls.GDriveBlockMetadata = bm.(*apicalls.GDriveBlockMetadata)
+func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
 	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	var fileCreate *drive.FilesCreateCall
@@ -49,10 +48,11 @@ func (d *GDriveDisk) Upload(bm apicalls.BlockMetadata) error {
 		// TODO: error handling
 	}
 
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 	return nil
 }
 
-func (d *GDriveDisk) Download(bm apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Download(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 

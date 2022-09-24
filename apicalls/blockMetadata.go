@@ -5,21 +5,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type BlockMetadata interface {
-}
-
-type AbstractBlockMetadata struct {
-	UUID uuid.UUID
-	Size int64
+type BlockMetadata struct {
+	Ctx      *gin.Context
+	FileUUID uuid.UUID
+	UUID     uuid.UUID
+	Size     int64
+	Status   *int
 
 	Content *[]uint8
-}
 
-type SFTPBlockMetadata struct {
-	AbstractBlockMetadata
-}
-
-type GDriveBlockMetadata struct {
-	AbstractBlockMetadata
-	Ctx *gin.Context
+	CompleteCallback func(uuid.UUID, *int)
 }

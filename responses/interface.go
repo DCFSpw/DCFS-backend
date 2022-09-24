@@ -32,8 +32,30 @@ type BlockDownloadResponse struct {
 }
 
 type DiskOAuthCodeResponse struct {
+	UUID         string `json:"uuid"`
+	Name         string `json:"name"`
+	ProviderUUID string `json:"provider_uuid"`
+	Link         string `json:"link"`
+}
+
+type DiskCreateResponse struct {
 	SuccessResponse
-	DiskUUID string `json:"diskUUID"`
+	Response DiskOAuthCodeResponse `json:"response"`
+}
+
+type FileRequestBlockResponse struct {
+	UUID  string
+	Order int
+	Size  int
+}
+
+type FileRequestResponse struct {
+	SuccessResponse
+	UUID   string
+	Name   string
+	Type   int
+	Size   int
+	Blocks []FileRequestBlockResponse
 }
 
 func NewEmptySuccessResponse() *EmptySuccessResponse {

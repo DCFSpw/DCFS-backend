@@ -18,10 +18,10 @@ package db
 	}
 
 	// add some providers
-	DB.DatabaseHandle.Where("provider_type = ?", dbo.GDRIVE).First(&provider)
-	if provider.ProviderType != dbo.GDRIVE {
+	DB.DatabaseHandle.Where("provider_type = ?", constants.PROVIDER_TYPE_GDRIVE).First(&provider)
+	if provider.ProviderType != constants.PROVIDER_TYPE_GDRIVE {
 		provider.UUID = uuid.New()
-		provider.ProviderType = dbo.GDRIVE
+		provider.ProviderType = constants.PROVIDER_TYPE_GDRIVE
 
 		DB.DatabaseHandle.Create(&provider)
 	}

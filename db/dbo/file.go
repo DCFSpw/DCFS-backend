@@ -7,8 +7,8 @@ import (
 
 // FileType types
 const (
-	Directory int = 0
-	Binary
+	FILE_TYPE_REGULAR   int = 1
+	FILE_TYPE_DIRECTORY int = 0
 )
 
 type File struct {

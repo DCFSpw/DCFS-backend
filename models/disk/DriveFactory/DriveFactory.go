@@ -1,7 +1,7 @@
 package DriveFactory
 
 import (
-	"dcfs/db/dbo"
+	"dcfs/constants"
 	"dcfs/models/disk"
 	"dcfs/models/disk/GDriveDisk"
 	"dcfs/models/disk/OneDriveDisk"
@@ -10,11 +10,11 @@ import (
 
 func NewDisk(providerType int) disk.Disk {
 	switch providerType {
-	case dbo.SFTP:
+	case constants.PROVIDER_TYPE_SFTP:
 		return SFTPDisk.NewSFTPDisk()
-	case dbo.GDRIVE:
+	case constants.PROVIDER_TYPE_GDRIVE:
 		return GDriveDisk.NewGDriveDisk()
-	case dbo.ONEDRIVE:
+	case constants.PROVIDER_TYPE_ONEDRIVE:
 		return OneDriveDisk.NewOneDriveDisk()
 	default:
 		return nil
