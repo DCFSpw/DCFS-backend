@@ -73,7 +73,7 @@ func FileRequest(c *gin.Context) {
 		Size:            file.GetSize(),
 	}
 
-	if file.GetType() != dbo.FILE_TYPE_DIRECTORY {
+	if file.GetType() != constants.FILE_TYPE_DIRECTORY {
 		var _file *models.RegularFile = file.(*models.RegularFile)
 		for _, block := range _file.Blocks {
 			blocks = append(blocks, responses.FileRequestBlockResponse{
