@@ -45,11 +45,7 @@ func DiskCreate(c *gin.Context) {
 		panic(err)
 	}
 
-	userUUID, err := uuid.Parse(_userUUID)
-	if err != nil {
-		// TODO: error handling
-		panic("Unimplemented")
-	}
+	userUUID := _userUUID
 
 	disk := DriveFactory.NewDisk(provider.ProviderType)
 	if disk == nil {
@@ -99,12 +95,7 @@ func DiskOAuth(c *gin.Context) {
 	}
 
 	userData, _ := c.Get("UserData")
-	_userUUID := userData.(middleware.UserData).UserUUID
-	userUUID, err := uuid.Parse(_userUUID)
-	if err != nil {
-		// TODO
-		panic("Unimplemented")
-	}
+	userUUID := userData.(middleware.UserData).UserUUID
 
 	volumeUUID, err := uuid.Parse(body.VolumeUUID)
 	if err != nil {
