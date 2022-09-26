@@ -1,0 +1,89 @@
+pipeline {
+    agent none
+    stages {
+        stage('build and update') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    branch 'main'
+                }
+            }
+            stages {
+                stage('create databases') {
+                    agent {
+                        label 'host'
+                    }
+                    steps {
+                        script {
+                            if (env.BRANCH_NAME == 'develop') {
+                                sh 'docker exec mariadb /bin/bash -c \"mysql -u root --execute=\\"DROP DATABASE IF EXISTS dcfs-develop\\"\"'
+                                sh 'docker exec mariadb /bin/bash -c \"mysql -u root --execute=\\"CREATE DATABASE dcfs-develop\\"\"'
+                            } else {
+                                sh 'docker exec mariadb /bin/bash -c \"mysql -u root --execute=\\"DROP DATABASE IF EXISTS dcfs\\"\"'
+                                sh 'docker exec mariadb /bin/bash -c \"mysql -u root --execute=\\"CREATE DATABASE dcfs\\"\"'
+                            }
+                        }
+                        
+                        cleanWs()
+                    }
+                }
+                stage('build') {
+                    agent {
+                        label 'worker'
+                    }
+                    steps {
+                            script {
+                                if (env.BRANCH_NAME == 'develop') {
+                                    sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
+                                    sh 'sed -i "s/dcfs/dcfs-develop/g" connection.json'
+                                } else {
+                                    sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
+                                }
+                            }
+                            sh 'go build -o dcfs-backend dcfs'
+                            stash includes: '**', name: 'build'
+                        }
+
+                        cleanWs()
+                    }
+                }
+                stage('update develop') {
+                    agent {
+                        label 'host'
+                    }
+                    when {
+                        branch 'develop'
+                    }
+                    steps {
+                        unstash name: 'build'
+                        sh 'echo "stopping backend-develop docker"'
+                        sh 'docker stop backend-develop'
+                        sh 'rm -rf /home/flatly/apps/backend/develop/*'
+                        sh 'cp -r ./* /home/flatly/apps/backend/develop/'
+                        sh 'echo "restarting backend-develop docker"'
+                        sh 'docker restart backend-develop'
+                        cleanWs()
+                    }
+                }
+                stage('update main') {
+                    agent {
+                        label 'vps'
+                    }
+                    when {
+                        branch 'main'
+                    }
+                    steps {
+                        unstash name: 'build'
+                        sh 'echo "stopping backend docker"'
+                        sh 'docker stop backend'
+                        sh 'rm -rf /home/flatly/apps/backend/main/*'
+                        sh 'cp -r ./* /home/flatly/apps/backend/main/'
+                        sh 'echo "restarting backend docker"'
+                        sh 'docker restart backend'
+                        cleanWs()
+                    }
+                }
+            }
+        }
+    }
+}

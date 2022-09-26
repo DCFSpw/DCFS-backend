@@ -1,0 +1,20 @@
+pipeline {
+    agent {
+        label 'worker'
+    }
+    stages {
+        stage('build and test') {
+            when {
+                // execute only on PRs to develop and main
+                anyOf {
+                    changeRequest target: 'main'
+                    changeRequest target: 'develop'
+                }
+            }
+            steps {
+                sh 'go test ./...'
+                cleanWs()
+            }
+        }
+    }
+}
