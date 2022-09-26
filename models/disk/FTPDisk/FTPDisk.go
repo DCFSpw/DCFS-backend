@@ -30,9 +30,7 @@ func (d *FTPDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *FTPDisk) Upload(bm apicalls.BlockMetadata) error {
-	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
-
+func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	// Create and upload remote file
 	err := d.credentials.Client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
@@ -42,9 +40,7 @@ func (d *FTPDisk) Upload(bm apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *FTPDisk) Download(bm apicalls.BlockMetadata) error {
-	var blockMetadata *apicalls.SFTPBlockMetadata = bm.(*apicalls.SFTPBlockMetadata)
-
+func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	// Download remote file
 	reader, err := d.credentials.Client.Retr(blockMetadata.UUID.String())
 	if err != nil {
