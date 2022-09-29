@@ -12,6 +12,7 @@ type ValidationError struct {
 }
 
 type ValidationErrorResponse struct {
+	// Error code: 422
 	Success          bool              `json:"success"`
 	Message          string            `json:"message"`
 	Code             string            `json:"code"`
@@ -52,6 +53,36 @@ func NewValidationErrorResponse(err error) *ValidationErrorResponse {
 			r.ValidationErrors[i].Message = getFieldValidationErrorMessage(field)
 		}
 	}
+
+	return r
+}
+
+func NewValidationErrorResponseSingle(code string, field string, message string) *ValidationErrorResponse {
+	var r *ValidationErrorResponse = new(ValidationErrorResponse)
+
+	// Create response header
+	r.Success = false
+	r.Code = code
+	r.Message = "Validation error"
+
+	// Create validation errors array
+	r.ValidationErrors = make([]ValidationError, 1)
+	r.ValidationErrors[0].Field = field
+	r.ValidationErrors[0].Message = message
+
+	return r
+}
+
+func NewValidationErrorResponseEmpty(code string, message string) *ValidationErrorResponse {
+	var r *ValidationErrorResponse = new(ValidationErrorResponse)
+
+	// Create response header
+	r.Success = false
+	r.Code = code
+	r.Message = message
+
+	// Create empty validation errors array
+	r.ValidationErrors = make([]ValidationError, 0)
 
 	return r
 }

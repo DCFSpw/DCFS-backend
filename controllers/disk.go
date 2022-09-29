@@ -9,6 +9,7 @@ import (
 	credentials2 "dcfs/models/credentials"
 	disk2 "dcfs/models/disk"
 	"dcfs/models/disk/DriveFactory"
+	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -16,54 +17,47 @@ import (
 	"log"
 )
 
-type diskCreateBody struct {
-	Name         string `json:"name"`
-	ProviderUUID string `json:"providerUUID"`
-	VolumeUUID   string `json:"volumeUUID"`
-	Credentials  string `json:"credentials"`
-}
-
 func DiskCreate(c *gin.Context) {
-	var body diskCreateBody = diskCreateBody{}
+	var requestBody requests.DiskCreateRequest = requests.DiskCreateRequest{}
 	var provider *dbo.Provider = dbo.NewProvider()
 	var authCode string = ""
 	userData, _ := c.Get("UserData")
 	_userUUID := userData.(middleware.UserData).UserUUID
 
-	// unpack request
-	if err := c.Bind(&body); err != nil {
-		// TODO: error handling
-		panic("Unimplemented")
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
 	}
-	log.Println("requests body: ", body)
+	log.Println("requests body: ", requestBody)
 	log.Println("userUUID: ", _userUUID)
 
-	// get provider info
-	db.DB.DatabaseHandle.Where("uuid = ?", body.ProviderUUID).First(&provider)
+	// Get provider info
+	db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider)
 
-	volumeUUID, err := uuid.Parse(body.VolumeUUID)
+	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
-		// TODO: error handling
-		panic(err)
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
+		return
 	}
 
 	userUUID := _userUUID
 
 	disk := DriveFactory.NewDisk(provider.ProviderType)
 	if disk == nil {
-		c.JSON(401, responses.SuccessResponse{Success: true, Message: "Provider not supported"})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
 
 	disk.SetUUID(uuid.New())
 
-	// get volume handle
+	// Get volume handle
 	volume := models.Transport.GetVolume(userUUID, volumeUUID)
 	volume.AddDisk(disk.GetUUID(), disk)
-	providerUUID, _ := uuid.Parse(body.ProviderUUID)
+	providerUUID, _ := uuid.Parse(requestBody.ProviderUUID)
 
 	if provider.ProviderType == constants.PROVIDER_TYPE_SFTP {
-		disk.SetCredentials(credentials2.NewSFTPCredentials(body.Credentials))
+		disk.SetCredentials(credentials2.NewSFTPCredentials(requestBody.Credentials))
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	}
 
@@ -73,76 +67,69 @@ func DiskCreate(c *gin.Context) {
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	}
 
-	c.JSON(200, responses.DiskCreateResponse{
+	c.JSON(200, responses.DiskCreateSuccessResponse{
 		SuccessResponse: responses.SuccessResponse{Success: true, Message: "Successfully started the procedure of adding a disk"},
-		Response: responses.DiskOAuthCodeResponse{
+		Data: responses.DiskOAuthCodeResponse{
 			UUID:         disk.GetUUID().String(),
-			Name:         body.Name,
+			Name:         requestBody.Name,
 			ProviderUUID: providerUUID.String(),
 			Link:         authCode,
 		},
 	})
 }
 
-type oauthBody struct {
-	VolumeUUID   string `json:"volumeUUID"`
-	DiskUUID     string `json:"diskUUID"`
-	ProviderUUID string `json:"providerUUID"`
-	Code         string `json:"code"`
-}
-
 func DiskOAuth(c *gin.Context) {
-	var body oauthBody
+	var requestBody requests.OAuthRequest
 
-	err := c.Bind(&body)
-	if err != nil {
-		// TODO: error handling
-		panic("Unimplemented")
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
 	}
 
 	userData, _ := c.Get("UserData")
 	userUUID := userData.(middleware.UserData).UserUUID
 
-	volumeUUID, err := uuid.Parse(body.VolumeUUID)
+	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
+		return
 	}
 
-	diskUUID, err := uuid.Parse(body.DiskUUID)
+	diskUUID, err := uuid.Parse(requestBody.DiskUUID)
 	if err != nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "DiskUUID", "Provided DiskUUID is not a valid UUID"))
+		return
 	}
 
-	providerUUID, err := uuid.Parse(body.ProviderUUID)
+	providerUUID, err := uuid.Parse(requestBody.ProviderUUID)
 	if err != nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "ProviderUUID", "Provided ProviderUUID is not a valid UUID"))
+		return
 	}
 
 	volume := models.Transport.GetVolume(userUUID, volumeUUID)
 	if volume == nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find volume with provided UUID"))
+		return
 	}
 
 	disk := (volume.GetDisk(diskUUID)).(disk2.OAuthDisk)
 	if disk == nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find disk with provided UUID or disk is not associated with provided volume"))
+		return
 	}
 
 	config := disk.GetConfig()
-	tok, err := config.Exchange(c, body.Code)
+	tok, err := config.Exchange(c, requestBody.Code)
 	if err != nil {
 		log.Fatalf("Unable to retrieve token from web %v", err)
 	}
 
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
 	db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-	// TODO: update return value
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Success"})
+
+	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
 func DiskGet(c *gin.Context) {

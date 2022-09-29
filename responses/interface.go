@@ -31,18 +31,6 @@ type BlockDownloadResponse struct {
 	Block   []uint8 `json:"block"`
 }
 
-type DiskOAuthCodeResponse struct {
-	UUID         string `json:"uuid"`
-	Name         string `json:"name"`
-	ProviderUUID string `json:"provider_uuid"`
-	Link         string `json:"link"`
-}
-
-type DiskCreateResponse struct {
-	SuccessResponse
-	Response DiskOAuthCodeResponse `json:"response"`
-}
-
 type FileRequestBlockResponse struct {
 	UUID  string
 	Order int
