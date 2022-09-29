@@ -29,6 +29,7 @@ func DiskCreate(c *gin.Context) {
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
+
 	log.Println("requests body: ", requestBody)
 	log.Println("userUUID: ", _userUUID)
 

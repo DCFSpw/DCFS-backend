@@ -19,12 +19,6 @@ type FailureResponse struct {
 	Code    string `json:"code"`
 }
 
-type OperationFailureResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
-}
-
 type BlockDownloadResponse struct {
 	Success bool    `json:"success"`
 	Message string  `json:"message"`
