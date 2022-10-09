@@ -37,3 +37,8 @@ const (
 	BLOCK_STATUS_TRANSFERRED int = 2
 	BLOCK_STATUS_FAILED      int = 3
 )
+
+// Pagination
+const (
+	PAGINATION_RECORDS_PER_PAGE int = 10
+)
