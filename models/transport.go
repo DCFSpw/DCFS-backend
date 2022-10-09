@@ -58,6 +58,21 @@ func (transport *transport) GetVolume(userUUID uuid.UUID, volumeUUID uuid.UUID) 
 	return transport.getVolumeContainer(userUUID, volumeUUID).Volume
 }
 
+func (transport *transport) GetVolumes(userUUID uuid.UUID) []*Volume {
+	transport.ActiveVolumesMutex.Lock()
+	defer transport.ActiveVolumesMutex.Unlock()
+
+	var rsp []*Volume
+	var _volumes []dbo.Volume
+	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Find(&_volumes)
+
+	for _, volume := range _volumes {
+		rsp = append(rsp, transport.getVolumeContainer(userUUID, volume.UUID).Volume)
+	}
+
+	return rsp
+}
+
 func (transport *transport) getVolumeContainer(userUUID uuid.UUID, volumeUUID uuid.UUID) *VolumeContainer {
 	if transport.ActiveVolumes == nil {
 		transport.ActiveVolumes = make(map[uuid.UUID]map[uuid.UUID]*VolumeContainer)

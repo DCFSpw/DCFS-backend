@@ -23,6 +23,7 @@ type File interface {
 	SetVolume(v *Volume)
 
 	IsCompleted() bool
+	GetBlocks() *[]*Block
 
 	Remove()
 }
@@ -84,6 +85,10 @@ func (file *AbstractFile) SetVolume(v *Volume) {
 	file.Volume = v
 }
 
+func (file *AbstractFile) GetBlocks() *[]*Block {
+	return nil
+}
+
 type RegularFile struct {
 	AbstractFile
 	Blocks map[uuid.UUID]*Block
@@ -143,6 +148,16 @@ func (file *RegularFile) SetVolume(v *Volume) {
 	file.AbstractFile.SetVolume(v)
 }
 
+func (file *RegularFile) GetBlocks() *[]*Block {
+	var blocks []*Block = nil
+
+	for _, block := range file.Blocks {
+		blocks = append(blocks, block)
+	}
+
+	return &blocks
+}
+
 type Directory struct {
 	AbstractFile
 	Files []File
@@ -199,6 +214,10 @@ func (d *Directory) GetVolume() *Volume {
 
 func (d *Directory) SetVolume(v *Volume) {
 	d.AbstractFile.SetVolume(v)
+}
+
+func (d *Directory) GetBlocks() *[]*Block {
+	return d.AbstractFile.GetBlocks()
 }
 
 func NewFile(filetype int) File {
