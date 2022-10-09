@@ -4,8 +4,8 @@ type Response interface {
 }
 
 type EmptySuccessResponse struct {
-	Success bool    `json:"success"`
-	Data    []uint8 `json:"data"`
+	Success bool        `json:"success"`
+	Data    interface{} `json:"data"`
 }
 
 type SuccessResponse struct {
@@ -45,4 +45,11 @@ func NewEmptySuccessResponse() *EmptySuccessResponse {
 	r.Success = true
 	r.Data = nil
 	return r
+}
+
+func CreateEmptySuccessResponse(data interface{}) *EmptySuccessResponse {
+	return &EmptySuccessResponse{
+		Success: true,
+		Data:    data,
+	}
 }

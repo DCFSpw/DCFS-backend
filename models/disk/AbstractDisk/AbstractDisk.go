@@ -86,7 +86,7 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 
 func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {
 	var provider dbo.Provider
-	db.DB.DatabaseHandle.Where("provider_type = ?", providerType).First(&provider)
+	db.DB.DatabaseHandle.Where("type = ?", providerType).First(&provider)
 
 	if provider.Type != providerType {
 		return uuid.Nil

@@ -10,7 +10,6 @@ import (
 	"dcfs/models/disk/OAuthDisk"
 	"dcfs/requests"
 	"dcfs/responses"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -145,9 +144,15 @@ func DiskUpdate(c *gin.Context) {
 	var _diskUUID string
 	var diskUUID uuid.UUID
 	var err error
-	var volumes *[]*models.Volume
-	var _volume *models.Volume = nil
+	var volumes []*models.Volume
+	var volume *models.Volume = nil
 	var disk models.Disk = nil
+
+	err = c.ShouldBindJSON(&body)
+	if err != nil {
+		c.JSON(401, responses.NewValidationErrorResponse(err))
+	}
+
 	userData, _ := c.Get("UserData")
 	userUUID := userData.(middleware.UserData).UserUUID
 
@@ -164,10 +169,10 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
-	for _, volume := range *volumes {
-		disk = volume.GetDisk(diskUUID)
+	for _, _volume := range volumes {
+		disk = _volume.GetDisk(diskUUID)
 		if disk != nil {
-			_volume = volume
+			volume = _volume
 			break
 		}
 	}
@@ -183,12 +188,34 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
-	disk.Rename(body.Name)
-	disk.CreateCredentials(fmt.Sprintf("%s:%s:%s:%s", body.Credentials.Login, body.Credentials.Password, body.Credentials.Host, body.Credentials.Port))
+	// TODO: change disk's name: in db and in the backend
+	cred := body.Credentials.ToString()
+	if cred != "" {
+		_, ok := disk.(OAuthDisk.OAuthDisk)
+		if ok {
+			c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "It is not allowed to change the credentials of an OAuth disk"))
+			return
+		}
 
-	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), _volume.UUID)
-	db.DB.DatabaseHandle.Save(&diskDBO)
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Update Endpoint"})
+		disk.CreateCredentials(cred)
+	}
+
+	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), volume.UUID)
+	err = db.DB.DatabaseHandle.Save(&diskDBO).Error
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
+		return
+	}
+
+	// load full database object with a provider and a volume to return
+	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&diskDBO).Error
+	if err != nil {
+		// this should never happen
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
+		return
+	}
+
+	c.JSON(200, responses.CreateEmptySuccessResponse(diskDBO))
 }
 
 func DiskDelete(c *gin.Context) {
