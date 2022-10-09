@@ -202,15 +202,15 @@ func GetDisks(c *gin.Context) {
 	var page int
 	var err error
 
-	page, err = strconv.Atoi(c.Param("page"))
+	page, err = strconv.Atoi(c.Request.URL.Query().Get("page"))
 	if err != nil {
 		page = 1
 	}
 
-	userData, _ := c.Get("User Data")
+	userData, _ := c.Get("UserData")
 	userUUID = userData.(middleware.UserData).UserUUID
 
-	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Find(&_disks)
+	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Preload("Provider").Preload("Volume").Find(&_disks)
 	for _, disk := range _disks {
 		disks = append(disks, disk)
 	}
