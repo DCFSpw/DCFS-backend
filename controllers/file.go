@@ -8,6 +8,7 @@ import (
 	"dcfs/middleware"
 	"dcfs/models"
 	"dcfs/models/disk/SFTPDisk"
+	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -15,19 +16,8 @@ import (
 	"time"
 )
 
-type RequestedFile struct {
-	Name string `json:"name"`
-	Type int    `json:"type"`
-	Size int    `json:"size"`
-}
-
-type FileRequestRequest struct {
-	VolumeUUID string        `json:"volumeUUID"`
-	File       RequestedFile `json:"file"`
-}
-
 func FileRequest(c *gin.Context) {
-	var req FileRequestRequest
+	var requestBody requests.GetFileRequest
 	var fileUploadRequest apicalls.FileUploadRequest = apicalls.FileUploadRequest{}
 	var file models.File
 	var volume *models.Volume
@@ -36,29 +26,29 @@ func FileRequest(c *gin.Context) {
 	userData, _ := c.Get("UserData")
 	userUUID := userData.(middleware.UserData).UserUUID
 
-	err = c.BindJSON(&req)
-	if err != nil {
-		panic("unimplemented")
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
 	}
 
-	volumeUUID, err := uuid.Parse(req.VolumeUUID)
+	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
-		// TODO
-		panic("unimplemented")
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
+		return
 	}
 
 	volume = models.Transport.GetVolume(userUUID, volumeUUID)
-
-	err = c.Bind(&req)
-	if err != nil {
-		// TODO
-		panic("unimplemented")
+	if volume == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find volume with provided UUID"))
+		return
 	}
-	log.Println("Got a request for a file named: ", req.File.Name, "of size: ", req.File.Size)
 
-	fileUploadRequest.Size = req.File.Size
-	fileUploadRequest.Type = req.File.Type
-	fileUploadRequest.Name = req.File.Name
+	log.Println("Got a request for a file named: ", requestBody.File.Name, "of size: ", requestBody.File.Size)
+
+	fileUploadRequest.Size = requestBody.File.Size
+	fileUploadRequest.Type = requestBody.File.Type
+	fileUploadRequest.Name = requestBody.File.Name
 	fileUploadRequest.UserUUID = userUUID
 
 	file = volume.FileUploadRequest(&fileUploadRequest)
@@ -90,9 +80,6 @@ func FileRequest(c *gin.Context) {
 	c.JSON(200, rsp)
 }
 
-type FileUploadBody struct {
-}
-
 func FileUpload(c *gin.Context) {
 	var fileUUID uuid.UUID
 	var blockUUID uuid.UUID
@@ -105,41 +92,43 @@ func FileUpload(c *gin.Context) {
 	_blockUUID = c.PostForm("blockUUID")
 	blockHeader, err := c.FormFile("block")
 	if err != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing block"})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "block", "Missing block"))
 		return
 	}
+
 	block, blockError := blockHeader.Open()
 	if blockError != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block opening failed: " + blockError.Error()})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_CANNOT_OPEN_BLOCK, "Block opening failed: "+blockError.Error()))
 		return
 	}
 
 	// Validate data
 	if _blockUUID == "" {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing blockUUID"})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_VALIDATOR_ERROR, "blockUUID", "Missing blockUUID"))
 		return
 	}
 
 	blockUUID, err = uuid.Parse(_blockUUID)
 	if err != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Invalid blockUUID"})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "blockUUID", "Provided blockUUID is not a valid UUID"))
 		return
 	}
 
 	fileUUID, err = uuid.Parse(_fileUUID)
 	if err != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Invalid fileUUID"})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "fileUUID", "Provided fileUUID is not a valid UUID"))
 		return
 	}
 
 	err = models.Transport.MarkAsUsed(fileUUID)
 	if err != nil {
-		panic("unimplemented")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
+		return
 	}
 
 	var file *models.RegularFile = models.Transport.GetEnqueuedFileUpload(fileUUID).(*models.RegularFile)
 	if file == nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Block belongs to an unknown file"})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_MISMATCH, "Block belongs to an unknown file"))
 		return
 	}
 
@@ -150,7 +139,7 @@ func FileUpload(c *gin.Context) {
 	readSize, err := block.Read(contents)
 
 	if err != nil || readSize != int(blockHeader.Size) {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block loading failed: " + err.Error()})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_CANNOT_LOAD_BLOCK, "Block loading failed: "+err.Error()))
 		return
 	}
 
@@ -168,7 +157,7 @@ func FileUpload(c *gin.Context) {
 
 	err = file.Blocks[blockUUID].Disk.Upload(blockMetadata)
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block uploading failed: " + err.Error()})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_UPLOAD_FAILED, "Block loading failed: "+err.Error()))
 		return
 	}
 
@@ -194,7 +183,7 @@ func FileUpload(c *gin.Context) {
 	}
 	*/
 
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Upload Endpoint"})
+	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
 func FileRename(c *gin.Context) {
@@ -255,12 +244,8 @@ func FileShareRemove(c *gin.Context) {
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Remove Endpoint"})
 }
 
-type FileRequestCompleteBody struct {
-	direction bool // true - download, false - upload
-}
-
 func FileRequestComplete(c *gin.Context) {
-	var body FileRequestCompleteBody = FileRequestCompleteBody{}
+	var requestBody requests.FileRequestCompleteRequest = requests.FileRequestCompleteRequest{}
 	var _fileUUID string
 	var fileUUID uuid.UUID
 	var userUUID uuid.UUID
@@ -275,17 +260,17 @@ func FileRequestComplete(c *gin.Context) {
 	_fileUUID = c.Param("FileUUID")
 	fileUUID, err = uuid.Parse(_fileUUID)
 	if err != nil {
-		// TODO
-		panic("Unimplemented")
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "fileUUID", "Provided fileUUID is not a valid UUID"))
+		return
 	}
 
-	err = c.Bind(&body)
-	if err != nil {
-		// TODO
-		panic("Unimplemented")
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
 	}
 
-	if body.direction {
+	if requestBody.Direction {
 		// TODO
 		panic("Unimplemented")
 	} else {
