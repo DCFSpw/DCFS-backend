@@ -72,7 +72,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 		provider := dbo.Provider{}
 		db.DB.DatabaseHandle.Where("uuid = ?", _d.ProviderUUID).First(&provider)
 
-		d := DriveFactory.NewDisk(provider.ProviderType)
+		d := DriveFactory.NewDisk(provider.Type)
 		d.SetUUID(_d.UUID)
 		d.CreateCredentials(_d.Credentials)
 		v.AddDisk(d.GetUUID(), d)
