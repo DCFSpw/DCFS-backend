@@ -42,9 +42,8 @@ pipeline {
                             }
                             sh 'go build -o dcfs-backend dcfs'
                             stash includes: '**', name: 'build'
-                        }
 
-                        cleanWs()
+                            cleanWs()
                     }
                 }
                 stage('update develop') {
