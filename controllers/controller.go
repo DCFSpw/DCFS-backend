@@ -86,6 +86,9 @@ func ServeBackend() {
 		authorized.DELETE("/file/share/FileUUID", FileShareRemove)
 
 		authorized.GET("/file/files", GetFiles)
+
+		// Providers
+		authorized.GET("/providers", GetProviders);
 	}
 
 	// Listen and serve on 0.0.0.0:8080

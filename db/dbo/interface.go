@@ -8,6 +8,6 @@ type DatabaseObject interface {
 }
 
 type AbstractDatabaseObject struct {
-	DatabaseObject `gorm:"-"`
-	UUID           uuid.UUID `gorm:"primaryKey;type:varchar(36)"`
+	DatabaseObject `gorm:"-" json:"-"`
+	UUID           uuid.UUID `gorm:"primaryKey;type:varchar(36)" json:"uuid"`
 }
