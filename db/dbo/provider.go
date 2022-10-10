@@ -2,9 +2,9 @@ package dbo
 
 type Provider struct {
 	AbstractDatabaseObject
-	Type int
-	Name string
-	Logo string
+	Type int    `json:"type"`
+	Name string `json:"name"`
+	Logo string `json:"logo"`
 }
 
 func NewProvider() *Provider {
