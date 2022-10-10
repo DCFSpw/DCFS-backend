@@ -49,7 +49,7 @@ func DiskCreate(c *gin.Context) {
 
 	userUUID := _userUUID
 
-	disk := DriveFactory.NewDisk(provider.ProviderType)
+	disk := DriveFactory.NewDisk(provider.Type)
 	if disk == nil {
 		c.JSON(401, responses.SuccessResponse{Success: true, Message: "Provider not supported"})
 		return
@@ -62,12 +62,12 @@ func DiskCreate(c *gin.Context) {
 	volume.AddDisk(disk.GetUUID(), disk)
 	providerUUID, _ := uuid.Parse(body.ProviderUUID)
 
-	if provider.ProviderType == constants.PROVIDER_TYPE_SFTP {
+	if provider.Type == constants.PROVIDER_TYPE_SFTP {
 		disk.SetCredentials(credentials2.NewSFTPCredentials(body.Credentials))
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	}
 
-	if provider.ProviderType == constants.PROVIDER_TYPE_ONEDRIVE || provider.ProviderType == constants.PROVIDER_TYPE_GDRIVE {
+	if provider.Type == constants.PROVIDER_TYPE_ONEDRIVE || provider.Type == constants.PROVIDER_TYPE_GDRIVE {
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 		config := disk.(disk2.OAuthDisk).GetConfig()
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
