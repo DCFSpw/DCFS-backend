@@ -77,6 +77,14 @@ func Authenticate() gin.HandlerFunc {
 			return
 		}
 
+		// Check if the token is bearer token and if it is, remove the bearer part
+		if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
+			c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_JWT_NOT_BEARER})
+			c.Abort()
+			return
+		}
+		tokenString = tokenString[7:]
+
 		// Validate the token
 		claims, errCode := ValidateToken(tokenString)
 		if errCode != constants.SUCCESS {
