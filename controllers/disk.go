@@ -58,7 +58,7 @@ func DiskCreate(c *gin.Context) {
 	providerUUID, _ := uuid.Parse(requestBody.ProviderUUID)
 
 	if provider.Type == constants.PROVIDER_TYPE_SFTP {
-		disk.SetCredentials(credentials2.NewSFTPCredentials(body.Credentials))
+		disk.SetCredentials(credentials2.NewSFTPCredentials(requestBody.Credentials))
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	}
 
