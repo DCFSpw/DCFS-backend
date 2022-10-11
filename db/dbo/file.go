@@ -14,6 +14,8 @@ type File struct {
 	ModificationDate time.Time
 	size             int
 	checksum         int
+
+	User User `gorm:"foreignKey:UserUUID;references:UUID"`
 }
 
 func NewFile() *File {
