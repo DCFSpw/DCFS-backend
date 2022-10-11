@@ -22,6 +22,7 @@ const (
 // Encryption types
 const (
 	ENCRYPTION_TYPE_NO_ENCRYPTION int = 0
+	ENCRYPTION_TYPE_AES_256       int = 1
 )
 
 // FilePartition types
