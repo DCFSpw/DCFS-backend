@@ -140,7 +140,7 @@ func ChangeUserPassword(c *gin.Context) {
 	// Check if password is correct
 	errCode := validators.ValidateUserPassword(user.Password, requestBody.OldPassword)
 	if errCode != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Invalid credentials", Code: constants.AUTH_INVALID_PASSWORD})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.AUTH_INVALID_OLD_PASSWORD, "OldPassword", "Old password is incorrect"))
 		return
 	}
 
