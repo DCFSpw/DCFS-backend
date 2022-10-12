@@ -8,6 +8,7 @@ import (
 	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 func CreateVolume(c *gin.Context) {
@@ -50,7 +51,31 @@ func DeleteVolume(c *gin.Context) {
 }
 
 func GetVolume(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Volume Endpoint"})
+	var volume *dbo.Volume
+	var volumeUUID string
+	var userUUID uuid.UUID
+
+	// Retrieve volumeUUID from path parameters
+	volumeUUID = c.Param("VolumeUUID")
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve volume from database
+	volume, dbErr := db.VolumeFromDatabase(volumeUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "Volume not found"))
+		return
+	}
+
+	// Verify that the user is owner of the volume
+	if userUUID != volume.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
+		return
+	}
+
+	// Return volume
+	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
 func ShareVolume(c *gin.Context) {
