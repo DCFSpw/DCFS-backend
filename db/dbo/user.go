@@ -27,11 +27,13 @@ func HashPassword(password string) string {
 
 func NewUserFromRequest(request *requests.RegisterUserRequest) *User {
 	var u *User = NewUser()
+
 	u.AbstractDatabaseObject.DatabaseObject = u
 	u.UUID, _ = uuid.NewUUID()
 	u.FirstName = request.FirstName
 	u.LastName = request.LastName
 	u.Email = request.Email
 	u.Password = HashPassword(request.Password)
+
 	return u
 }

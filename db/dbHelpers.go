@@ -16,3 +16,14 @@ func UserFromDatabase(uuid uuid.UUID) (*dbo.User, string) {
 
 	return user, constants.SUCCESS
 }
+
+func VolumeFromDatabase(uuid string) (*dbo.Volume, string) {
+	var volume *dbo.Volume = dbo.NewVolume()
+
+	result := DB.DatabaseHandle.Where("uuid = ?", uuid).First(&volume)
+	if result.Error != nil {
+		return nil, constants.DATABASE_VOLUME_NOT_FOUND
+	}
+
+	return volume, constants.SUCCESS
+}
