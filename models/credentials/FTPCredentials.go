@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/jlaffaye/ftp"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -18,7 +17,7 @@ type FTPCredentials struct {
 	Client   *ftp.ServerConn
 }
 
-func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	log.Printf("Connecting to %s ...\n", credentials.Host)
 
 	// Prepare FTP server address
