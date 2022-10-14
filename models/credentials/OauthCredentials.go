@@ -64,6 +64,10 @@ func (credentials *OauthCredentials) ToString() string {
 	return credentials.Token.AccessToken + ":" + credentials.Token.RefreshToken
 }
 
+func (credentials *OauthCredentials) GetPath() string {
+	panic("OAuth credentials do not return a path!")
+}
+
 func NewOauthCredentials(str string) *OauthCredentials {
 	var credentials *OauthCredentials = new(OauthCredentials)
 	tokens := strings.Split(str, ":")

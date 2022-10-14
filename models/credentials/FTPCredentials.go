@@ -14,6 +14,7 @@ type FTPCredentials struct {
 	Password string
 	Host     string
 	Port     string
+	Path     string
 	Client   *ftp.ServerConn
 }
 
@@ -45,6 +46,10 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 
 func (credentials *FTPCredentials) ToString() string {
 	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port
+}
+
+func (credentials *FTPCredentials) GetPath() string {
+	return credentials.Path
 }
 
 func NewFTPCredentials(cred string) *FTPCredentials {
