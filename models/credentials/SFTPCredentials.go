@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -23,7 +22,7 @@ type SFTPCredentials struct {
 	Client   *sftp.Client
 }
 
-func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	log.Printf("Connecting to %s ...\n", credentials.Host)
 
 	// Try to use $SSH_AUTH_SOCK which contains the path of the unix file socket that the sshd agent uses
