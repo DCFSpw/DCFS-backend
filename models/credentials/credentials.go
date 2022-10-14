@@ -12,4 +12,5 @@ const (
 type Credentials interface {
 	Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{}
 	ToString() string
+	GetPath() string
 }
