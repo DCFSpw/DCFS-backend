@@ -5,6 +5,7 @@ const (
 	PROVIDER_TYPE_SFTP     int = 1
 	PROVIDER_TYPE_GDRIVE   int = 2
 	PROVIDER_TYPE_ONEDRIVE int = 3
+	PROVIDER_TYPE_FTP      int = 4
 )
 
 // file types
