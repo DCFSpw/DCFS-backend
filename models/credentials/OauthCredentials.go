@@ -15,7 +15,7 @@ type OauthCredentials struct {
 	Token *oauth2.Token
 }
 
-func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	var config *oauth2.Config = md.Config
 	var ret *http.Client
 	credentials.PerformOp(
