@@ -18,10 +18,10 @@ type PaginationData struct {
 func Paginate(collection []interface{}, page int, _perPage int) *PaginationData {
 	var paginationData *PaginationData = new(PaginationData)
 	var totalPages int = int(math.Ceil(float64(len(collection)) / float64(_perPage)))
-	var recordsOnPage int = int(math.Min(float64(_perPage), float64(len(collection)*((page-1)*_perPage))))
+	var recordsOnPage int = int(math.Min(float64(_perPage), float64(len(collection)-((page-1)*_perPage))))
 	var data []interface{} = nil
 
-	for i := len(collection) * ((page - 1) * _perPage); i < len(collection)*((page-1)*_perPage)+recordsOnPage; i++ {
+	for i := (page - 1) * _perPage; i < ((page-1)*_perPage)+recordsOnPage; i++ {
 		data = append(data, collection[i])
 	}
 
@@ -31,5 +31,5 @@ func Paginate(collection []interface{}, page int, _perPage int) *PaginationData 
 	paginationData.Pagination.PerPage = _perPage
 	paginationData.Pagination.RecordsOnPage = recordsOnPage
 	paginationData.Pagination.TotalRecords = len(collection)
-	return nil
+	return paginationData
 }
