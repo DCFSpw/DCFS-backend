@@ -122,6 +122,7 @@ func DiskOAuth(c *gin.Context) {
 	}
 
 	config := disk.GetConfig()
+	config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 	tok, err := config.Exchange(c, requestBody.Code)
 	if err != nil {
 		log.Fatalf("Unable to retrieve token from web %v", err)
