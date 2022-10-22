@@ -41,7 +41,7 @@ func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 
 	if req.Type == constants.FILE_TYPE_REGULAR {
 		var _f *RegularFile = f.(*RegularFile)
-		var blockCount int = int(math.Ceil(float64(req.Size / v.BlockSize)))
+		var blockCount int = int(math.Max(math.Ceil(float64(req.Size/v.BlockSize)), 1))
 		var cumulativeSize int = 0
 
 		_f.Blocks = make(map[uuid.UUID]*Block)
