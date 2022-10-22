@@ -4,10 +4,11 @@ import (
 	"dcfs/apicalls"
 	"dcfs/db"
 	"dcfs/db/dbo"
+	"dcfs/requests"
+	"encoding/json"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -61,7 +62,10 @@ func (credentials *OauthCredentials) PerformOp(operator func(token *oauth2.Token
 }
 
 func (credentials *OauthCredentials) ToString() string {
-	return credentials.Token.AccessToken + ":" + credentials.Token.RefreshToken
+	var _cred *requests.OAuthCredentials = &requests.OAuthCredentials{AccessToken: credentials.Token.AccessToken, RefreshToken: credentials.Token.RefreshToken}
+	str, _ := json.Marshal(_cred)
+
+	return string(str)
 }
 
 func (credentials *OauthCredentials) GetPath() string {
@@ -69,13 +73,10 @@ func (credentials *OauthCredentials) GetPath() string {
 }
 
 func NewOauthCredentials(str string) *OauthCredentials {
-	var credentials *OauthCredentials = new(OauthCredentials)
-	tokens := strings.Split(str, ":")
-	if len(tokens) < 2 {
-		return nil
-	}
+	var _credentials *requests.OAuthCredentials = requests.StringToOAuthCredentials(str)
+	var credentials *OauthCredentials = &OauthCredentials{}
 
-	credentials.Token = &oauth2.Token{AccessToken: tokens[0], RefreshToken: tokens[1]}
+	credentials.Token = &oauth2.Token{AccessToken: _credentials.AccessToken, RefreshToken: _credentials.RefreshToken}
 
 	// invalidate token
 	credentials.Token.Expiry = time.Now()

@@ -2,6 +2,7 @@ package disk
 
 import (
 	"dcfs/apicalls"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"github.com/gin-gonic/gin"
@@ -76,4 +77,19 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		VolumeUUID:             volumeUUID,
 		Credentials:            credentials,
 	}
+}
+
+func (d *AbstractDisk) GetProviderUUID() uuid.UUID {
+	panic("Unimplemented abstract function")
+}
+
+func (d *AbstractDisk) GetProvider(provider_type int) uuid.UUID {
+	var provider dbo.Provider
+	db.DB.DatabaseHandle.Where("provider_type = ?", provider_type).First(&provider)
+
+	if provider.Type != provider_type {
+		return uuid.Nil
+	}
+
+	return provider.UUID
 }
