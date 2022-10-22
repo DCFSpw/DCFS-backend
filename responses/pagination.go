@@ -1,9 +1,7 @@
 package responses
 
-import "dcfs/models"
-
 type data struct {
-	Pagination models.Pagination
+	Pagination interface{}
 	Data       interface{}
 }
 
@@ -12,6 +10,11 @@ type PaginationResponse struct {
 	Data    data
 }
 
-func NewPaginationResponse(paginationData models.PaginationData) PaginationResponse {
+type PaginationData struct {
+	Pagination interface{}
+	Data       interface{}
+}
+
+func NewPaginationResponse(paginationData PaginationData) PaginationResponse {
 	return PaginationResponse{Success: true, Data: data{Pagination: paginationData.Pagination, Data: paginationData.Data}}
 }
