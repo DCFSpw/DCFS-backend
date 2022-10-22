@@ -15,5 +15,5 @@ type FileUploadRequest struct {
 }
 
 type FileRequestCompleteRequest struct {
-	Direction bool `json:"direction" binding:"required"` // true - download, false - upload
+	Direction bool `json:"direction"` // true - download, false - upload
 }

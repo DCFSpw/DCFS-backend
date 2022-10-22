@@ -2,15 +2,16 @@ package credentials
 
 import (
 	"dcfs/apicalls"
+	"dcfs/requests"
+	"encoding/json"
 	"fmt"
 	"github.com/jlaffaye/ftp"
 	"log"
-	"strings"
 	"time"
 )
 
 type FTPCredentials struct {
-	User     string
+	Login    string
 	Password string
 	Host     string
 	Port     string
@@ -31,7 +32,7 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 	}
 
 	// Login to FTP server
-	err = conn.Login(credentials.User, credentials.Password)
+	err = conn.Login(credentials.Login, credentials.Password)
 	if err != nil {
 		log.Printf("Unable to login to FTP: %v", err)
 		return nil
@@ -42,7 +43,8 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 }
 
 func (credentials *FTPCredentials) ToString() string {
-	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port + ":" + credentials.Path
+	ret, _ := json.Marshal(credentials)
+	return string(ret)
 }
 
 func (credentials *FTPCredentials) GetPath() string {
@@ -50,14 +52,14 @@ func (credentials *FTPCredentials) GetPath() string {
 }
 
 func NewFTPCredentials(cred string) *FTPCredentials {
-	// string format: user:password:host:port:path
-	parsed := strings.Split(cred, ":")
+	var _credentials *requests.FTPCredentials = requests.StringToFTPCredentials(cred)
+
 	credentials := FTPCredentials{
-		User:     parsed[0],
-		Password: parsed[1],
-		Host:     parsed[2],
-		Port:     parsed[3],
-		Path:     parsed[4],
+		Login:    _credentials.Login,
+		Password: _credentials.Password,
+		Host:     _credentials.Host,
+		Port:     _credentials.Port,
+		Path:     _credentials.Path,
 	}
 
 	return &credentials
