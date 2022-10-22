@@ -43,3 +43,9 @@ const (
 const (
 	PAGINATION_RECORDS_PER_PAGE int = 10
 )
+
+// OneDrive
+const (
+	ONEDRIVE_SIZE_LIMIT   int = 4 * 1024 * 1024
+	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
+)
