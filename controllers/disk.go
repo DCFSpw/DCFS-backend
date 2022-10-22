@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"log"
+	"strconv"
 )
 
 func DiskCreate(c *gin.Context) {
@@ -58,7 +59,7 @@ func DiskCreate(c *gin.Context) {
 	providerUUID, _ := uuid.Parse(requestBody.ProviderUUID)
 
 	if provider.Type == constants.PROVIDER_TYPE_SFTP || provider.Type == constants.PROVIDER_TYPE_FTP {
-		disk.CreateCredentials(requestBody.Credentials)
+		disk.CreateCredentials(requestBody.Credentials.ToString())
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	}
 
@@ -147,7 +148,27 @@ func DiskDelete(c *gin.Context) {
 }
 
 func GetDisks(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Disks Endpoint"})
+	var userUUID uuid.UUID
+	var _disks []dbo.Disk
+	var disks []interface{}
+	var page int
+	var err error
+
+	page, err = strconv.Atoi(c.Param("page"))
+	if err != nil {
+		page = 1
+	}
+
+	userData, _ := c.Get("User Data")
+	userUUID = userData.(middleware.UserData).UserUUID
+
+	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Find(&_disks)
+	for _, disk := range _disks {
+		disks = append(disks, disk)
+	}
+
+	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
+	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }
 
 func DiskAssociate(c *gin.Context) {

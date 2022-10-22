@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -15,11 +14,7 @@ import (
 )
 
 type SFTPCredentials struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	Path     string
+	FTPCredentials
 }
 
 func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
@@ -39,7 +34,7 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 
 	// Prepare client configuration
 	config := ssh.ClientConfig{
-		User:            credentials.User,
+		User:            credentials.Login,
 		Auth:            auths,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         30 * time.Second,
@@ -69,7 +64,7 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 }
 
 func (credentials *SFTPCredentials) ToString() string {
-	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port + ":" + credentials.Path
+	return credentials.FTPCredentials.ToString()
 }
 
 func (credentials *SFTPCredentials) GetPath() string {
@@ -77,14 +72,8 @@ func (credentials *SFTPCredentials) GetPath() string {
 }
 
 func NewSFTPCredentials(cred string) *SFTPCredentials {
-	// string format: user:password:host:port
-	parsed := strings.Split(cred, ":")
 	credentials := SFTPCredentials{
-		User:     parsed[0],
-		Password: parsed[1],
-		Host:     parsed[2],
-		Port:     parsed[3],
-		Path:     parsed[4],
+		FTPCredentials: *NewFTPCredentials(cred),
 	}
 
 	return &credentials

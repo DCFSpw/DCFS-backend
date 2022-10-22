@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/sftp"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type SFTPDisk struct {
@@ -38,7 +39,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
-	var filepath string = fmt.Sprintf("%s/%s", d.GetCredentials().GetPath(), blockMetadata.UUID.String())
+	var filepath string = filepath.Join(d.GetCredentials().GetPath(), blockMetadata.UUID.String())
 
 	// Check if the file already exists
 	remoteFile, err := client.Open(filepath)
