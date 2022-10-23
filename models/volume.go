@@ -32,6 +32,14 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 	v.disks[diskUUID] = _disk
 }
 
+func (v *Volume) DeleteDisk(diskUUID uuid.UUID) {
+	if v.disks == nil {
+		return
+	}
+
+	delete(v.disks, diskUUID)
+}
+
 func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 	var f File = NewFileFromReq(req)
 	f.SetVolume(v)
