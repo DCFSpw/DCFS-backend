@@ -15,19 +15,19 @@ type dummyDisk struct {
 
 /* Mandatory Disk interface implementations */
 
-func (d *dummyDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
+func (d *dummyDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
+func (d *dummyDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
+func (d *dummyDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
+func (d *dummyDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 

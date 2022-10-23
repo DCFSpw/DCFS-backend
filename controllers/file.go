@@ -155,9 +155,9 @@ func FileUpload(c *gin.Context) {
 		models.Transport.MarkAsCompleted(UUID)
 	}
 
-	err = file.Blocks[blockUUID].Disk.Upload(blockMetadata)
-	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_UPLOAD_FAILED, "Block loading failed: "+err.Error()))
+	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
+	if errorWrapper != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errorWrapper.Code, "Block loading failed: "+errorWrapper.Error.Error()))
 		return
 	}
 
@@ -227,9 +227,9 @@ func FileDownload(c *gin.Context) {
 		return
 	}*/
 
-	err := ftpDisk.Download(&blockMetadata)
-	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + err.Error()})
+	errorWrapper := ftpDisk.Download(&blockMetadata)
+	if errorWrapper != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + errorWrapper.Error.Error()})
 		return
 	}
 
