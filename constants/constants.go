@@ -50,3 +50,8 @@ const (
 	ONEDRIVE_SIZE_LIMIT   int = 4 * 1024 * 1024
 	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
 )
+
+// block size
+const (
+	DEFAULT_VOLUME_BLOCK_SIZE int = 8 * 1024 * 1024
+)
