@@ -234,7 +234,44 @@ func DiskUpdate(c *gin.Context) {
 }
 
 func DiskDelete(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Delete Endpoint"})
+	var _diskUUID string
+	var _disk dbo.Disk
+	var _blocks []dbo.Block
+	var volume *models.Volume
+	var err error
+
+	_diskUUID = c.Param("DiskUUID")
+	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	if err != nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not find the disk with the provided UUID"))
+		return
+	}
+
+	userData, _ := c.Get("UserData")
+	userUUID := userData.(middleware.UserData).UserUUID
+
+	_d := models.Transport.FindEnqueuedDisk(_disk.UUID)
+	if _d != nil {
+		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't delete it now"))
+		return
+	}
+
+	err = db.DB.DatabaseHandle.Where("disk_uuid = ?", _diskUUID).Find(&_blocks).Error
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
+		return
+	}
+
+	if len(_blocks) > 0 {
+		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "The provided disk is not empty and thus cannot be deleted"))
+		return
+	}
+
+	volume = models.Transport.GetVolume(userUUID, _disk.Volume.UUID)
+	volume.DeleteDisk(_disk.UUID)
+	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
+
+	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }
 
 func GetDisks(c *gin.Context) {
