@@ -69,15 +69,14 @@ func DiskCreate(c *gin.Context) {
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	}
 
-	c.JSON(200, responses.DiskCreateSuccessResponse{
-		SuccessResponse: responses.SuccessResponse{Success: true, Message: "Successfully started the procedure of adding a disk"},
-		Data: responses.DiskOAuthCodeResponse{
-			UUID:         disk.GetUUID().String(),
-			Name:         requestBody.Name,
-			ProviderUUID: provider.UUID.String(),
-			Link:         authCode,
-		},
-	})
+	// load full database object with a provider and a volume to return
+	err = db.DB.DatabaseHandle.Where("uuid = ?", disk.GetUUID().String()).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	if err != nil {
+		// this should never happen
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
+	}
+
+	c.JSON(200, responses.CreateDiskSuccessResponse(_disk, authCode))
 }
 
 func DiskOAuth(c *gin.Context) {
