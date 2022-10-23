@@ -66,9 +66,6 @@ func ServeBackend() {
 		authorized.PUT("/disks/manage/:DiskUUID", DiskUpdate)
 		authorized.DELETE("/disks/manage/:DiskUUID", DiskDelete)
 
-		authorized.POST("/disks/association/:DiskUUID", DiskAssociate)
-		authorized.DELETE("/disks/association/:DiskUUID", DiskDissociate)
-
 		authorized.POST("/disks/oauth/:DiskUUID", DiskOAuth)
 
 		// File
@@ -88,7 +85,7 @@ func ServeBackend() {
 		authorized.GET("/file/files", GetFiles)
 
 		// Providers
-		authorized.GET("/providers", GetProviders);
+		authorized.GET("/providers", GetProviders)
 	}
 
 	// Listen and serve on 0.0.0.0:8080

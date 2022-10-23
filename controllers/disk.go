@@ -297,11 +297,3 @@ func GetDisks(c *gin.Context) {
 	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
 	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }
-
-func DiskAssociate(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Associate Endpoint"})
-}
-
-func DiskDissociate(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Dissociate Endpoint"})
-}
