@@ -1,7 +1,6 @@
 package models
 
 import (
-	"dcfs/models/disk"
 	"github.com/google/uuid"
 )
 
@@ -9,7 +8,7 @@ type Block struct {
 	UUID     uuid.UUID
 	UserUUID uuid.UUID
 	File     *File
-	Disk     disk.Disk
+	Disk     Disk
 
 	Size     int
 	Checksum int
@@ -18,7 +17,7 @@ type Block struct {
 	Order  int
 }
 
-func NewBlock(_UUID uuid.UUID, _userUUID uuid.UUID, _file *File, _disk disk.Disk, _size int, _checksum int, _status int, _order int) *Block {
+func NewBlock(_UUID uuid.UUID, _userUUID uuid.UUID, _file *File, _disk Disk, _size int, _checksum int, _status int, _order int) *Block {
 	var block *Block = new(Block)
 	block.UUID = _UUID
 	block.UserUUID = _userUUID

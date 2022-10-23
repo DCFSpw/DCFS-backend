@@ -4,13 +4,13 @@ import (
 	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
-	"dcfs/models/disk"
+	"dcfs/models"
 	"github.com/google/uuid"
 )
 
 // TODO: move seeding to another package to avoid cyclic imports
 func Seed() {
-	rootUUID := disk.RootUUID
+	rootUUID := models.RootUUID
 	volume := dbo.Volume{}
 	provider1 := dbo.Provider{}
 	provider2 := dbo.Provider{}
@@ -19,9 +19,9 @@ func Seed() {
 	user := dbo.User{}
 
 	// Add a root user
-	db.DB.DatabaseHandle.Where("uuid = ?", disk.RootUUID).First(&user)
-	if user.UUID != disk.RootUUID {
-		user.UUID = disk.RootUUID
+	db.DB.DatabaseHandle.Where("uuid = ?", models.RootUUID).First(&user)
+	if user.UUID != models.RootUUID {
+		user.UUID = models.RootUUID
 		user.FirstName = "Root"
 		user.LastName = "Root"
 		user.Email = "root@root.com"

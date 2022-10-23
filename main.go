@@ -5,7 +5,11 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/db/seeder"
-	"dcfs/models/disk"
+	"dcfs/models"
+	_ "dcfs/models/disk/FTPDisk"
+	_ "dcfs/models/disk/GDriveDisk"
+	_ "dcfs/models/disk/OneDriveDisk"
+	_ "dcfs/models/disk/SFTPDisk"
 	"flag"
 	"github.com/google/uuid"
 	"log"
@@ -13,7 +17,7 @@ import (
 )
 
 func main() {
-	disk.RootUUID, _ = uuid.Parse("91c32303-0856-43d6-8e18-1cc671e256e4")
+	models.RootUUID, _ = uuid.Parse("91c32303-0856-43d6-8e18-1cc671e256e4")
 	// ignore error
 
 	path := flag.String("db-connection", "./connection.json", "file containing db connection info")

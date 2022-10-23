@@ -7,10 +7,10 @@ import (
 	"dcfs/middleware"
 	"dcfs/models"
 	credentials2 "dcfs/models/credentials"
-	disk2 "dcfs/models/disk"
-	"dcfs/models/disk/DriveFactory"
+	"dcfs/models/disk/OAuthDisk"
 	"dcfs/requests"
 	"dcfs/responses"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -23,7 +23,7 @@ func DiskCreate(c *gin.Context) {
 	var provider *dbo.Provider = dbo.NewProvider()
 	var authCode string = ""
 	userData, _ := c.Get("UserData")
-	_userUUID := userData.(middleware.UserData).UserUUID
+	userUUID := userData.(middleware.UserData).UserUUID
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -32,7 +32,7 @@ func DiskCreate(c *gin.Context) {
 	}
 
 	log.Println("requests body: ", requestBody)
-	log.Println("userUUID: ", _userUUID)
+	log.Println("userUUID: ", userUUID)
 
 	// Get provider info
 	db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider)
@@ -43,29 +43,30 @@ func DiskCreate(c *gin.Context) {
 		return
 	}
 
-	userUUID := _userUUID
-
-	disk := DriveFactory.NewDisk(provider.Type)
+	volume := models.Transport.GetVolume(userUUID, volumeUUID)
+	_disk := dbo.Disk{
+		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+			UUID: uuid.New(),
+		},
+		UserUUID:     userUUID,
+		VolumeUUID:   volumeUUID,
+		ProviderUUID: provider.UUID,
+		Credentials:  requestBody.Credentials.ToString(),
+		Provider:     *provider,
+	}
+	disk := models.CreateDisk(models.CreateDiskMetadata{
+		Disk:   &_disk,
+		Volume: volume,
+	})
 	if disk == nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
+	db.DB.DatabaseHandle.Omit("Provider", "Volume").Create(_disk)
 
-	disk.SetUUID(uuid.New())
-
-	// Get volume handle
-	volume := models.Transport.GetVolume(userUUID, volumeUUID)
-	volume.AddDisk(disk.GetUUID(), disk)
-	providerUUID, _ := uuid.Parse(requestBody.ProviderUUID)
-
-	if provider.Type == constants.PROVIDER_TYPE_SFTP || provider.Type == constants.PROVIDER_TYPE_FTP {
-		disk.CreateCredentials(requestBody.Credentials.ToString())
-		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-	}
-
-	if provider.Type == constants.PROVIDER_TYPE_ONEDRIVE || provider.Type == constants.PROVIDER_TYPE_GDRIVE {
-		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
-		config := disk.(disk2.OAuthDisk).GetConfig()
+	_, ok := disk.(OAuthDisk.OAuthDisk)
+	if ok {
+		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	}
 
@@ -74,7 +75,7 @@ func DiskCreate(c *gin.Context) {
 		Data: responses.DiskOAuthCodeResponse{
 			UUID:         disk.GetUUID().String(),
 			Name:         requestBody.Name,
-			ProviderUUID: providerUUID.String(),
+			ProviderUUID: provider.UUID.String(),
 			Link:         authCode,
 		},
 	})
@@ -116,7 +117,7 @@ func DiskOAuth(c *gin.Context) {
 		return
 	}
 
-	disk := (volume.GetDisk(diskUUID)).(disk2.OAuthDisk)
+	disk := (volume.GetDisk(diskUUID)).(OAuthDisk.OAuthDisk)
 	if disk == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find disk with provided UUID or disk is not associated with provided volume"))
 		return
@@ -140,6 +141,53 @@ func DiskGet(c *gin.Context) {
 }
 
 func DiskUpdate(c *gin.Context) {
+	var body requests.DiskUpdateRequest
+	var _diskUUID string
+	var diskUUID uuid.UUID
+	var err error
+	var volumes *[]*models.Volume
+	var _volume *models.Volume = nil
+	var disk models.Disk = nil
+	userData, _ := c.Get("UserData")
+	userUUID := userData.(middleware.UserData).UserUUID
+
+	_diskUUID = c.Param("DiskUUID")
+	diskUUID, err = uuid.Parse(_diskUUID)
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "DiskUUID", "Provided DiskUUID is not a valid UUID"))
+		return
+	}
+
+	volumes = models.Transport.GetVolumes(userUUID)
+	if volumes == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find volume with provided UUID"))
+		return
+	}
+
+	for _, volume := range *volumes {
+		disk = volume.GetDisk(diskUUID)
+		if disk != nil {
+			_volume = volume
+			break
+		}
+	}
+
+	if disk == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find volume with provided UUID"))
+		return
+	}
+
+	_disk := models.Transport.FindEnqueuedDisk(diskUUID)
+	if _disk != nil {
+		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't update it now"))
+		return
+	}
+
+	disk.Rename(body.Name)
+	disk.CreateCredentials(fmt.Sprintf("%s:%s:%s:%s", body.Credentials.Login, body.Credentials.Password, body.Credentials.Host, body.Credentials.Port))
+
+	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), _volume.UUID)
+	db.DB.DatabaseHandle.Save(&diskDBO)
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Update Endpoint"})
 }
 
