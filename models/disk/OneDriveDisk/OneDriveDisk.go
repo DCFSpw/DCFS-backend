@@ -29,10 +29,10 @@ type OneDriveDisk struct {
 
 /* Mandatory Disk interface implementations */
 
-func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
 	var client *http.Client = _client.(*http.Client)
@@ -44,24 +44,21 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	ft, err := filetype.Match(*blockMetadata.Content)
 	if err != nil {
-		return fmt.Errorf("file %s is corrupted", blockMetadata.FileUUID.String())
+		return apicalls.CreateErrorWrapper(constants.FS_BAD_FILE, "file:", blockMetadata.FileUUID.String(), "is corrupted")
 	}
-	err = nil
 
 	if size <= constants.ONEDRIVE_SIZE_LIMIT {
 		// fast upload
 		req, err := oneDriveClient.NewFileUploadRequest(apiURL+":/content?@microsoft.graph.conflictBehavior=rename", ft.MIME.Value, bytes.NewReader(*blockMetadata.Content))
 		if err != nil {
-			return err
+			return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload request:", err.Error())
 		}
-		err = nil
 
 		var response *onedrive.DriveItem
 		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 		if err != nil {
-			return err
+			return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 		}
-		err = nil
 	} else {
 		// upload session
 		url, err := oneDriveClient.BaseURL.Parse(apiURL + ":/createUploadSession")
@@ -69,18 +66,15 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 		req, err := http.NewRequest("POST", url.String(), nil)
 		req.Header.Set("Content-Type", "application/json")
-		//req, err := oneDriveClient.NewFileUploadRequest(apiURL+":/createUploadSession", "application/json", nil)
 		if err != nil {
-			return err
+			return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload session:", err.Error())
 		}
-		err = nil
 
 		var response *responses.CreateUploadSessionResponse
 		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 		if err != nil {
-			return err
+			return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 		}
-		err = nil
 
 		// fill the end of file with 0, so the byte number is divisible by 320 KiB
 		remainder := len(*blockMetadata.Content) % (320 * 1024)
@@ -97,24 +91,22 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 			request.Header.Set("Content-Length", strconv.Itoa(upperBound-i))
 			request.Header.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", i, upperBound-1, len(*blockMetadata.Content)))
 			if err != nil {
-				return err
+				return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload request:", err.Error())
 			}
-			err = nil
 
 			if upperBound < size {
 				rsp := responses.UploadSessionResponse{}
 				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
 				if err != nil {
-					return err
+					return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 				}
 			} else {
 				rsp := responses.UploadSessionFinalResponse{}
 				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
 				if err != nil {
-					return err
+					return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 				}
 			}
-			err = nil
 		}
 	}
 
@@ -122,15 +114,15 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *OneDriveDisk) Download(bm *apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
-func (d *OneDriveDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
-func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
+func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
