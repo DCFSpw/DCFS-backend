@@ -22,19 +22,19 @@ type AbstractDisk struct {
 
 /* Mandatory Disk interface implementations */
 
-func (d *AbstractDisk) Upload(bm *apicalls.BlockMetadata) error {
+func (d *AbstractDisk) Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) Download(bm *apicalls.BlockMetadata) error {
+func (d *AbstractDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) Rename(bm *apicalls.BlockMetadata) error {
+func (d *AbstractDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) Remove(bm *apicalls.BlockMetadata) error {
+func (d *AbstractDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented abstract method")
 }
 

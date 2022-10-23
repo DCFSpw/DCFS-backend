@@ -8,7 +8,6 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
-	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -23,7 +22,7 @@ type GDriveDisk struct {
 	abstractDisk AbstractDisk.AbstractDisk
 }
 
-func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
 	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
 	var fileCreate *drive.FilesCreateCall
@@ -31,33 +30,33 @@ func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	srv, err := drive.NewService(blockMetadata.Ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Drive client: %v", err)
+		log.Printf("Unable to retrieve Drive client: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
 	}
-
-	//cred.Token.AccessToken
 
 	fileCreate = srv.Files.
 		Create(&(drive.File{Name: blockMetadata.UUID.String()})).
 		Media(bytes.NewReader(*blockMetadata.Content)).
-		ProgressUpdater(func(now, size int64) { fmt.Printf("%d, %d\r", now, size) })
+		ProgressUpdater(func(now, size int64) { log.Printf("[%s] %d, %d\r", blockMetadata.UUID.String(), now, size) })
 	_, err = fileCreate.Do()
 	if err != nil {
-		// TODO: error handling
+		log.Printf("Failed to upload block: %s, with err: %s", blockMetadata.UUID.String(), err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Failed to upload block:", blockMetadata.UUID.String(), "with err:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 	return nil
 }
 
-func (d *GDriveDisk) Download(bm *apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
-func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
-func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) error {
+func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("unimplemented")
 }
 
