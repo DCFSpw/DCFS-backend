@@ -3,33 +3,22 @@ package FTPDisk
 import (
 	"bytes"
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/models"
 	"dcfs/models/credentials"
-	"dcfs/models/disk"
+	"dcfs/models/disk/AbstractDisk"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
 	"io"
 )
 
 type FTPDisk struct {
-	abstractDisk disk.AbstractDisk
+	abstractDisk AbstractDisk.AbstractDisk
 }
 
-func (d *FTPDisk) Connect(c *gin.Context) error {
-	// Import generic credentials
-	/*
-		d.Credentials = d.abstractDisk.Credentials.(*credentials.FTPCredentials)
-
-		// Authenticate and connect to SFTP server
-		err := d.credentials.Authenticate(nil)
-		if err != nil {
-			return fmt.Errorf("Cannot connect to FTP server: %v", err)
-		}
-	*/
-	return nil
-}
+/* Mandatory Disk interface methods */
 
 func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	// Create and upload remote file
@@ -73,18 +62,12 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *FTPDisk) Rename(c *gin.Context) error {
-	// unpack gin context
-	// d.rename(oldName, newName)
+func (d *FTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
 	panic("Unimplemented")
-	return nil
 }
 
-func (d *FTPDisk) Remove(c *gin.Context) error {
-	// unpack gin context
-	// d.remove(fileName)
+func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
 	panic("Unimplemented")
-	return nil
 }
 
 func (d *FTPDisk) SetUUID(uuid uuid.UUID) {
@@ -93,6 +76,14 @@ func (d *FTPDisk) SetUUID(uuid uuid.UUID) {
 
 func (d *FTPDisk) GetUUID() uuid.UUID {
 	return d.abstractDisk.GetUUID()
+}
+
+func (d *FTPDisk) SetVolume(volume *models.Volume) {
+	d.abstractDisk.SetVolume(volume)
+}
+
+func (d *FTPDisk) GetVolume() *models.Volume {
+	return d.abstractDisk.GetVolume()
 }
 
 func (d *FTPDisk) GetCredentials() credentials.Credentials {
@@ -107,12 +98,22 @@ func (d *FTPDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewFTPCredentials(c)
 }
 
+func (d *FTPDisk) GetProviderUUID() uuid.UUID {
+	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_FTP)
+}
+
 func (d *FTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
+
+/* Factory methods */
 
 func NewFTPDisk() *FTPDisk {
 	var d *FTPDisk = new(FTPDisk)
 	d.abstractDisk.Disk = d
 	return d
+}
+
+func init() {
+	models.DiskTypesRegistry[constants.PROVIDER_TYPE_FTP] = func() models.Disk { return NewFTPDisk() }
 }

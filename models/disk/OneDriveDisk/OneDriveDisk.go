@@ -5,11 +5,11 @@ import (
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/models"
 	"dcfs/models/credentials"
-	"dcfs/models/disk"
+	"dcfs/models/disk/AbstractDisk"
 	"dcfs/responses"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/goh-chunlin/go-onedrive/onedrive"
 	"github.com/google/uuid"
 	"github.com/h2non/filetype"
@@ -24,12 +24,10 @@ import (
 )
 
 type OneDriveDisk struct {
-	abstractDisk disk.AbstractDisk
+	abstractDisk AbstractDisk.AbstractDisk
 }
 
-func (d *OneDriveDisk) Connect(c *gin.Context) error {
-	return nil
-}
+/* Mandatory Disk interface implementations */
 
 func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
@@ -39,25 +37,6 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	var client *http.Client = _client.(*http.Client)
 	oneDriveClient := onedrive.NewClient(client)
-
-	/*
-		drives, err := oneDriveClient.Drives.List(blockMetadata.Ctx)
-		if err != nil {
-			return fmt.Errorf("error retrieving OneDrive disk list")
-		}
-		err = nil
-
-		if len(drives.Drives) == 0 {
-			return fmt.Errorf("could not find a suitable OneDrive disk")
-		}
-
-		// get the default drive
-		drive, err := oneDriveClient.Drives.Get(blockMetadata.Ctx, "")
-		if err != nil {
-			return fmt.Errorf("could not find a suitable OneDrive disk, with err: %s", err.Error())
-		}
-		err = nil
-	*/
 
 	// size in bytes
 	var size int = len(*blockMetadata.Content)
@@ -140,20 +119,19 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
-
 	return nil
 }
 
 func (d *OneDriveDisk) Download(bm *apicalls.BlockMetadata) error {
-	return nil
+	panic("unimplemented")
 }
 
-func (d *OneDriveDisk) Rename(c *gin.Context) error {
-	return nil
+func (d *OneDriveDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
+	panic("unimplemented")
 }
 
-func (d *OneDriveDisk) Remove(c *gin.Context) error {
-	return nil
+func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
+	panic("unimplemented")
 }
 
 func (d *OneDriveDisk) SetUUID(uuid uuid.UUID) {
@@ -162,6 +140,14 @@ func (d *OneDriveDisk) SetUUID(uuid uuid.UUID) {
 
 func (d *OneDriveDisk) GetUUID() uuid.UUID {
 	return d.abstractDisk.GetUUID()
+}
+
+func (d *OneDriveDisk) SetVolume(volume *models.Volume) {
+	d.abstractDisk.SetVolume(volume)
+}
+
+func (d *OneDriveDisk) GetVolume() *models.Volume {
+	return d.abstractDisk.GetVolume()
 }
 
 func (d *OneDriveDisk) GetCredentials() credentials.Credentials {
@@ -176,15 +162,15 @@ func (d *OneDriveDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewOauthCredentials(c)
 }
 
+func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
+	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
+}
+
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
-func NewOneDriveDisk() *OneDriveDisk {
-	var d *OneDriveDisk = new(OneDriveDisk)
-	d.abstractDisk.Disk = d
-	return d
-}
+/* Mandatory OAuthDisk interface implementations */
 
 func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/OneDriveDisk/credentials.json")
@@ -199,4 +185,16 @@ func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	}
 
 	return config
+}
+
+/* Factory methods */
+
+func NewOneDriveDisk() *OneDriveDisk {
+	var d *OneDriveDisk = new(OneDriveDisk)
+	d.abstractDisk.Disk = d
+	return d
+}
+
+func init() {
+	models.DiskTypesRegistry[constants.PROVIDER_TYPE_ONEDRIVE] = func() models.Disk { return NewOneDriveDisk() }
 }

@@ -3,11 +3,12 @@ package SFTPDisk
 import (
 	"bytes"
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/models"
 	"dcfs/models/credentials"
-	"dcfs/models/disk"
+	"dcfs/models/disk/AbstractDisk"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -16,20 +17,10 @@ import (
 )
 
 type SFTPDisk struct {
-	abstractDisk disk.AbstractDisk
+	abstractDisk AbstractDisk.AbstractDisk
 }
 
-func (d *SFTPDisk) Connect(c *gin.Context) error {
-	// Import generic credentials
-	/*
-		d.credentials = d.abstractDisk.Credentials.(*credentials.SFTPCredentials)
-
-		// Authenticate and connect to SFTP server
-		d.credentials.Authenticate(nil)
-	*/
-
-	return nil
-}
+/* Mandatory Disk interface implementations */
 
 func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
@@ -93,36 +84,20 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *SFTPDisk) Rename(c *gin.Context) error {
-	// unpack gin content to get old name and new name
-	/*
-		var client *sftp.Client = d.credentials.Authenticate(nil).(*sftp.Client)
-		defer client.Close()
-
-		err := client.Rename(oldName.String(), newName.String())
-		if err != nil {
-			return err
-		}
-	*/
+func (d *SFTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
 	panic("Unimplemented")
-	return nil
 }
 
-func (d *SFTPDisk) Remove(c *gin.Context) error {
-	// unpack gin context
-
-	/*
-		var client *sftp.Client = d.credentials.Authenticate(nil).(*sftp.Client)
-		defer client.Close()
-
-		err := client.Remove(fileName.String())
-		if err != nil {
-			return err
-		}
-	*/
-
+func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
 	panic("Unimplemented")
-	return nil
+}
+
+func (d *SFTPDisk) SetVolume(volume *models.Volume) {
+	d.abstractDisk.SetVolume(volume)
+}
+
+func (d *SFTPDisk) GetVolume() *models.Volume {
+	return d.abstractDisk.GetVolume()
 }
 
 func (d *SFTPDisk) SetUUID(uuid uuid.UUID) {
@@ -145,12 +120,22 @@ func (d *SFTPDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewSFTPCredentials(c)
 }
 
+func (d *SFTPDisk) GetProviderUUID() uuid.UUID {
+	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_SFTP)
+}
+
 func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
+
+/* Factory methods */
 
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)
 	d.abstractDisk.Disk = d
 	return d
+}
+
+func init() {
+	models.DiskTypesRegistry[constants.PROVIDER_TYPE_SFTP] = func() models.Disk { return NewSFTPDisk() }
 }

@@ -14,7 +14,7 @@ func NewNotFoundErrorResponse(code string, message string) *NotFoundErrorRespons
 }
 
 type OperationFailureResponse struct {
-	// Error code: 500
+	// Error code: 500 or 405
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Code    string `json:"code"`

@@ -3,11 +3,12 @@ package GDriveDisk
 import (
 	"bytes"
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/models"
 	"dcfs/models/credentials"
-	"dcfs/models/disk"
+	"dcfs/models/disk/AbstractDisk"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -19,11 +20,7 @@ import (
 )
 
 type GDriveDisk struct {
-	abstractDisk disk.AbstractDisk
-}
-
-func (d *GDriveDisk) Connect(c *gin.Context) error {
-	return nil
+	abstractDisk AbstractDisk.AbstractDisk
 }
 
 func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
@@ -53,15 +50,15 @@ func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 }
 
 func (d *GDriveDisk) Download(bm *apicalls.BlockMetadata) error {
-	return nil
+	panic("unimplemented")
 }
 
-func (d *GDriveDisk) Rename(c *gin.Context) error {
-	return nil
+func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) error {
+	panic("unimplemented")
 }
 
-func (d *GDriveDisk) Remove(c *gin.Context) error {
-	return nil
+func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) error {
+	panic("unimplemented")
 }
 
 func (d *GDriveDisk) SetUUID(uuid uuid.UUID) {
@@ -70,6 +67,14 @@ func (d *GDriveDisk) SetUUID(uuid uuid.UUID) {
 
 func (d *GDriveDisk) GetUUID() uuid.UUID {
 	return d.abstractDisk.GetUUID()
+}
+
+func (d *GDriveDisk) SetVolume(volume *models.Volume) {
+	d.abstractDisk.SetVolume(volume)
+}
+
+func (d *GDriveDisk) GetVolume() *models.Volume {
+	return d.abstractDisk.GetVolume()
 }
 
 func (d *GDriveDisk) GetCredentials() credentials.Credentials {
@@ -84,15 +89,15 @@ func (d *GDriveDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewOauthCredentials(c)
 }
 
+func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
+	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
+}
+
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
-func NewGDriveDisk() *GDriveDisk {
-	var d *GDriveDisk = new(GDriveDisk)
-	d.abstractDisk.Disk = d
-	return d
-}
+/* Mandatory OAuthDisk interface methods */
 
 func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/GDriveDisk/credentials.json")
@@ -107,4 +112,16 @@ func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	}
 
 	return config
+}
+
+/* Factory methods */
+
+func NewGDriveDisk() *GDriveDisk {
+	var d *GDriveDisk = new(GDriveDisk)
+	d.abstractDisk.Disk = d
+	return d
+}
+
+func init() {
+	models.DiskTypesRegistry[constants.PROVIDER_TYPE_GDRIVE] = func() models.Disk { return NewGDriveDisk() }
 }

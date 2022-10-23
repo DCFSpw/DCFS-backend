@@ -221,13 +221,13 @@ func FileDownload(c *gin.Context) {
 
 	var ftpDisk = SFTPDisk.NewSFTPDisk()
 	ftpDisk.CreateCredentials("...")
-	err := ftpDisk.Connect(nil)
+	/*err := ftpDisk.Connect(nil)
 	if err != nil {
 		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "FTP connection failed: " + err.Error()})
 		return
-	}
+	}*/
 
-	err = ftpDisk.Download(&blockMetadata)
+	err := ftpDisk.Download(&blockMetadata)
 	if err != nil {
 		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + err.Error()})
 		return
