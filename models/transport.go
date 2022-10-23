@@ -74,7 +74,7 @@ func (transport *transport) getVolumeContainer(userUUID uuid.UUID, volumeUUID uu
 		var _volume dbo.Volume = dbo.Volume{}
 		var _disks []dbo.Disk
 
-		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Find(&_disks)
+		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
 		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
 
 		container = new(VolumeContainer)
@@ -169,6 +169,18 @@ func (transport *transport) RemoveEnqueuedFileUpload(UUID uuid.UUID) {
 		return
 	}
 	delete(transport.FileUploadQueue, UUID)
+}
+
+func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
+	for _, fc := range transport.FileUploadQueue {
+		for _, block := range *fc.File.GetBlocks() {
+			if block.Disk.GetUUID() == diskUUID {
+				return block.Disk
+			}
+		}
+	}
+
+	return nil
 }
 
 // Transport - global variable

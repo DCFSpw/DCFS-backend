@@ -3,10 +3,7 @@ package models
 import (
 	"dcfs/apicalls"
 	"dcfs/constants"
-	"dcfs/db"
 	"dcfs/db/dbo"
-	"dcfs/models/disk"
-	"dcfs/models/disk/DriveFactory"
 	"github.com/google/uuid"
 	"log"
 	"math"
@@ -15,11 +12,11 @@ import (
 type Volume struct {
 	UUID        uuid.UUID
 	BlockSize   int
-	disks       map[uuid.UUID]disk.Disk
+	disks       map[uuid.UUID]Disk
 	partitioner Partitioner
 }
 
-func (v *Volume) GetDisk(diskUUID uuid.UUID) disk.Disk {
+func (v *Volume) GetDisk(diskUUID uuid.UUID) Disk {
 	if v.disks == nil {
 		return nil
 	}
@@ -27,9 +24,9 @@ func (v *Volume) GetDisk(diskUUID uuid.UUID) disk.Disk {
 	return v.disks[diskUUID]
 }
 
-func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk disk.Disk) {
+func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 	if v.disks == nil {
-		v.disks = make(map[uuid.UUID]disk.Disk)
+		v.disks = make(map[uuid.UUID]Disk)
 	}
 
 	v.disks[diskUUID] = _disk
@@ -69,13 +66,10 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	v.BlockSize = 8 * 1024 * 1024
 
 	for _, _d := range _disks {
-		provider := dbo.Provider{}
-		db.DB.DatabaseHandle.Where("uuid = ?", _d.ProviderUUID).First(&provider)
-
-		d := DriveFactory.NewDisk(provider.Type)
-		d.SetUUID(_d.UUID)
-		d.CreateCredentials(_d.Credentials)
-		v.AddDisk(d.GetUUID(), d)
+		_ = CreateDisk(CreateDiskMetadata{
+			Disk:   &_d,
+			Volume: v,
+		})
 	}
 
 	log.Println("Created a new Volume: ", v)

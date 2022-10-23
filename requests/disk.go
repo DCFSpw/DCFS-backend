@@ -18,7 +18,7 @@ type OAuthCredentials struct {
 }
 
 func (cred *FTPCredentials) ToString() string {
-	if cred == nil {
+	if cred.Port == "" || cred.Login == "" || cred.Host == "" {
 		return ""
 	}
 

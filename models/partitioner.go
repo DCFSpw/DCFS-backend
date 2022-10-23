@@ -1,16 +1,14 @@
 package models
 
-import "dcfs/models/disk"
-
 type Partitioner interface {
-	AssignDisk(int) disk.Disk
+	AssignDisk(int) Disk
 }
 
 type AbstractPartitioner struct {
 	Volume *Volume
 }
 
-func (p *AbstractPartitioner) AssignDisk(size int) *disk.Disk {
+func (p *AbstractPartitioner) AssignDisk(size int) *Disk {
 	panic("Unimplemented abstract method!")
 }
 
@@ -19,9 +17,9 @@ type DummyPartitioner struct {
 	LastPickedDiskIndex int
 }
 
-func (p *DummyPartitioner) AssignDisk(size int) disk.Disk {
+func (p *DummyPartitioner) AssignDisk(size int) Disk {
 	// load disk list again in case something has changed in volume
-	var disks []disk.Disk
+	var disks []Disk
 	for _, _d := range p.Volume.disks {
 		disks = append(disks, _d)
 	}
