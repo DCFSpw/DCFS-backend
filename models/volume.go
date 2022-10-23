@@ -85,7 +85,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	var v *Volume = new(Volume)
 	v.partitioner = NewDummyPartitioner(v)
 	v.UUID = _volume.UUID
-	v.BlockSize = 8 * 1024 * 1024
+	v.BlockSize = constants.DEFAULT_VOLUME_BLOCK_SIZE
 
 	v.Name = _volume.Name
 	v.UserUUID = _volume.UserUUID
