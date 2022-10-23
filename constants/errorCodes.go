@@ -28,6 +28,8 @@ const (
 	AUTH_JWT_EXPIRED          = "AUTH-014"
 	AUTH_JWT_NOT_BEARER       = "AUTH-015"
 
+	OAUTH_BAD_CODE = "AUTH-001"
+
 	FS_ERROR               = "FS-000"
 	FS_CANNOT_OPEN_BLOCK   = "FS-001"
 	FS_CANNOT_LOAD_BLOCK   = "FS-002"

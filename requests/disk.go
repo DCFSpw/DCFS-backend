@@ -48,10 +48,7 @@ type DiskCreateRequest struct {
 }
 
 type OAuthRequest struct {
-	VolumeUUID   string `json:"volumeUUID" binding:"required"`
-	DiskUUID     string `json:"diskUUID" binding:"required"`
-	ProviderUUID string `json:"providerUUID" binding:"required"`
-	Code         string `json:"code" binding:"required"`
+	Code string `json:"code" binding:"required"`
 }
 
 type DiskUpdateRequest struct {
