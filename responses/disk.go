@@ -1,13 +1,13 @@
 package responses
 
 type DiskCreateSuccessResponse struct {
-	SuccessResponse
-	Data DiskOAuthCodeResponse `json:"Data"`
+	EmptySuccessResponse
+	Link string `json:"link"`
 }
 
-type DiskOAuthCodeResponse struct {
-	UUID         string `json:"uuid"`
-	Name         string `json:"name"`
-	ProviderUUID string `json:"provider_uuid"`
-	Link         string `json:"link"`
+func CreateDiskSuccessResponse(data interface{}, link string) *DiskCreateSuccessResponse {
+	return &DiskCreateSuccessResponse{
+		EmptySuccessResponse: *CreateEmptySuccessResponse(data),
+		Link:                 link,
+	}
 }
