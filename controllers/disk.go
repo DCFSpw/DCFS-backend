@@ -140,7 +140,18 @@ func DiskOAuth(c *gin.Context) {
 }
 
 func DiskGet(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Disk Get Endpoint"})
+	var _diskUUID string
+	var _disk dbo.Disk
+	var err error
+
+	_diskUUID = c.Param("DiskUUID")
+	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	if err != nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
+		return
+	}
+
+	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }
 
 func DiskUpdate(c *gin.Context) {
