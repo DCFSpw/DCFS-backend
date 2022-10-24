@@ -5,10 +5,12 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/middleware"
+	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"strconv"
 )
 
 func CreateVolume(c *gin.Context) {
@@ -19,7 +21,7 @@ func CreateVolume(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
@@ -35,7 +37,7 @@ func CreateVolume(c *gin.Context) {
 	// Save user to database
 	result := db.DB.DatabaseHandle.Create(&volume)
 	if result.Error != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
@@ -103,14 +105,19 @@ func UpdateVolume(c *gin.Context) {
 
 	// Update volume data
 	volume.Name = requestBody.Name
-	// TO DO: Discuss if we should allow users to change the volume settings
-	//volume.VolumeSettings.Backup = requestBody.Settings.Backup
-	//volume.VolumeSettings.Encryption = requestBody.Settings.Encryption
-	//volume.VolumeSettings.FilePartition = requestBody.Settings.FilePartition
+	volume.VolumeSettings.FilePartition = requestBody.Settings.FilePartition
 
+	// Update options for empty volume
+	empty, err := db.IsVolumeEmpty(volume.UUID)
+	if empty && err == nil {
+		volume.VolumeSettings.Backup = requestBody.Settings.Backup
+		volume.VolumeSettings.Encryption = requestBody.Settings.Encryption
+	}
+
+	// Save volume to database
 	result := db.DB.DatabaseHandle.Save(&volume)
 	if result.Error != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
@@ -123,5 +130,38 @@ func DeleteVolume(c *gin.Context) {
 }
 
 func GetVolumes(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Volumes Endpoint"})
+	var volumes []dbo.Volume
+	var volumesPagination []interface{}
+	var userUUID uuid.UUID
+	var page int
+	var err error
+
+	// Retrieve page from query
+	page, err = strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil {
+		page = 1
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve list of volumes of current user from the database
+	err = db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID).Find(&volumes).Error
+	if err != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + err.Error(), Code: constants.DATABASE_ERROR})
+		return
+	}
+
+	// Prepare pagination list
+	for _, volume := range volumes {
+		volumesPagination = append(volumesPagination, volume)
+	}
+	pagination := models.Paginate(volumesPagination, page, constants.PAGINATION_RECORDS_PER_PAGE)
+	if pagination == nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Pagination process failed.", Code: constants.INT_PAGINATION_ERROR})
+		return
+	}
+
+	// Return list of volumes
+	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }
