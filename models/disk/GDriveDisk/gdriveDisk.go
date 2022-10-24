@@ -28,7 +28,7 @@ func (d *GDriveDisk) Connect(c *gin.Context) error {
 
 func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
-	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
 	var fileCreate *drive.FilesCreateCall
 	var err error
 

@@ -15,7 +15,7 @@ type OauthCredentials struct {
 	Token *oauth2.Token
 }
 
-func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	var config *oauth2.Config = md.Config
 	var ret *http.Client
 	credentials.PerformOp(
@@ -62,6 +62,10 @@ func (credentials *OauthCredentials) PerformOp(operator func(token *oauth2.Token
 
 func (credentials *OauthCredentials) ToString() string {
 	return credentials.Token.AccessToken + ":" + credentials.Token.RefreshToken
+}
+
+func (credentials *OauthCredentials) GetPath() string {
+	panic("OAuth credentials do not return a path!")
 }
 
 func NewOauthCredentials(str string) *OauthCredentials {

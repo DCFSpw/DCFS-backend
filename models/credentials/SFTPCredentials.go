@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -20,10 +19,10 @@ type SFTPCredentials struct {
 	Password string
 	Host     string
 	Port     string
-	Client   *sftp.Client
+	Path     string
 }
 
-func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client {
+func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	log.Printf("Connecting to %s ...\n", credentials.Host)
 
 	// Try to use $SSH_AUTH_SOCK which contains the path of the unix file socket that the sshd agent uses
@@ -62,15 +61,19 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 		log.Printf("Unable to create SFTP client: %v", err)
 		return nil
 	}
-	credentials.Client = sftpClient
 	//defer credentials.Client.Close()
 
 	log.Printf("Connected to %s ...\n", credentials.Host)
-	return nil
+
+	return sftpClient
 }
 
 func (credentials *SFTPCredentials) ToString() string {
-	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port
+	return credentials.User + ":" + credentials.Password + ":" + credentials.Host + ":" + credentials.Port + ":" + credentials.Path
+}
+
+func (credentials *SFTPCredentials) GetPath() string {
+	return credentials.Path
 }
 
 func NewSFTPCredentials(cred string) *SFTPCredentials {
@@ -81,6 +84,7 @@ func NewSFTPCredentials(cred string) *SFTPCredentials {
 		Password: parsed[1],
 		Host:     parsed[2],
 		Port:     parsed[3],
+		Path:     parsed[4],
 	}
 
 	return &credentials

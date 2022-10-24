@@ -49,11 +49,14 @@ func ServeBackend() {
 		authorized.PUT("/user/password", ChangeUserPassword)
 
 		// Volume
-		authorized.POST("/volumes/manage", CreateVolume)
-		authorized.GET("/volumes/manage", GetVolumes)
-		authorized.GET("/volumes/manage/:VolumeUUID", GetVolume)
-		authorized.PUT("/volumes/manage/:VolumeUUID", UpdateVolume)
-		authorized.DELETE("/volumes/manage/:VolumeUUID", DeleteVolume)
+		authorized.POST("/volume/manage", CreateVolume)
+		authorized.PUT("/volume/manage/:VolumeUUID", UpdateVolume)
+		authorized.DELETE("/volume/manage/:VolumeUUID", DeleteVolume)
+		authorized.GET("/volume/manage/:VolumeUUID", GetVolume)
+
+		authorized.POST("/volume/share/:VolumeUUID", ShareVolume)
+
+		authorized.GET("/volume/volumes", GetVolumes)
 
 		// Disk
 		authorized.POST("/disks/manage", DiskCreate)
@@ -85,7 +88,7 @@ func ServeBackend() {
 		authorized.GET("/file/files", GetFiles)
 
 		// Providers
-		authorized.GET("/providers", GetProviders)
+		authorized.GET("/providers", GetProviders);
 	}
 
 	// Listen and serve on 0.0.0.0:8080
