@@ -30,6 +30,6 @@ func VolumeFromDatabase(uuid string) (*dbo.Volume, string) {
 
 func IsVolumeEmpty(uuid uuid.UUID) (bool, error) {
 	var blockCount int64
-	err := DB.DatabaseHandle.Model(&dbo.Block{}).Where("VolumeUUID = ?", uuid).Count(&blockCount).Error
+	err := DB.DatabaseHandle.Model(&dbo.Block{}).Where("volume_uuid = ?", uuid).Count(&blockCount).Error
 	return blockCount == 0, err
 }
