@@ -57,8 +57,8 @@ func DiskCreate(c *gin.Context) {
 	volume.AddDisk(disk.GetUUID(), disk)
 	providerUUID, _ := uuid.Parse(requestBody.ProviderUUID)
 
-	if provider.Type == constants.PROVIDER_TYPE_SFTP || provider.Type == constants.PROVIDER_TYPE_FTP {
-		disk.CreateCredentials(requestBody.Credentials)
+	if provider.Type == constants.PROVIDER_TYPE_SFTP {
+		disk.SetCredentials(credentials2.NewSFTPCredentials(requestBody.Credentials))
 		db.DB.DatabaseHandle.Create(disk.GetDiskDBO(userUUID, providerUUID, volumeUUID))
 	}
 
@@ -122,7 +122,6 @@ func DiskOAuth(c *gin.Context) {
 	}
 
 	config := disk.GetConfig()
-	config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 	tok, err := config.Exchange(c, requestBody.Code)
 	if err != nil {
 		log.Fatalf("Unable to retrieve token from web %v", err)

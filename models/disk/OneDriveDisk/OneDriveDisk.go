@@ -1,26 +1,17 @@
 package OneDriveDisk
 
 import (
-	"bytes"
 	"dcfs/apicalls"
-	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"dcfs/models/disk"
-	"dcfs/responses"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/goh-chunlin/go-onedrive/onedrive"
 	"github.com/google/uuid"
-	"github.com/h2non/filetype"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/drive/v3"
 	"log"
-	"math"
-	"net/http"
-	"net/url"
 	"os"
-	"strconv"
 )
 
 type OneDriveDisk struct {
@@ -31,116 +22,7 @@ func (d *OneDriveDisk) Connect(c *gin.Context) error {
 	return nil
 }
 
-func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
-	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
-	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
-	}
-
-	var client *http.Client = _client.(*http.Client)
-	oneDriveClient := onedrive.NewClient(client)
-
-	/*
-		drives, err := oneDriveClient.Drives.List(blockMetadata.Ctx)
-		if err != nil {
-			return fmt.Errorf("error retrieving OneDrive disk list")
-		}
-		err = nil
-
-		if len(drives.Drives) == 0 {
-			return fmt.Errorf("could not find a suitable OneDrive disk")
-		}
-
-		// get the default drive
-		drive, err := oneDriveClient.Drives.Get(blockMetadata.Ctx, "")
-		if err != nil {
-			return fmt.Errorf("could not find a suitable OneDrive disk, with err: %s", err.Error())
-		}
-		err = nil
-	*/
-
-	// size in bytes
-	var size int = len(*blockMetadata.Content)
-	var apiURL string = "me/drive/root:/" + url.PathEscape(blockMetadata.UUID.String())
-
-	ft, err := filetype.Match(*blockMetadata.Content)
-	if err != nil {
-		return fmt.Errorf("file %s is corrupted", blockMetadata.FileUUID.String())
-	}
-	err = nil
-
-	if size <= constants.ONEDRIVE_SIZE_LIMIT {
-		// fast upload
-		req, err := oneDriveClient.NewFileUploadRequest(apiURL+":/content?@microsoft.graph.conflictBehavior=rename", ft.MIME.Value, bytes.NewReader(*blockMetadata.Content))
-		if err != nil {
-			return err
-		}
-		err = nil
-
-		var response *onedrive.DriveItem
-		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
-		if err != nil {
-			return err
-		}
-		err = nil
-	} else {
-		// upload session
-		url, err := oneDriveClient.BaseURL.Parse(apiURL + ":/createUploadSession")
-		err = nil
-
-		req, err := http.NewRequest("POST", url.String(), nil)
-		req.Header.Set("Content-Type", "application/json")
-		//req, err := oneDriveClient.NewFileUploadRequest(apiURL+":/createUploadSession", "application/json", nil)
-		if err != nil {
-			return err
-		}
-		err = nil
-
-		var response *responses.CreateUploadSessionResponse
-		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
-		if err != nil {
-			return err
-		}
-		err = nil
-
-		// fill the end of file with 0, so the byte number is divisible by 320 KiB
-		remainder := len(*blockMetadata.Content) % (320 * 1024)
-		if remainder > 0 {
-			complement := make([]uint8, 320*1024-remainder)
-			*blockMetadata.Content = append(*blockMetadata.Content, complement...)
-		}
-		size = len(*blockMetadata.Content)
-
-		for i := 0; i < size; i = i + constants.ONEDRIVE_UPLOAD_LIMIT {
-			upperBound := int(math.Min(float64(i+constants.ONEDRIVE_UPLOAD_LIMIT), float64(size)))
-
-			request, err := http.NewRequest("PUT", response.UploadUrl, bytes.NewReader((*blockMetadata.Content)[i:upperBound]))
-			request.Header.Set("Content-Length", strconv.Itoa(upperBound-i))
-			request.Header.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", i, upperBound-1, len(*blockMetadata.Content)))
-			if err != nil {
-				return err
-			}
-			err = nil
-
-			if upperBound < size {
-				rsp := responses.UploadSessionResponse{}
-				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
-				if err != nil {
-					return err
-				}
-			} else {
-				rsp := responses.UploadSessionFinalResponse{}
-				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
-				if err != nil {
-					return err
-				}
-			}
-			err = nil
-		}
-	}
-
-	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
-
+func (d *OneDriveDisk) Upload(bm *apicalls.BlockMetadata) error {
 	return nil
 }
 
@@ -187,13 +69,13 @@ func NewOneDriveDisk() *OneDriveDisk {
 }
 
 func (d *OneDriveDisk) GetConfig() *oauth2.Config {
-	b, err := os.ReadFile("./models/disk/OneDriveDisk/credentials.json")
+	b, err := os.ReadFile("./models/disk/GDriveDisk/credentials.json")
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, "files.readwrite", "wl.offline_access")
+	config, err := google.ConfigFromJSON(b, drive.DriveMetadataReadonlyScope)
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}

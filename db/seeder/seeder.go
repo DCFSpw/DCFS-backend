@@ -15,7 +15,6 @@ func Seed() {
 	provider1 := dbo.Provider{}
 	provider2 := dbo.Provider{}
 	provider3 := dbo.Provider{}
-	provider4 := dbo.Provider{}
 	user := dbo.User{}
 
 	// Add a root user
@@ -69,15 +68,5 @@ func Seed() {
 		provider3.Logo = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Microsoft_Office_OneDrive_%282019%E2%80%93present%29.svg"
 
 		db.DB.DatabaseHandle.Create(&provider3)
-	}
-
-	db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_FTP).First(&provider4)
-	if provider4.Type != constants.PROVIDER_TYPE_FTP {
-		provider4.UUID = uuid.New()
-		provider4.Type = constants.PROVIDER_TYPE_FTP
-		provider4.Name = "FTP drive"
-		provider4.Logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Antu_gFTP.svg/640px-Antu_gFTP.svg.png"
-
-		db.DB.DatabaseHandle.Create(&provider4)
 	}
 }

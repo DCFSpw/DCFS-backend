@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"dcfs/apicalls"
+	"net/http"
 )
 
 const (
@@ -10,7 +11,6 @@ const (
 )
 
 type Credentials interface {
-	Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{}
+	Authenticate(md *apicalls.CredentialsAuthenticateMetadata) *http.Client
 	ToString() string
-	GetPath() string
 }

@@ -41,7 +41,7 @@ func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 
 	if req.Type == constants.FILE_TYPE_REGULAR {
 		var _f *RegularFile = f.(*RegularFile)
-		var blockCount int = int(math.Max(math.Ceil(float64(req.Size/v.BlockSize)), 1))
+		var blockCount int = int(math.Ceil(float64(req.Size / v.BlockSize)))
 		var cumulativeSize int = 0
 
 		_f.Blocks = make(map[uuid.UUID]*Block)
@@ -66,7 +66,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	var v *Volume = new(Volume)
 	v.partitioner = NewDummyPartitioner(v)
 	v.UUID = _volume.UUID
-	v.BlockSize = 8 * 1024 * 1024
+	v.BlockSize = 256 * 1024 * 1024
 
 	for _, _d := range _disks {
 		provider := dbo.Provider{}

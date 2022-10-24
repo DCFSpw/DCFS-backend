@@ -9,40 +9,32 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jlaffaye/ftp"
 	"io"
 )
 
 type FTPDisk struct {
 	abstractDisk disk.AbstractDisk
+	credentials  *credentials.FTPCredentials
 }
 
 func (d *FTPDisk) Connect(c *gin.Context) error {
 	// Import generic credentials
-	/*
-		d.Credentials = d.abstractDisk.Credentials.(*credentials.FTPCredentials)
+	d.credentials = d.abstractDisk.Credentials.(*credentials.FTPCredentials)
 
-		// Authenticate and connect to SFTP server
-		err := d.credentials.Authenticate(nil)
-		if err != nil {
-			return fmt.Errorf("Cannot connect to FTP server: %v", err)
-		}
-	*/
+	// Authenticate and connect to SFTP server
+	err := d.credentials.Authenticate(nil)
+	if err != nil {
+		return fmt.Errorf("Cannot connect to FTP server: %v", err)
+	}
+
 	return nil
 }
 
 func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	// Create and upload remote file
-	var _client interface{} = d.GetCredentials().Authenticate(nil)
-	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
-	}
-
-	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
-
-	err := client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
+	err := d.credentials.Client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
-		return fmt.Errorf("cannot open remote file: %v", err)
+		return fmt.Errorf("Cannot open remote file: %v", err)
 	}
 
 	return nil
@@ -50,14 +42,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	// Download remote file
-	var _client interface{} = d.GetCredentials().Authenticate(nil)
-	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
-	}
-
-	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
-
-	reader, err := client.Retr(blockMetadata.UUID.String())
+	reader, err := d.credentials.Client.Retr(blockMetadata.UUID.String())
 	if err != nil {
 		return fmt.Errorf("Cannot open remote file: %v", err)
 	}

@@ -9,6 +9,7 @@ type Disk struct {
 	ProviderUUID uuid.UUID
 	Credentials  string
 
+	User     User     `gorm:"foreignKey:UserUUID;references:UUID"`
 	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID"`
 	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID"`
 }

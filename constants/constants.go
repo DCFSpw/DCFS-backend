@@ -5,7 +5,6 @@ const (
 	PROVIDER_TYPE_SFTP     int = 1
 	PROVIDER_TYPE_GDRIVE   int = 2
 	PROVIDER_TYPE_ONEDRIVE int = 3
-	PROVIDER_TYPE_FTP      int = 4
 )
 
 // file types
@@ -23,6 +22,7 @@ const (
 // Encryption types
 const (
 	ENCRYPTION_TYPE_NO_ENCRYPTION int = 0
+	ENCRYPTION_TYPE_AES_256       int = 1
 )
 
 // FilePartition types
@@ -42,10 +42,4 @@ const (
 // Pagination
 const (
 	PAGINATION_RECORDS_PER_PAGE int = 10
-)
-
-// OneDrive
-const (
-	ONEDRIVE_SIZE_LIMIT   int = 4 * 1024 * 1024
-	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
 )

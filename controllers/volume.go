@@ -1,13 +1,45 @@
 package controllers
 
 import (
+	"dcfs/constants"
+	"dcfs/db"
+	"dcfs/db/dbo"
+	"dcfs/middleware"
+	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 func CreateVolume(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Create Volume Endpoint"})
+	var requestBody requests.VolumeCreateRequest
+	var user *dbo.User
+	var volume *dbo.Volume
+
+	// Retrieve user account
+	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		return
+	}
+
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	// Create a new volume
+	volume = dbo.NewVolumeFromRequest(&requestBody, user.UUID)
+
+	// Save user to database
+	result := db.DB.DatabaseHandle.Create(&volume)
+	if result.Error != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		return
+	}
+
+	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
 func UpdateVolume(c *gin.Context) {
