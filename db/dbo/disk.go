@@ -4,13 +4,13 @@ import "github.com/google/uuid"
 
 type Disk struct {
 	AbstractDatabaseObject
-	UserUUID     uuid.UUID
-	VolumeUUID   uuid.UUID
-	ProviderUUID uuid.UUID
-	Credentials  string
+	UserUUID     uuid.UUID `json:"-"`
+	VolumeUUID   uuid.UUID `json:"-"`
+	ProviderUUID uuid.UUID `json:"-"`
+	Credentials  string    `json:"credentials"`
 
-	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID"`
-	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID"`
+	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
+	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID" json:"provider"`
 }
 
 func NewDisk() *Disk {

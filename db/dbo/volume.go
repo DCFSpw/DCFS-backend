@@ -5,13 +5,15 @@ import (
 )
 
 type VolumeSettings struct {
-	Backup, Encryption, FilePartition int
+	Backup        int `json:"backup"`
+	Encryption    int `json:"encryption"`
+	FilePartition int `json:"filePartition"`
 }
 
 type Volume struct {
 	AbstractDatabaseObject
-	UserUUID       uuid.UUID
-	VolumeSettings VolumeSettings `gorm:"embedded"`
+	UserUUID       uuid.UUID      `json:"-"`
+	VolumeSettings VolumeSettings `gorm:"embedded" json:"settings"`
 }
 
 func NewVolume() *Volume {
