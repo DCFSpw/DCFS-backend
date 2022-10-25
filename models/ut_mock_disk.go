@@ -65,3 +65,7 @@ func (d *dummyDisk) GetProviderUUID() uuid.UUID {
 func (d *dummyDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	panic("Unimplemented")
 }
+
+func (d *dummyDisk) Delete() (string, error) {
+	panic("Unimplemented")
+}
