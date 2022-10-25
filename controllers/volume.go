@@ -195,7 +195,7 @@ func GetVolumes(c *gin.Context) {
 	// Retrieve list of volumes of current user from the database
 	err = db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID).Find(&volumes).Error
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + err.Error(), Code: constants.DATABASE_ERROR})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
 		return
 	}
 
@@ -205,7 +205,7 @@ func GetVolumes(c *gin.Context) {
 	}
 	pagination := models.Paginate(volumesPagination, page, constants.PAGINATION_RECORDS_PER_PAGE)
 	if pagination == nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Pagination process failed.", Code: constants.INT_PAGINATION_ERROR})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.INT_PAGINATION_ERROR, "Pagination process failed."))
 		return
 	}
 
