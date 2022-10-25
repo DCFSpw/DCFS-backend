@@ -16,14 +16,14 @@ const (
 
 // Backup types
 const (
-	BACKUP_TYPE_NO_BACKUP int = 1
-	BACKUP_TYPE_RAID_1    int = 2
+	BACKUP_TYPE_RAID_1    int = 1
+	BACKUP_TYPE_NO_BACKUP int = 2
 )
 
 // Encryption types
 const (
-	ENCRYPTION_TYPE_NO_ENCRYPTION int = 1
-	ENCRYPTION_TYPE_AES_256       int = 2
+	ENCRYPTION_TYPE_AES_256       int = 1
+	ENCRYPTION_TYPE_NO_ENCRYPTION int = 2
 )
 
 // FilePartition types
