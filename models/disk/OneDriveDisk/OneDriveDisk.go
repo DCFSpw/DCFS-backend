@@ -175,12 +175,6 @@ func (d *OneDriveDisk) Delete() (string, error) {
 }
 
 /* Mandatory OAuthDisk interface implementations */
-func NewOneDriveDisk() *OneDriveDisk {
-	var d *OneDriveDisk = new(OneDriveDisk)
-	d.abstractDisk.Disk = d
-	return d
-}
-
 func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/OneDriveDisk/credentials.json")
 	if err != nil {

@@ -102,12 +102,6 @@ func (d *GDriveDisk) Delete() (string, error) {
 }
 
 /* Mandatory OAuthDisk interface methods */
-func NewGDriveDisk() *GDriveDisk {
-	var d *GDriveDisk = new(GDriveDisk)
-	d.abstractDisk.Disk = d
-	return d
-}
-
 func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/GDriveDisk/credentials.json")
 	if err != nil {
