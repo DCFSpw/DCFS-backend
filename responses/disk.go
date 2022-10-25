@@ -1,13 +1,15 @@
 package responses
 
 type DiskCreateSuccessResponse struct {
-	EmptySuccessResponse
-	Link string `json:"link"`
+	// do not import the 'modules' package here
+	Disk interface{} `json:"disk"`
+	Link string      `json:"link"`
 }
 
-func CreateDiskSuccessResponse(data interface{}, link string) *DiskCreateSuccessResponse {
-	return &DiskCreateSuccessResponse{
-		EmptySuccessResponse: *CreateEmptySuccessResponse(data),
-		Link:                 link,
+func CreateDiskSuccessResponse(disk interface{}, link string) *EmptySuccessResponse {
+	_data := DiskCreateSuccessResponse{
+		Disk: disk,
+		Link: link,
 	}
+	return CreateEmptySuccessResponse(_data)
 }
