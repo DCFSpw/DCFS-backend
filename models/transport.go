@@ -91,6 +91,9 @@ func (transport *transport) getVolumeContainer(userUUID uuid.UUID, volumeUUID uu
 
 		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
 		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
+		if _volume.UUID != volumeUUID {
+			return &VolumeContainer{Volume: nil}
+		}
 
 		container = new(VolumeContainer)
 		container.Volume = NewVolume(&_volume, _disks)
