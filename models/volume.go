@@ -83,3 +83,19 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	log.Println("Created a new Volume: ", v)
 	return v
 }
+
+func (v *Volume) Delete() (string, error) {
+	// TO DO: deletion process worker
+	var errCode string
+	var err error
+
+	// Trigger delete process in all disks assigned to this volume
+	for _, diskModel := range v.disks {
+		errCode, err = diskModel.Delete()
+		if err != nil {
+			return errCode, err
+		}
+	}
+
+	return constants.SUCCESS, nil
+}

@@ -3,6 +3,7 @@ package dbo
 import (
 	"dcfs/requests"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type VolumeSettings struct {
@@ -16,6 +17,8 @@ type Volume struct {
 	Name           string         `json:"name"`
 	UserUUID       uuid.UUID      `json:"-"`
 	VolumeSettings VolumeSettings `gorm:"embedded" json:"settings"`
+
+	DeletedAt gorm.DeletedAt `json:"-"`
 
 	User User `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 }
