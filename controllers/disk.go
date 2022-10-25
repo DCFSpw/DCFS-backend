@@ -43,6 +43,11 @@ func DiskCreate(c *gin.Context) {
 	}
 
 	volume := models.Transport.GetVolume(userUUID, volumeUUID)
+	if volume == nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "A volume of provided UUID does not exist"))
+		return
+	}
+
 	_disk := dbo.Disk{
 		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 			UUID: uuid.New(),
