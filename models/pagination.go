@@ -11,8 +11,8 @@ type Pagination struct {
 }
 
 type PaginationData struct {
-	Pagination Pagination
-	Data       interface{}
+	Pagination Pagination  `json:"pagination"`
+	Data       interface{} `json:"data"`
 }
 
 func Paginate(collection []interface{}, page int, _perPage int) *PaginationData {
