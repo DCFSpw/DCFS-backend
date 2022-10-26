@@ -42,7 +42,7 @@ const (
 
 // Pagination
 const (
-	PAGINATION_RECORDS_PER_PAGE int = 10
+	PAGINATION_RECORDS_PER_PAGE int = 12
 )
 
 // OneDrive
