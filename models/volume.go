@@ -10,8 +10,13 @@ import (
 )
 
 type Volume struct {
-	UUID        uuid.UUID
-	BlockSize   int
+	UUID      uuid.UUID
+	BlockSize int
+
+	Name           string
+	UserUUID       uuid.UUID
+	VolumeSettings dbo.VolumeSettings
+
 	disks       map[uuid.UUID]Disk
 	partitioner Partitioner
 }
@@ -67,11 +72,24 @@ func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
 	return f
 }
 
+func (v *Volume) GetVolumeDBO() dbo.Volume {
+	return dbo.Volume{
+		AbstractDatabaseObject: dbo.AbstractDatabaseObject{UUID: v.UUID},
+		Name:                   v.Name,
+		UserUUID:               v.UserUUID,
+		VolumeSettings:         v.VolumeSettings,
+	}
+}
+
 func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	var v *Volume = new(Volume)
 	v.partitioner = NewDummyPartitioner(v)
 	v.UUID = _volume.UUID
 	v.BlockSize = 8 * 1024 * 1024
+
+	v.Name = _volume.Name
+	v.UserUUID = _volume.UserUUID
+	v.VolumeSettings = _volume.VolumeSettings
 
 	for _, _d := range _disks {
 		_ = CreateDisk(CreateDiskMetadata{
@@ -82,20 +100,4 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 
 	log.Println("Created a new Volume: ", v)
 	return v
-}
-
-func (v *Volume) Delete() (string, error) {
-	// TO DO: deletion process worker
-	var errCode string
-	var err error
-
-	// Trigger delete process in all disks assigned to this volume
-	for _, diskModel := range v.disks {
-		errCode, err = diskModel.Delete()
-		if err != nil {
-			return errCode, err
-		}
-	}
-
-	return constants.SUCCESS, nil
 }
