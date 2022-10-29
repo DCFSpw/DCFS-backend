@@ -34,12 +34,15 @@ func CreateVolume(c *gin.Context) {
 	// Create a new volume
 	volume = dbo.NewVolumeFromRequest(&requestBody, user.UUID)
 
-	// Save user to database
+	// Save volume to database
 	result := db.DB.DatabaseHandle.Create(&volume)
 	if result.Error != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
+
+	// Initiate volume in transport
+	_ = models.Transport.GetVolume(user.UUID, volume.UUID)
 
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
