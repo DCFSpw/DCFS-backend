@@ -8,10 +8,10 @@ import (
 
 type User struct {
 	AbstractDatabaseObject
-	FirstName string `gorm:"type:varchar(64)"`
-	LastName  string `gorm:"type:varchar(64)"`
-	Email     string `gorm:"type:varchar(128)"`
-	Password  string `gorm:"type:varchar(64)"`
+	FirstName string `gorm:"type:varchar(64)" json:"firstName"`
+	LastName  string `gorm:"type:varchar(64)" json:"lastName"`
+	Email     string `gorm:"type:varchar(128)" json:"email"`
+	Password  string `gorm:"type:varchar(64)" json:"-"`
 }
 
 func NewUser() *User {
