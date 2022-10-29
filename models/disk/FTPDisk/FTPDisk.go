@@ -86,6 +86,14 @@ func (d *FTPDisk) GetVolume() *models.Volume {
 	return d.abstractDisk.GetVolume()
 }
 
+func (d *FTPDisk) SetName(name string) {
+	d.abstractDisk.SetName(name)
+}
+
+func (d *FTPDisk) GetName() string {
+	return d.abstractDisk.GetName()
+}
+
 func (d *FTPDisk) GetCredentials() credentials.Credentials {
 	return d.abstractDisk.GetCredentials()
 }

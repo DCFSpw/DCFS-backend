@@ -57,6 +57,7 @@ func DiskCreate(c *gin.Context) {
 		ProviderUUID: provider.UUID,
 		Credentials:  requestBody.Credentials.ToString(),
 		Provider:     *provider,
+		Name:         requestBody.Name,
 	}
 	disk := models.CreateDisk(models.CreateDiskMetadata{
 		Disk:   &_disk,
@@ -208,7 +209,6 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
-	// TODO: change disk's name: in db and in the backend
 	cred := body.Credentials.ToString()
 	if cred != "" {
 		_, ok := disk.(OAuthDisk.OAuthDisk)
@@ -219,6 +219,8 @@ func DiskUpdate(c *gin.Context) {
 
 		disk.CreateCredentials(cred)
 	}
+
+	disk.SetName(body.Name)
 
 	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), volume.UUID)
 	err = db.DB.DatabaseHandle.Save(&diskDBO).Error

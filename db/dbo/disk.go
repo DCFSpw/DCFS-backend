@@ -8,6 +8,7 @@ type Disk struct {
 	VolumeUUID   uuid.UUID `json:"-"`
 	ProviderUUID uuid.UUID `json:"-"`
 	Credentials  string    `json:"credentials"`
+	Name         string    `json:"name"`
 
 	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
 	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`

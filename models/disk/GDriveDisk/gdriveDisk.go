@@ -77,6 +77,14 @@ func (d *GDriveDisk) GetVolume() *models.Volume {
 	return d.abstractDisk.GetVolume()
 }
 
+func (d *GDriveDisk) SetName(name string) {
+	d.abstractDisk.SetName(name)
+}
+
+func (d *GDriveDisk) GetName() string {
+	return d.abstractDisk.GetName()
+}
+
 func (d *GDriveDisk) GetCredentials() credentials.Credentials {
 	return d.abstractDisk.GetCredentials()
 }
