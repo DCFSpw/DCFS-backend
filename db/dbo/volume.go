@@ -1,7 +1,9 @@
 package dbo
 
 import (
+	"dcfs/requests"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type VolumeSettings struct {
@@ -12,12 +14,31 @@ type VolumeSettings struct {
 
 type Volume struct {
 	AbstractDatabaseObject
+	Name           string         `json:"name"`
 	UserUUID       uuid.UUID      `json:"-"`
 	VolumeSettings VolumeSettings `gorm:"embedded" json:"settings"`
+
+	DeletedAt gorm.DeletedAt `json:"-"`
+
+	User User `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 }
 
 func NewVolume() *Volume {
 	var v *Volume = new(Volume)
 	v.AbstractDatabaseObject.DatabaseObject = v
+	return v
+}
+
+func NewVolumeFromRequest(request *requests.VolumeCreateRequest, userUUID uuid.UUID) *Volume {
+	var v *Volume = NewVolume()
+
+	v.AbstractDatabaseObject.DatabaseObject = v
+	v.UUID, _ = uuid.NewUUID()
+	v.UserUUID = userUUID
+	v.Name = request.Name
+	v.VolumeSettings.Backup = request.Settings.Backup
+	v.VolumeSettings.Encryption = request.Settings.Encryption
+	v.VolumeSettings.FilePartition = request.Settings.FilePartition
+
 	return v
 }

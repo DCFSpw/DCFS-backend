@@ -97,8 +97,11 @@ func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volu
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
-/* Mandatory OAuthDisk interface methods */
+func (d *GDriveDisk) Delete() (string, error) {
+	return d.abstractDisk.Delete()
+}
 
+/* Mandatory OAuthDisk interface methods */
 func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/GDriveDisk/credentials.json")
 	if err != nil {

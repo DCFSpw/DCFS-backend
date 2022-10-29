@@ -170,8 +170,11 @@ func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
-/* Mandatory OAuthDisk interface implementations */
+func (d *OneDriveDisk) Delete() (string, error) {
+	return d.abstractDisk.Delete()
+}
 
+/* Mandatory OAuthDisk interface implementations */
 func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/OneDriveDisk/credentials.json")
 	if err != nil {

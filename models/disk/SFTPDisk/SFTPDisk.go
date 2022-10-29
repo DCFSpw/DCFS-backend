@@ -128,8 +128,11 @@ func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volume
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
-/* Factory methods */
+func (d *SFTPDisk) Delete() (string, error) {
+	return d.abstractDisk.Delete()
+}
 
+/* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)
 	d.abstractDisk.Disk = d

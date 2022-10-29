@@ -1,6 +1,7 @@
 package models
 
 import (
+	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"errors"
@@ -199,6 +200,45 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	}
 
 	return nil
+}
+
+func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
+	for _, fc := range transport.FileUploadQueue {
+		for _, block := range *fc.File.GetBlocks() {
+			volume := block.Disk.GetVolume()
+			if volume.UUID == volumeUUID {
+				return volume
+			}
+		}
+	}
+
+	return nil
+}
+
+func (transport *transport) DeleteVolume(userUUID uuid.UUID, volumeUUID uuid.UUID) (string, error) {
+	// TO DO: deletion process worker
+	var errCode string
+	var err error
+	var volume *Volume
+
+	// Retrieve volume from transport
+	volume = Transport.GetVolume(userUUID, volumeUUID)
+	if volume == nil {
+		return constants.TRANSPORT_VOLUME_NOT_FOUND, errors.New("Volume not found in transport layer")
+	}
+
+	// Trigger delete process in all disks assigned to this volume
+	for _, disk := range volume.disks {
+		errCode, err = disk.Delete()
+		if err != nil {
+			return errCode, err
+		}
+	}
+
+	// Remove volume from transport
+	delete(transport.ActiveVolumes[userUUID], volumeUUID)
+
+	return constants.SUCCESS, nil
 }
 
 // Transport - global variable

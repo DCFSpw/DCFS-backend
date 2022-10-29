@@ -12,6 +12,7 @@ type Block struct {
 	size       int
 	checksum   int
 
+	//User   User   `gorm:"foreignKey:UserUUID;references:UUID"`
 	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID"`
 	Disk   Disk   `gorm:"foreignKey:DiskUUID;references:UUID"`
 }
