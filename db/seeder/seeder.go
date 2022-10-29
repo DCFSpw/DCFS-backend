@@ -46,7 +46,7 @@ func Seed() {
 		provider1.UUID = uuid.New()
 		provider1.Type = constants.PROVIDER_TYPE_SFTP
 		provider1.Name = "SFTP drive"
-		provider1.Logo = "https://freesvg.org/img/1538300664.png"
+		provider1.Logo = "https://cdn.iconscout.com/icon/free/png-256/sftp-1758329-1496548.png"
 
 		db.DB.DatabaseHandle.Create(&provider1)
 	}
