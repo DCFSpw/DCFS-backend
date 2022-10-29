@@ -49,14 +49,11 @@ func ServeBackend() {
 		authorized.PUT("/user/password", ChangeUserPassword)
 
 		// Volume
-		authorized.POST("/volume/manage", CreateVolume)
-		authorized.PUT("/volume/manage/:VolumeUUID", UpdateVolume)
-		authorized.DELETE("/volume/manage/:VolumeUUID", DeleteVolume)
-		authorized.GET("/volume/manage/:VolumeUUID", GetVolume)
-
-		authorized.POST("/volume/share/:VolumeUUID", ShareVolume)
-
-		authorized.GET("/volume/volumes", GetVolumes)
+		authorized.POST("/volumes/manage", CreateVolume)
+		authorized.GET("/volumes/manage", GetVolumes)
+		authorized.GET("/volumes/manage/:VolumeUUID", GetVolume)
+		authorized.PUT("/volumes/manage/:VolumeUUID", UpdateVolume)
+		authorized.DELETE("/volumes/manage/:VolumeUUID", DeleteVolume)
 
 		// Disk
 		authorized.POST("/disks/manage", DiskCreate)

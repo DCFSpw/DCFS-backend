@@ -21,7 +21,7 @@ func Paginate(collection []interface{}, page int, _perPage int) *PaginationData 
 	var recordsOnPage int = int(math.Min(float64(_perPage), float64(len(collection)-((page-1)*_perPage))))
 	var data []interface{} = nil
 
-	for i := (page - 1) * _perPage; i < ((page-1)*_perPage)+recordsOnPage; i++ {
+	for i := ((page - 1) * _perPage); i < ((page-1)*_perPage)+recordsOnPage; i++ {
 		data = append(data, collection[i])
 	}
 

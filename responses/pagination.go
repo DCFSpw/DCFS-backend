@@ -16,5 +16,9 @@ type PaginationData struct {
 }
 
 func NewPaginationResponse(paginationData PaginationData) PaginationResponse {
-	return PaginationResponse{Success: true, Data: data{Pagination: paginationData.Pagination, Data: paginationData.Data}}
+	var r *PaginationResponse = new(PaginationResponse)
+	r.Success = true
+	r.Data.Pagination = paginationData.Pagination
+	r.Data.Data = paginationData.Data
+	return *r
 }

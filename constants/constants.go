@@ -16,19 +16,20 @@ const (
 
 // Backup types
 const (
-	BACKUP_TYPE_NO_BACKUP int = 0
 	BACKUP_TYPE_RAID_1    int = 1
+	BACKUP_TYPE_NO_BACKUP int = 2
 )
 
 // Encryption types
 const (
-	ENCRYPTION_TYPE_NO_ENCRYPTION int = 0
+	ENCRYPTION_TYPE_AES_256       int = 1
+	ENCRYPTION_TYPE_NO_ENCRYPTION int = 2
 )
 
 // FilePartition types
 const (
-	PARTITION_TYPE_BALANCED int = 0
-	PARTITION_TYPE_PRIORITY int = 1
+	PARTITION_TYPE_BALANCED int = 1
+	PARTITION_TYPE_PRIORITY int = 2
 )
 
 // Block status
@@ -41,7 +42,7 @@ const (
 
 // Pagination
 const (
-	PAGINATION_RECORDS_PER_PAGE int = 10
+	PAGINATION_RECORDS_PER_PAGE int = 12
 )
 
 // OneDrive

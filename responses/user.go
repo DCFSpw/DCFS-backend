@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"dcfs/constants"
 	"dcfs/db/dbo"
 	"github.com/google/uuid"
 )
@@ -51,5 +52,13 @@ func NewLoginSuccessResponse(userData *dbo.User, token string) *LoginSuccessResp
 	r.Data.FirstName = userData.FirstName
 	r.Data.LastName = userData.LastName
 	r.Data.Email = userData.Email
+	return r
+}
+
+func NewInvalidCredentialsResponse() *InvalidCredentialsResponse {
+	var r *InvalidCredentialsResponse = new(InvalidCredentialsResponse)
+	r.Success = false
+	r.Message = "Unauthorized"
+	r.Code = constants.AUTH_UNAUTHORIZED
 	return r
 }

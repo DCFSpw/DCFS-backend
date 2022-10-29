@@ -28,6 +28,8 @@ type Disk interface {
 	GetProviderUUID() uuid.UUID
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
+
+	Delete() (string, error)
 }
 
 type CreateDiskMetadata struct {
