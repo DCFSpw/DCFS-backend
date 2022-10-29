@@ -10,6 +10,7 @@ import (
 type dummyDisk struct {
 	UUID   uuid.UUID
 	Volume *Volume
+	Name   string
 }
 
 /* Mandatory Disk interface implementations */
@@ -44,6 +45,14 @@ func (d *dummyDisk) SetUUID(uuid uuid.UUID) {
 
 func (d *dummyDisk) GetUUID() uuid.UUID {
 	return d.UUID
+}
+
+func (d *dummyDisk) SetName(name string) {
+	d.Name = name
+}
+
+func (d *dummyDisk) GetName() string {
+	return d.Name
 }
 
 func (d *dummyDisk) GetCredentials() credentials.Credentials {

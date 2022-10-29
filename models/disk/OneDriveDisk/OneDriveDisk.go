@@ -150,6 +150,14 @@ func (d *OneDriveDisk) GetVolume() *models.Volume {
 	return d.abstractDisk.GetVolume()
 }
 
+func (d *OneDriveDisk) SetName(name string) {
+	d.abstractDisk.SetName(name)
+}
+
+func (d *OneDriveDisk) GetName() string {
+	return d.abstractDisk.GetName()
+}
+
 func (d *OneDriveDisk) GetCredentials() credentials.Credentials {
 	return d.abstractDisk.GetCredentials()
 }
