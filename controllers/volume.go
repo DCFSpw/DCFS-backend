@@ -167,6 +167,14 @@ func DeleteVolume(c *gin.Context) {
 		return
 	}
 
+	// Check if volume is enqueued for upload or download
+	// We do not allow deleting volumes that are in use
+	volumeFromQueue := models.Transport.FindEnqueuedVolume(volumeUUID)
+	if volumeFromQueue != nil {
+		c.JSON(409, responses.NewOperationFailureResponse(constants.TRANSPORT_VOLUME_IS_BEING_USED, "Volume is currently enqueued for upload or download"))
+		return
+	}
+
 	// Trigger delete process
 	errCode, err = models.Transport.DeleteVolume(userUUID, volumeUUID)
 	if err != nil {

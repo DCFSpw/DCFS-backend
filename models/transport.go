@@ -202,6 +202,19 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	return nil
 }
 
+func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
+	for _, fc := range transport.FileUploadQueue {
+		for _, block := range *fc.File.GetBlocks() {
+			volume := block.Disk.GetVolume()
+			if volume.UUID == volumeUUID {
+				return volume
+			}
+		}
+	}
+
+	return nil
+}
+
 func (transport *transport) DeleteVolume(userUUID uuid.UUID, volumeUUID uuid.UUID) (string, error) {
 	// TO DO: deletion process worker
 	var errCode string
@@ -212,15 +225,6 @@ func (transport *transport) DeleteVolume(userUUID uuid.UUID, volumeUUID uuid.UUI
 	volume = Transport.GetVolume(userUUID, volumeUUID)
 	if volume == nil {
 		return constants.TRANSPORT_VOLUME_NOT_FOUND, errors.New("Volume not found in transport layer")
-	}
-
-	// Remove enqueued files from volume
-	transport.FileUploadQueueMutex.Lock()
-	defer transport.FileUploadQueueMutex.Unlock()
-	for _, fc := range transport.FileUploadQueue {
-		if fc.File.GetVolume().UUID == volumeUUID {
-			delete(transport.FileUploadQueue, fc.File.GetUUID())
-		}
 	}
 
 	// Trigger delete process in all disks assigned to this volume
