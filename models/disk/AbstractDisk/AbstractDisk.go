@@ -17,6 +17,7 @@ type AbstractDisk struct {
 	Credentials credentials.Credentials
 	BlockSize   int
 	Volume      *models.Volume
+	Name        string
 }
 
 /* Mandatory Disk interface implementations */
@@ -53,6 +54,14 @@ func (d *AbstractDisk) GetVolume() *models.Volume {
 	return d.Volume
 }
 
+func (d *AbstractDisk) SetName(name string) {
+	d.Name = name
+}
+
+func (d *AbstractDisk) GetName() string {
+	return d.Name
+}
+
 func (d *AbstractDisk) GetCredentials() credentials.Credentials {
 	return d.Credentials
 }
@@ -81,6 +90,7 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		ProviderUUID:           providerUUID,
 		VolumeUUID:             volumeUUID,
 		Credentials:            credentials,
+		Name:                   d.Name,
 	}
 }
 

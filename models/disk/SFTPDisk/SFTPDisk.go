@@ -100,6 +100,14 @@ func (d *SFTPDisk) GetVolume() *models.Volume {
 	return d.abstractDisk.GetVolume()
 }
 
+func (d *SFTPDisk) SetName(name string) {
+	d.abstractDisk.SetName(name)
+}
+
+func (d *SFTPDisk) GetName() string {
+	return d.abstractDisk.GetName()
+}
+
 func (d *SFTPDisk) SetUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetUUID(uuid)
 }
