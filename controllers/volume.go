@@ -10,7 +10,6 @@ import (
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"strconv"
 )
 
 func CreateVolume(c *gin.Context) {
@@ -203,10 +202,7 @@ func GetVolumes(c *gin.Context) {
 	var err error
 
 	// Retrieve page from query
-	page, err = strconv.Atoi(c.DefaultQuery("page", "1"))
-	if err != nil {
-		page = 1
-	}
+	page = requests.GetPageFromQuery(c)
 
 	// Retrieve userUUID from context
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
