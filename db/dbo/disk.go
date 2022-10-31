@@ -1,6 +1,9 @@
 package dbo
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+	"time"
+)
 
 type Disk struct {
 	AbstractDatabaseObject
@@ -9,6 +12,8 @@ type Disk struct {
 	ProviderUUID uuid.UUID `json:"-"`
 	Credentials  string    `json:"credentials"`
 	Name         string    `json:"name"`
+
+	CreatedAt time.Time `json:"-"`
 
 	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
 	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
@@ -19,4 +24,8 @@ func NewDisk() *Disk {
 	var d *Disk = new(Disk)
 	d.AbstractDatabaseObject.DatabaseObject = d
 	return d
+}
+
+func (d Disk) GetCreationTime() time.Time {
+	return d.CreatedAt
 }
