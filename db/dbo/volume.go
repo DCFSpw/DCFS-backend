@@ -4,6 +4,7 @@ import (
 	"dcfs/requests"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"time"
 )
 
 type VolumeSettings struct {
@@ -18,6 +19,7 @@ type Volume struct {
 	UserUUID       uuid.UUID      `json:"-"`
 	VolumeSettings VolumeSettings `gorm:"embedded" json:"settings"`
 
+	CreatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-"`
 
 	User User `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
@@ -41,4 +43,8 @@ func NewVolumeFromRequest(request *requests.VolumeCreateRequest, userUUID uuid.U
 	v.VolumeSettings.FilePartition = request.Settings.FilePartition
 
 	return v
+}
+
+func (v Volume) GetCreationTime() time.Time {
+	return v.CreatedAt
 }
