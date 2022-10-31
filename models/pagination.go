@@ -1,6 +1,10 @@
 package models
 
-import "math"
+import (
+	"math"
+	"sort"
+	"time"
+)
 
 type Pagination struct {
 	CurrentPage   int `json:"currentPage"`
@@ -15,16 +19,31 @@ type PaginationData struct {
 	Data       interface{} `json:"data"`
 }
 
+type SortablePaginationData interface {
+	interface{}
+	GetCreationTime() time.Time
+}
+
 func Paginate(collection []interface{}, page int, _perPage int) *PaginationData {
 	var paginationData *PaginationData = new(PaginationData)
 	var totalPages int = int(math.Ceil(float64(len(collection)) / float64(_perPage)))
 	var recordsOnPage int = int(math.Min(float64(_perPage), float64(len(collection)-((page-1)*_perPage))))
 	var data []interface{} = nil
 
-	for i := ((page - 1) * _perPage); i < ((page-1)*_perPage)+recordsOnPage; i++ {
-		data = append(data, collection[i])
+	// If the page is out of bounds, return an empty page
+	if page > 0 && recordsOnPage > 0 {
+		// Sort elements by creation time
+		sort.Slice(collection, func(i, j int) bool {
+			return collection[i].(SortablePaginationData).GetCreationTime().Before(collection[j].(SortablePaginationData).GetCreationTime())
+		})
+
+		// Get elements from requested page
+		data = collection[((page - 1) * _perPage) : ((page-1)*_perPage)+recordsOnPage]
+	} else {
+		recordsOnPage = 0
 	}
 
+	// Prepare pagination response
 	paginationData.Data = data
 	paginationData.Pagination.CurrentPage = page
 	paginationData.Pagination.TotalPages = totalPages
