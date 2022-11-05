@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"log"
+	"strconv"
 )
 
 func DiskCreate(c *gin.Context) {
@@ -285,8 +286,12 @@ func GetDisks(c *gin.Context) {
 	var _disks []dbo.Disk
 	var disks []interface{}
 	var page int
+	var err error
 
-	page = requests.GetPageFromQuery(c)
+	page, err = strconv.Atoi(c.Request.URL.Query().Get("page"))
+	if err != nil {
+		page = 1
+	}
 
 	userData, _ := c.Get("UserData")
 	userUUID = userData.(middleware.UserData).UserUUID
