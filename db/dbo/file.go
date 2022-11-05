@@ -11,21 +11,21 @@ import (
 type File struct {
 	AbstractDatabaseObject
 
-	VolumeUUID uuid.UUID
-	RootUUID   uuid.UUID
-	UserUUID   uuid.UUID
-	Type       int
-	Name       string
+	VolumeUUID uuid.UUID `json:"-"`
+	RootUUID   uuid.UUID `json:"-"`
+	UserUUID   uuid.UUID `json:"-"`
+	Type       int       `json:"type"`
+	Name       string    `json:"name"`
 
-	Size     int
-	Checksum int
+	Size     int    `json:"size"`
+	Checksum string `json:"checksum"`
 
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt
+	CreatedAt time.Time      `json:"creationDate"`
+	UpdatedAt time.Time      `json:"modificationDate"`
+	DeletedAt gorm.DeletedAt `json:"-"`
 
-	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID"`
-	User   User   `gorm:"foreignKey:UserUUID;references:UUID"`
+	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID" json:"-"`
+	User   User   `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 }
 
 func NewFile() *File {
