@@ -9,8 +9,9 @@ type Block struct {
 	UserUUID   uuid.UUID
 	VolumeUUID uuid.UUID
 	DiskUUID   uuid.UUID
-	size       int
-	checksum   int
+	
+	Size     int
+	Checksum string
 
 	//User   User   `gorm:"foreignKey:UserUUID;references:UUID"`
 	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID"`
