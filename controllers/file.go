@@ -83,6 +83,34 @@ func CreateDirectory(c *gin.Context) {
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
+func GetFile(c *gin.Context) {
+	var file *dbo.File
+	var fileUUID string
+	var userUUID uuid.UUID
+
+	// Retrieve fileUUID from path parameters
+	fileUUID = c.Param("FileUUID")
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve file from database
+	file, dbErr := db.FileFromDatabase(fileUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
+		return
+	}
+
+	// Verify that the user is owner of the volume
+	if userUUID != file.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "File not found"))
+		return
+	}
+
+	// Return volume data
+	c.JSON(200, responses.NewFileDataSuccessResponse(file))
+}
+
 func GetFiles(c *gin.Context) {
 	var files []dbo.File
 	var userUUID uuid.UUID

@@ -68,6 +68,7 @@ func ServeBackend() {
 		// File
 		authorized.POST("/files/manage", CreateDirectory)
 
+		authorized.GET("/files/manage/:FileUUID", GetFile)
 		authorized.GET("/files/manage", GetFiles)
 
 		//authorized.POST("/file/io/:FileUUID", FileUpload)
@@ -83,7 +84,7 @@ func ServeBackend() {
 		//authorized.POST("/file/share/:FileUUID", FileShare)
 		//authorized.DELETE("/file/share/FileUUID", FileShareRemove)
 
-		authorized.GET("/file/files", GetFiles)
+		//authorized.GET("/file/files", GetFiles)
 
 		// Providers
 		authorized.GET("/providers", GetProviders)
