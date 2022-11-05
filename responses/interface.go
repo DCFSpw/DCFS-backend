@@ -42,8 +42,10 @@ type FileRequestResponse struct {
 
 func NewEmptySuccessResponse() *EmptySuccessResponse {
 	var r *EmptySuccessResponse = new(EmptySuccessResponse)
+
 	r.Success = true
 	r.Data = nil
+
 	return r
 }
 
