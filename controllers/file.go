@@ -73,14 +73,60 @@ func CreateDirectory(c *gin.Context) {
 	// Create a new directory
 	directory = dbo.NewDirectoryFromRequest(&requestBody, userUUID, rootUUID)
 
-	// Save user to database
+	// Save directory to database
 	result := db.DB.DatabaseHandle.Create(&directory)
 	if result.Error != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
 	c.JSON(200, responses.NewEmptySuccessResponse())
+}
+
+func GetFiles(c *gin.Context) {
+	var files []dbo.File
+	var userUUID uuid.UUID
+	var volumeUUID uuid.UUID
+	var rootUUID uuid.UUID
+	var err error
+
+	// Retrieve volumeUUID from query
+	volumeUUIDString := c.Query("volumeUUID")
+	if volumeUUIDString == "" {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_VALIDATOR_ERROR, "volumeUUID", "Field VolumeUUID is required."))
+		return
+	} else {
+		volumeUUID, err = uuid.Parse(volumeUUIDString)
+		if err != nil {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "volumeUUID", "Provided VolumeUUID is not a valid UUID"))
+			return
+		}
+	}
+
+	// Retrieve rootUUID from query
+	rootUUIDString := c.Query("rootUUID")
+	if rootUUIDString != "" {
+		rootUUID, err = uuid.Parse(rootUUIDString)
+		if err != nil {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
+			return
+		}
+	} else {
+		rootUUID = uuid.Nil
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve list of volumes of current user from the database
+	err = db.DB.DatabaseHandle.Where("user_uuid = ? AND volume_uuid = ? AND root_uuid = ?", userUUID, volumeUUID, rootUUID).Find(&files).Error
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
+		return
+	}
+
+	// Return list of volumes
+	c.JSON(200, responses.NewGetFilesSuccessResponse(files))
 }
 
 func FileRequest(c *gin.Context) {
@@ -398,8 +444,4 @@ func FileRequestComplete(c *gin.Context) {
 	}
 
 	c.JSON(code, rsp)
-}
-
-func GetFiles(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "Get Files Endpoint"})
 }
