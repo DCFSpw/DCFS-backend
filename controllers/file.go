@@ -13,8 +13,75 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"log"
-	"time"
 )
+
+func CreateDirectory(c *gin.Context) {
+	var requestBody requests.DirectoryCreateRequest
+	var userUUID uuid.UUID
+	var volumeUUID uuid.UUID
+	var rootUUID uuid.UUID
+	var volume *models.Volume
+	var directory *dbo.File
+
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	// Retrieve volumeUUID from request
+	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
+		return
+	}
+
+	// Retrieve rootUUID from request if provided
+	if requestBody.RootUUID != "" {
+		rootUUID, err = uuid.Parse(requestBody.RootUUID)
+		if err != nil {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
+			return
+		}
+	} else {
+		rootUUID = uuid.Nil
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve volume from transport
+	volume = models.Transport.GetVolume(userUUID, volumeUUID)
+	if volume == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
+		return
+	}
+
+	// Verify that the user is owner of the volume
+	if userUUID != volume.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
+		return
+	}
+
+	// Verify that the rootUUID exists in the volume, and it's a directory
+	errCode := db.ValidateRootDirectory(rootUUID, volumeUUID)
+	if errCode != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
+		return
+	}
+
+	// Create a new directory
+	directory = dbo.NewDirectoryFromRequest(&requestBody, userUUID, rootUUID)
+
+	// Save user to database
+	result := db.DB.DatabaseHandle.Create(&directory)
+	if result.Error != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Database operation failed: " + result.Error.Error(), Code: constants.DATABASE_ERROR})
+		return
+	}
+
+	c.JSON(200, responses.NewEmptySuccessResponse())
+}
 
 func FileRequest(c *gin.Context) {
 	var requestBody requests.GetFileRequest
@@ -303,11 +370,9 @@ func FileRequestComplete(c *gin.Context) {
 				AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 					UUID: file.GetUUID(),
 				},
-				UserUUID:         userUUID,
-				Type:             file.GetType(),
-				Name:             file.GetName(),
-				CreationDate:     time.Now(),
-				ModificationDate: time.Now(),
+				UserUUID: userUUID,
+				Type:     file.GetType(),
+				Name:     file.GetName(),
 			})
 
 			for _, _block := range _file.Blocks {
