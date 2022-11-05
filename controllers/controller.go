@@ -68,6 +68,8 @@ func ServeBackend() {
 		// File
 		authorized.POST("/files/manage", CreateDirectory)
 
+		authorized.GET("/files/manage", GetFiles)
+
 		//authorized.POST("/file/io/:FileUUID", FileUpload)
 		//authorized.GET("/file/io/:FileUUID", FileDownload)
 
