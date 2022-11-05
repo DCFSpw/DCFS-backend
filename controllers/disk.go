@@ -66,7 +66,7 @@ func DiskCreate(c *gin.Context) {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
-	db.DB.DatabaseHandle.Omit("Provider", "Volume").Create(_disk)
+	db.DB.DatabaseHandle.Create(&_disk)
 
 	_, ok := disk.(OAuthDisk.OAuthDisk)
 	if ok {
