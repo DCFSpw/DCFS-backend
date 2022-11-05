@@ -6,6 +6,12 @@ type FileDataRequest struct {
 	Size int    `json:"size" binding:"required,min=1"`
 }
 
+type DirectoryCreateRequest struct {
+	Name       string `json:"name" binding:"required,gte=1,lte=64"`
+	VolumeUUID string `json:"volumeUUID" binding:"required"`
+	RootUUID   string `json:"rootUUID"`
+}
+
 type GetFileRequest struct {
 	VolumeUUID string          `json:"volumeUUID" binding:"required"`
 	File       FileDataRequest `json:"file" binding:"required"`
