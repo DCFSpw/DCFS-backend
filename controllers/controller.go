@@ -66,18 +66,20 @@ func ServeBackend() {
 		authorized.POST("/disks/oauth/:DiskUUID", DiskOAuth)
 
 		// File
-		authorized.POST("/file/io/:FileUUID", FileUpload)
-		authorized.GET("/file/io/:FileUUID", FileDownload)
+		authorized.POST("/files/manage", CreateDirectory)
 
-		authorized.PUT("/file/manage/:FileUUID", FileRename)
-		authorized.DELETE("/file/manage/:FileUUID", FileRemove)
-		authorized.GET("/file/manage/:FileUUID", FileGet)
+		//authorized.POST("/file/io/:FileUUID", FileUpload)
+		//authorized.GET("/file/io/:FileUUID", FileDownload)
 
-		authorized.GET("/file/request", FileRequest)
-		authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
+		//authorized.PUT("/file/manage/:FileUUID", FileRename)
+		//authorized.DELETE("/file/manage/:FileUUID", FileRemove)
+		//authorized.GET("/file/manage/:FileUUID", FileGet)
 
-		authorized.POST("/file/share/:FileUUID", FileShare)
-		authorized.DELETE("/file/share/FileUUID", FileShareRemove)
+		//authorized.GET("/file/request", FileRequest)
+		//authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
+
+		//authorized.POST("/file/share/:FileUUID", FileShare)
+		//authorized.DELETE("/file/share/FileUUID", FileShareRemove)
 
 		authorized.GET("/file/files", GetFiles)
 
