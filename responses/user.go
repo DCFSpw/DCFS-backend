@@ -46,19 +46,23 @@ func NewUserDataSuccessResponse(userData *dbo.User) *UserDataSuccessResponse {
 
 func NewLoginSuccessResponse(userData *dbo.User, token string) *LoginSuccessResponse {
 	var r *LoginSuccessResponse = new(LoginSuccessResponse)
+
 	r.Success = true
 	r.Data.Token = token
 	r.Data.UUID = userData.UUID
 	r.Data.FirstName = userData.FirstName
 	r.Data.LastName = userData.LastName
 	r.Data.Email = userData.Email
+
 	return r
 }
 
 func NewInvalidCredentialsResponse() *InvalidCredentialsResponse {
 	var r *InvalidCredentialsResponse = new(InvalidCredentialsResponse)
+
 	r.Success = false
 	r.Message = "Unauthorized"
 	r.Code = constants.AUTH_UNAUTHORIZED
+	
 	return r
 }
