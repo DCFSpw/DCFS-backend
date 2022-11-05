@@ -7,13 +7,17 @@ import (
 
 type File struct {
 	AbstractDatabaseObject
-	UserUUID         uuid.UUID
-	Type             int
-	Name             string
+
+	RootUUID uuid.UUID
+	UserUUID uuid.UUID
+	Type     int
+	Name     string
+
+	Size     int
+	Checksum int
+
 	CreationDate     time.Time
 	ModificationDate time.Time
-	size             int
-	checksum         int
 
 	User User `gorm:"foreignKey:UserUUID;references:UUID"`
 }
