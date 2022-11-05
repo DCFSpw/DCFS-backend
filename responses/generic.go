@@ -7,9 +7,11 @@ type NotFoundErrorResponse struct {
 
 func NewNotFoundErrorResponse(code string, message string) *NotFoundErrorResponse {
 	var r *NotFoundErrorResponse = new(NotFoundErrorResponse)
+
 	r.Success = false
 	r.Message = message
 	r.Code = code
+
 	return r
 }
 
@@ -22,8 +24,10 @@ type OperationFailureResponse struct {
 
 func NewOperationFailureResponse(code string, message string) *OperationFailureResponse {
 	var r *OperationFailureResponse = new(OperationFailureResponse)
+
 	r.Success = false
 	r.Message = message
 	r.Code = code
+	
 	return r
 }
