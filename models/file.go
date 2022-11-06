@@ -1,9 +1,11 @@
 package models
 
 import (
-	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db/dbo"
+	"dcfs/requests"
 	"github.com/google/uuid"
+	"time"
 )
 
 type File interface {
@@ -19,22 +21,29 @@ type File interface {
 	GetType() int
 	SetType(newType int)
 
+	GetRoot() uuid.UUID
+	SetRoot(rootUUID uuid.UUID)
+
 	GetVolume() *Volume
 	SetVolume(v *Volume)
 
 	IsCompleted() bool
 	GetBlocks() *[]*Block
 
+	GetFileDBO(userUUID uuid.UUID) dbo.File
+
 	Remove()
 }
 
 type AbstractFile struct {
-	UUID   uuid.UUID
-	Name   string
-	Type   int
-	Size   int
-	Parent *File
-	Volume *Volume
+	UUID uuid.UUID
+	Name string
+	Type int
+	Size int
+
+	RootUUID uuid.UUID
+	Parent   *File
+	Volume   *Volume
 }
 
 func (file *AbstractFile) Remove() {
@@ -73,6 +82,14 @@ func (file *AbstractFile) SetType(newType int) {
 	file.Type = newType
 }
 
+func (file *AbstractFile) GetRoot() uuid.UUID {
+	return file.RootUUID
+}
+
+func (file *AbstractFile) SetRoot(rootUUID uuid.UUID) {
+	file.RootUUID = rootUUID
+}
+
 func (file *AbstractFile) IsCompleted() bool {
 	panic("Unimplemented abstract method")
 }
@@ -87,6 +104,22 @@ func (file *AbstractFile) SetVolume(v *Volume) {
 
 func (file *AbstractFile) GetBlocks() *[]*Block {
 	return nil
+}
+
+func (file *AbstractFile) GetFileDBO(userUUID uuid.UUID) dbo.File {
+	var f = dbo.NewFile()
+
+	f.UUID = file.UUID
+	f.Name = file.Name
+	f.Type = file.Type
+	f.Size = file.Size
+	f.RootUUID = file.RootUUID
+	f.UserUUID = userUUID
+	f.CreatedAt = time.Now()
+	f.UpdatedAt = time.Now()
+	f.Checksum = ""
+
+	return *f
 }
 
 type RegularFile struct {
@@ -128,6 +161,18 @@ func (file *RegularFile) GetType() int {
 
 func (file *RegularFile) SetType(newType int) {
 	file.AbstractFile.SetType(newType)
+}
+
+func (file *RegularFile) GetRoot() uuid.UUID {
+	return file.AbstractFile.GetRoot()
+}
+
+func (file *RegularFile) SetRoot(rootUUID uuid.UUID) {
+	file.AbstractFile.SetRoot(rootUUID)
+}
+
+func (file *RegularFile) GetFileDBO(userUUID uuid.UUID) dbo.File {
+	return file.AbstractFile.GetFileDBO(userUUID)
 }
 
 func (file *RegularFile) IsCompleted() bool {
@@ -204,6 +249,18 @@ func (d *Directory) SetType(newType int) {
 	d.AbstractFile.SetType(newType)
 }
 
+func (d *Directory) GetRoot() uuid.UUID {
+	return d.AbstractFile.GetRoot()
+}
+
+func (d *Directory) SetRoot(rootUUID uuid.UUID) {
+	d.AbstractFile.SetRoot(rootUUID)
+}
+
+func (d *Directory) GetFileDBO(userUUID uuid.UUID) dbo.File {
+	return d.AbstractFile.GetFileDBO(userUUID)
+}
+
 func (d *Directory) IsCompleted() bool {
 	return true
 }
@@ -234,10 +291,11 @@ func NewFile(filetype int) File {
 	return f
 }
 
-func NewFileFromReq(req *apicalls.FileUploadRequest) File {
-	var f File = NewFile(req.Type)
-	f.SetName(req.Name)
-	f.SetSize(req.Size)
+func NewFileFromRequest(request *requests.InitFileUploadRequest, rootUUID uuid.UUID) File {
+	var f File = NewFile(request.File.Type)
+	f.SetName(request.File.Name)
+	f.SetSize(request.File.Size)
+	f.SetRoot(rootUUID)
 
 	return f
 }

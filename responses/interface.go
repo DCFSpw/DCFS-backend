@@ -25,21 +25,6 @@ type BlockDownloadResponse struct {
 	Block   []uint8 `json:"block"`
 }
 
-type FileRequestBlockResponse struct {
-	UUID  string
-	Order int
-	Size  int
-}
-
-type FileRequestResponse struct {
-	SuccessResponse
-	UUID   string
-	Name   string
-	Type   int
-	Size   int
-	Blocks []FileRequestBlockResponse
-}
-
 func NewEmptySuccessResponse() *EmptySuccessResponse {
 	var r *EmptySuccessResponse = new(EmptySuccessResponse)
 

@@ -16,7 +16,7 @@ import (
 	"log"
 )
 
-func DiskCreate(c *gin.Context) {
+func CreateDisk(c *gin.Context) {
 	var requestBody requests.DiskCreateRequest = requests.DiskCreateRequest{}
 	var provider *dbo.Provider = dbo.NewProvider()
 	var authCode string = ""
