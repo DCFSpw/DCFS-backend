@@ -59,3 +59,12 @@ func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file *models.RegularFi
 
 	return r
 }
+
+func NewBlockTransferFailureResponse(blocks []FileRequestBlockResponse) *EmptySuccessResponse {
+	var r *EmptySuccessResponse = new(EmptySuccessResponse)
+
+	r.Success = false
+	r.Data = blocks
+
+	return r
+}
