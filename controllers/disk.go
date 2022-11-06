@@ -41,7 +41,7 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
-	volume := models.Transport.GetVolume(userUUID, volumeUUID)
+	volume := models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "A volume of provided UUID does not exist"))
 		return
@@ -110,7 +110,7 @@ func DiskOAuth(c *gin.Context) {
 		return
 	}
 
-	volume := models.Transport.GetVolume(userUUID, _disk.VolumeUUID)
+	volume := models.Transport.GetVolume(_disk.VolumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
 		return
@@ -253,9 +253,6 @@ func DiskDelete(c *gin.Context) {
 		return
 	}
 
-	userData, _ := c.Get("UserData")
-	userUUID := userData.(middleware.UserData).UserUUID
-
 	_d := models.Transport.FindEnqueuedDisk(_disk.UUID)
 	if _d != nil {
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't delete it now"))
@@ -273,7 +270,7 @@ func DiskDelete(c *gin.Context) {
 		return
 	}
 
-	volume = models.Transport.GetVolume(userUUID, _disk.Volume.UUID)
+	volume = models.Transport.GetVolume(_disk.Volume.UUID)
 	volume.DeleteDisk(_disk.UUID)
 	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
 

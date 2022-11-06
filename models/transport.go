@@ -11,188 +11,203 @@ import (
 	"time"
 )
 
-// TODO: transform to an abstract object
-type VolumeContainer struct {
-	Volume  *Volume
-	Counter int64
+type InstanceContainer struct {
+	Instance interface{}
+	Counter  int64
 }
 
-type FileContainer struct {
-	File    File
-	Counter int64
+type ConcurrentInstances struct {
+	InstanceMutex sync.Mutex
+	Instances     map[uuid.UUID]*InstanceContainer
 }
 
-func (transport *transport) updateCounter(vc *VolumeContainer, userUUID uuid.UUID, volumeUUID uuid.UUID) {
-	vc.Counter++
+func NewConcurrentInstances() *ConcurrentInstances {
+	return &ConcurrentInstances{
+		InstanceMutex: sync.Mutex{},
+		Instances:     make(map[uuid.UUID]*InstanceContainer),
+	}
+}
+
+func (instances *ConcurrentInstances) updateCounter(key uuid.UUID) {
+	instances.Instances[key].Counter++
 
 	time.AfterFunc(6*time.Minute, func() {
-		vc.Counter--
+		instances.InstanceMutex.Lock()
+		defer instances.InstanceMutex.Unlock()
 
-		if vc.Counter <= 0 {
-			transport.ActiveVolumesMutex.Lock()
-			defer transport.ActiveVolumesMutex.Unlock()
+		if instances.Instances == nil || instances.Instances[key] == nil {
+			return
+		}
 
-			delete(transport.ActiveVolumes[userUUID], volumeUUID)
+		instances.Instances[key].Counter--
+
+		if instances.Instances[key].Counter <= 0 {
+			delete(instances.Instances, key)
 		}
 	})
 }
 
+// MarkAsUsed - add '1' to the instance from instances under the provided key.
+//
+//	It is a blocking call, there is no callback that would reduce
+//	the instance counter later - the instance will only be
+//	deleted manually by the call to MarkAsCompleted
+//
+// fields:
+//   - key - UUID of the instance to be marked
+func (instances *ConcurrentInstances) MarkAsUsed(key uuid.UUID) error {
+	instances.InstanceMutex.Lock()
+	defer instances.InstanceMutex.Unlock()
+
+	var container *InstanceContainer = instances.Instances[key]
+	if container == nil {
+		return errors.New(fmt.Sprintf("instance with UUID: %s is not enqueued", key.String()))
+	}
+
+	container.Counter++
+	return nil
+}
+
+// MarkAsCompleted - removes '1' from the instance from instances under the provided key.
+//
+//	It manually checks whether the instance should be deleted because
+//	it has been blocked by a call to MarkAsUsed
+//
+// fields:
+//   - key - UUID of the instance to be marked
+func (instances *ConcurrentInstances) MarkAsCompleted(key uuid.UUID) {
+	time.AfterFunc(6*time.Minute, func() {
+		instances.InstanceMutex.Lock()
+		defer instances.InstanceMutex.Unlock()
+
+		var container *InstanceContainer = instances.Instances[key]
+		if container == nil {
+			return
+		}
+
+		container.Counter--
+		if container.Counter <= 0 {
+			delete(instances.Instances, key)
+		}
+	})
+}
+
+// EnqueueInstance - enqueues instance in the instance queues and triggers its automatic deletion.
+//
+// fields:
+//   - key - UUID of the newly enqueued instance
+//   - instance
+func (instances *ConcurrentInstances) EnqueueInstance(key uuid.UUID, instance interface{}) {
+	instances.InstanceMutex.Lock()
+	defer instances.InstanceMutex.Unlock()
+
+	if instances.Instances == nil {
+		instances.Instances = make(map[uuid.UUID]*InstanceContainer)
+	}
+
+	var container *InstanceContainer = &InstanceContainer{
+		Instance: instance,
+		Counter:  0,
+	}
+
+	instances.Instances[key] = container
+	instances.updateCounter(key)
+}
+
+// GetEnqueuedInstance - gets the enqueued instance.
+//
+// fields:
+//   - key
+func (instances *ConcurrentInstances) GetEnqueuedInstance(key uuid.UUID) interface{} {
+	instances.InstanceMutex.Lock()
+	defer instances.InstanceMutex.Unlock()
+
+	if instances.Instances == nil {
+		return nil
+	}
+
+	return instances.Instances[key].Instance
+}
+
+// RemoveEnqueuedInstance - removes the enqueued instance.
+//
+// fields:
+//   - key
+func (instances *ConcurrentInstances) RemoveEnqueuedInstance(key uuid.UUID) {
+	instances.InstanceMutex.Lock()
+	defer instances.InstanceMutex.Unlock()
+
+	if instances.Instances == nil {
+		return
+	}
+
+	delete(instances.Instances, key)
+}
+
 type transport struct {
-	ActiveVolumesMutex sync.Mutex
-	ActiveVolumes      map[uuid.UUID]map[uuid.UUID]*VolumeContainer
-
-	FileUploadQueueMutex sync.Mutex
-	FileUploadQueue      map[uuid.UUID]*FileContainer
+	ActiveVolumes     *ConcurrentInstances
+	FileDownloadQueue *ConcurrentInstances
+	FileUploadQueue   *ConcurrentInstances
 }
 
-func (transport *transport) KeepAlive(userUUID uuid.UUID, volumeUUID uuid.UUID) {
-	transport.ActiveVolumesMutex.Lock()
-	defer transport.ActiveVolumesMutex.Unlock()
+/* public methods */
 
-	_ = transport.getVolumeContainer(userUUID, volumeUUID)
+// VolumeKeepAlive - prolongs the volume life in the ActiveVolumes instance array
+//
+// fields:
+//   - volumeUUID
+func (transport *transport) VolumeKeepAlive(volumeUUID uuid.UUID) {
+	transport.ActiveVolumes.InstanceMutex.Lock()
+	defer transport.ActiveVolumes.InstanceMutex.Unlock()
+
+	_ = transport.getVolumeContainer(volumeUUID)
 }
 
-func (transport *transport) GetVolume(userUUID uuid.UUID, volumeUUID uuid.UUID) *Volume {
-	transport.ActiveVolumesMutex.Lock()
-	defer transport.ActiveVolumesMutex.Unlock()
+// GetVolume - gets the volume handle from the ActiveVolumes instance array.
+//
+// fields:
+//   - volumeUUID
+func (transport *transport) GetVolume(volumeUUID uuid.UUID) *Volume {
+	transport.ActiveVolumes.InstanceMutex.Lock()
+	defer transport.ActiveVolumes.InstanceMutex.Unlock()
 
-	return transport.getVolumeContainer(userUUID, volumeUUID).Volume
+	return transport.getVolumeContainer(volumeUUID).Instance.(*Volume)
 }
 
+// GetVolumes - gets an array of volume handles belonging to the given user
+//
+// fields:
+//   - userUUID
 func (transport *transport) GetVolumes(userUUID uuid.UUID) []*Volume {
-	transport.ActiveVolumesMutex.Lock()
-	defer transport.ActiveVolumesMutex.Unlock()
+	transport.ActiveVolumes.InstanceMutex.Lock()
+	defer transport.ActiveVolumes.InstanceMutex.Unlock()
 
 	var rsp []*Volume
 	var _volumes []dbo.Volume
 	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Find(&_volumes)
 
 	for _, volume := range _volumes {
-		rsp = append(rsp, transport.getVolumeContainer(userUUID, volume.UUID).Volume)
+		rsp = append(rsp, transport.getVolumeContainer(volume.UUID).Instance.(*Volume))
 	}
 
 	return rsp
 }
 
-func (transport *transport) getVolumeContainer(userUUID uuid.UUID, volumeUUID uuid.UUID) *VolumeContainer {
-	if transport.ActiveVolumes == nil {
-		transport.ActiveVolumes = make(map[uuid.UUID]map[uuid.UUID]*VolumeContainer)
-	}
-
-	if transport.ActiveVolumes[userUUID] == nil {
-		transport.ActiveVolumes[userUUID] = make(map[uuid.UUID]*VolumeContainer)
-	}
-
-	var container *VolumeContainer
-	if vc, ok := transport.ActiveVolumes[userUUID][volumeUUID]; ok {
-		container = vc
-	} else {
-		var _volume dbo.Volume = dbo.Volume{}
-		var _disks []dbo.Disk
-
-		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
-		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
-		if _volume.UUID != volumeUUID {
-			return &VolumeContainer{Volume: nil}
-		}
-
-		container = new(VolumeContainer)
-		container.Volume = NewVolume(&_volume, _disks)
-	}
-
-	transport.ActiveVolumes[userUUID][volumeUUID] = container
-	transport.updateCounter(container, userUUID, volumeUUID)
-	return container
-}
-
-func (transport *transport) _updateCounter(UUID uuid.UUID) {
-	var fc *FileContainer = transport.FileUploadQueue[UUID]
-	fc.Counter++
-
-	time.AfterFunc(6*time.Minute, func() {
-		transport.FileUploadQueueMutex.Lock()
-		defer transport.FileUploadQueueMutex.Unlock()
-
-		var _fc *FileContainer = transport.FileUploadQueue[UUID]
-		if _fc == nil {
-			return
-		}
-
-		_fc.Counter--
-		if _fc.Counter <= 0 {
-			delete(transport.FileUploadQueue, UUID)
-		}
-	})
-}
-
-func (transport *transport) MarkAsUsed(UUID uuid.UUID) error {
-	transport.FileUploadQueueMutex.Lock()
-	defer transport.FileUploadQueueMutex.Unlock()
-
-	var fc *FileContainer = transport.FileUploadQueue[UUID]
-	if fc == nil {
-		return errors.New(fmt.Sprintf("file with UUID: %s is not enqueued", UUID.String()))
-	}
-
-	fc.Counter++
-	return nil
-}
-
-func (transport *transport) MarkAsCompleted(UUID uuid.UUID) {
-	time.AfterFunc(6*time.Minute, func() {
-		transport.FileUploadQueueMutex.Lock()
-		defer transport.FileUploadQueueMutex.Unlock()
-
-		var _fc *FileContainer = transport.FileUploadQueue[UUID]
-		if _fc == nil {
-			return
-		}
-
-		_fc.Counter--
-		if _fc.Counter <= 0 {
-			delete(transport.FileUploadQueue, UUID)
-		}
-	})
-}
-
-func (transport *transport) EnqueueFileUpload(UUID uuid.UUID, file File) {
-	transport.FileUploadQueueMutex.Lock()
-	defer transport.FileUploadQueueMutex.Unlock()
-
-	if transport.FileUploadQueue == nil {
-		transport.FileUploadQueue = make(map[uuid.UUID]*FileContainer)
-	}
-
-	var fc *FileContainer = new(FileContainer)
-	fc.File = file
-	transport.FileUploadQueue[UUID] = fc
-	transport._updateCounter(UUID)
-}
-
-func (transport *transport) GetEnqueuedFileUpload(UUID uuid.UUID) File {
-	transport.FileUploadQueueMutex.Lock()
-	defer transport.FileUploadQueueMutex.Unlock()
-
-	if transport.FileUploadQueue == nil {
-		return nil
-	}
-
-	return transport.FileUploadQueue[UUID].File
-}
-
-func (transport *transport) RemoveEnqueuedFileUpload(UUID uuid.UUID) {
-	transport.FileUploadQueueMutex.Lock()
-	defer transport.FileUploadQueueMutex.Unlock()
-
-	if transport.FileUploadQueue == nil {
-		return
-	}
-	delete(transport.FileUploadQueue, UUID)
-}
-
+// FindEnqueuedDisk - checks whether any block belonging to the given disk has been enqueued and returns it.
+//
+// fields:
+//   - diskUUID
 func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
-	for _, fc := range transport.FileUploadQueue {
-		for _, block := range *fc.File.GetBlocks() {
+	for _, instance := range transport.FileUploadQueue.Instances {
+		for _, block := range *instance.Instance.(File).GetBlocks() {
+			if block.Disk.GetUUID() == diskUUID {
+				return block.Disk
+			}
+		}
+	}
+
+	for _, instance := range transport.FileDownloadQueue.Instances {
+		for _, block := range *instance.Instance.(File).GetBlocks() {
 			if block.Disk.GetUUID() == diskUUID {
 				return block.Disk
 			}
@@ -202,9 +217,22 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	return nil
 }
 
+// FindEnqueuedVolume - checks whether any block belonging to the given volume has been enqueued and returns it.
+//
+// fields:
+//   - volumeUUID
 func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
-	for _, fc := range transport.FileUploadQueue {
-		for _, block := range *fc.File.GetBlocks() {
+	for _, instance := range transport.FileUploadQueue.Instances {
+		for _, block := range *instance.Instance.(File).GetBlocks() {
+			volume := block.Disk.GetVolume()
+			if volume.UUID == volumeUUID {
+				return volume
+			}
+		}
+	}
+
+	for _, instance := range transport.FileDownloadQueue.Instances {
+		for _, block := range *instance.Instance.(File).GetBlocks() {
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				return volume
@@ -215,14 +243,18 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 	return nil
 }
 
-func (transport *transport) DeleteVolume(userUUID uuid.UUID, volumeUUID uuid.UUID) (string, error) {
+// DeleteVolume - deletes the given volume from the ActiveVolumes array.
+//
+// fields:
+//   - volumeUUID
+func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	// TO DO: deletion process worker
 	var errCode string
 	var err error
 	var volume *Volume
 
 	// Retrieve volume from transport
-	volume = Transport.GetVolume(userUUID, volumeUUID)
+	volume = Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		return constants.TRANSPORT_VOLUME_NOT_FOUND, errors.New("Volume not found in transport layer")
 	}
@@ -236,10 +268,51 @@ func (transport *transport) DeleteVolume(userUUID uuid.UUID, volumeUUID uuid.UUI
 	}
 
 	// Remove volume from transport
-	delete(transport.ActiveVolumes[userUUID], volumeUUID)
+	transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
 
 	return constants.SUCCESS, nil
 }
 
+/* private methods */
+
+func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceContainer {
+	if transport.ActiveVolumes == nil {
+		transport.ActiveVolumes = &ConcurrentInstances{
+			InstanceMutex: sync.Mutex{},
+			Instances:     make(map[uuid.UUID]*InstanceContainer),
+		}
+	}
+
+	var container *InstanceContainer
+	if vc, ok := transport.ActiveVolumes.Instances[volumeUUID]; ok {
+		container = vc
+	} else {
+		var _volume dbo.Volume = dbo.Volume{}
+		var _disks []dbo.Disk
+
+		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
+		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
+		if _volume.UUID != volumeUUID {
+			return &InstanceContainer{Instance: nil}
+		}
+
+		container = new(InstanceContainer)
+		container.Instance = NewVolume(&_volume, _disks)
+	}
+
+	transport.ActiveVolumes.Instances[volumeUUID] = container
+	transport.ActiveVolumes.updateCounter(volumeUUID)
+
+	return container
+}
+
+func NewTransport() *transport {
+	return &transport{
+		ActiveVolumes:     NewConcurrentInstances(),
+		FileDownloadQueue: NewConcurrentInstances(),
+		FileUploadQueue:   NewConcurrentInstances(),
+	}
+}
+
 // Transport - global variable
-var Transport *transport = new(transport)
+var Transport *transport = NewTransport()
