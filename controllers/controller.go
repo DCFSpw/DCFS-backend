@@ -73,7 +73,7 @@ func ServeBackend() {
 		authorized.DELETE("/file/manage/:FileUUID", FileRemove)
 		authorized.GET("/file/manage/:FileUUID", FileGet)
 
-		authorized.GET("/file/request", FileRequest)
+		authorized.POST("/file/request", FileRequest)
 		authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
 
 		authorized.POST("/file/share/:FileUUID", FileShare)

@@ -13,7 +13,7 @@ type Disk struct {
 	Credentials  string    `json:"credentials"`
 	Name         string    `json:"name"`
 
-	CreatedAt time.Time `json:"-"`
+	CreatedAt time.Time `gorm:"<-:create" json:"-"`
 
 	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
 	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
