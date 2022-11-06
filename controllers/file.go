@@ -372,91 +372,87 @@ func FileShareRemove(c *gin.Context) {
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Remove Endpoint"})
 }
 
-func FileRequestComplete(c *gin.Context) {
-	var requestBody requests.FileRequestCompleteRequest = requests.FileRequestCompleteRequest{}
-	var _fileUUID string
+func CompleteFileUploadRequest(c *gin.Context) {
 	var fileUUID uuid.UUID
+	var _fileUUID string
 	var userUUID uuid.UUID
-	var err error
-	var file models.File
-	var rsp responses.FileRequestResponse = responses.FileRequestResponse{}
-	var code int
+	var file models.RegularFile
+	var failedBlocks []responses.FileRequestBlockResponse
 
-	userData, _ := c.Get("UserData")
-	userUUID = userData.(middleware.UserData).UserUUID
-
-	_fileUUID = c.Param("FileUUID")
-	fileUUID, err = uuid.Parse(_fileUUID)
-	if err != nil {
-		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "fileUUID", "Provided fileUUID is not a valid UUID"))
-		return
-	}
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve and validate data from request
-	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(422, responses.NewValidationErrorResponse(err))
+	_fileUUID = c.Param("FileUUID")
+	fileUUID, err := uuid.Parse(_fileUUID)
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided fileUUID is not a valid UUID"))
 		return
 	}
 
-	if requestBody.Direction {
-		// TODO
-		panic("Unimplemented")
-	} else {
-		file = models.Transport.GetEnqueuedFileUpload(fileUUID)
-		//rsp.Type = file.GetType()
-		//rsp.UUID = file.GetUUID().String()
-		//rsp.Name = file.GetName()
-		//rsp.Size = file.GetSize()
+	// Retrieve file from transport
+	file = *models.Transport.GetEnqueuedFileUpload(fileUUID).(*models.RegularFile)
 
-		var _file *models.RegularFile = file.(*models.RegularFile)
-		for _, _block := range _file.Blocks {
-			if _block.Status == constants.BLOCK_STATUS_TRANSFERRED {
-				continue
-			}
-
-			var b responses.FileRequestBlockResponse = responses.FileRequestBlockResponse{
-				UUID:  _block.UUID,
-				Order: _block.Order,
-				Size:  _block.Size,
-			}
-
-			rsp.Blocks = append(rsp.Blocks, b)
+	// Verify whether blocks were successfully uploaded
+	for _, _block := range file.Blocks {
+		if _block.Status == constants.BLOCK_STATUS_TRANSFERRED {
+			continue
 		}
 
-		if len(rsp.Blocks) == 0 {
-			//rsp.Success = true
-			//rsp.Message = "Successfully transferred the file"
+		// Add untransferred blocks to failed response
+		var b = responses.FileRequestBlockResponse{
+			UUID:  _block.UUID,
+			Order: _block.Order,
+			Size:  _block.Size,
+		}
 
-			db.DB.DatabaseHandle.Create(&dbo.File{
-				AbstractDatabaseObject: dbo.AbstractDatabaseObject{
-					UUID: file.GetUUID(),
-				},
-				UserUUID: userUUID,
-				Type:     file.GetType(),
-				Name:     file.GetName(),
-			})
+		failedBlocks = append(failedBlocks, b)
+	}
 
-			for _, _block := range _file.Blocks {
-				db.DB.DatabaseHandle.Create(&dbo.Block{
-					AbstractDatabaseObject: dbo.AbstractDatabaseObject{
-						UUID: _block.UUID,
-					},
-					UserUUID:   userUUID,
-					VolumeUUID: _file.Volume.UUID,
-					DiskUUID:   _block.Disk.GetUUID(),
-				})
-			}
+	// If there are failed blocks, return them
+	if len(failedBlocks) > 0 {
+		c.JSON(449, responses.NewBlockTransferFailureResponse(failedBlocks))
+		return
+	}
 
-			models.Transport.RemoveEnqueuedFileUpload(fileUUID)
+	// Save file to database
+	result := db.DB.DatabaseHandle.Create(&dbo.File{
+		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+			UUID: file.GetUUID(),
+		},
+		VolumeUUID: file.GetVolume().UUID,
+		RootUUID:   file.GetRoot(),
+		UserUUID:   userUUID,
+		Type:       file.GetType(),
+		Name:       file.GetName(),
+		Size:       file.GetSize(),
+		Checksum:   "",
+	})
 
-			code = 200
-		} else {
-			//rsp.Success = false
-			//rsp.Message = "Failed to transfer the file"
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+		return
+	}
 
-			code = 449
+	// Save blocks to database
+	for _, _block := range file.Blocks {
+		result := db.DB.DatabaseHandle.Create(&dbo.Block{
+			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+				UUID: _block.UUID,
+			},
+			UserUUID:   userUUID,
+			VolumeUUID: file.Volume.UUID,
+			DiskUUID:   _block.Disk.GetUUID(),
+		})
+
+		if result.Error != nil {
+			c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+			return
 		}
 	}
 
-	c.JSON(code, nil)
+	// Remove file from transport
+	models.Transport.RemoveEnqueuedFileUpload(fileUUID)
+
+	c.JSON(200, responses.NewEmptySuccessResponse())
 }
