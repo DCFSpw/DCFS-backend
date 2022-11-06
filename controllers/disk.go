@@ -82,6 +82,8 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
+	volume.RefreshPartitioner()
+
 	c.JSON(200, responses.CreateDiskSuccessResponse(_disk, authCode))
 }
 
@@ -236,6 +238,8 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
+	volume.RefreshPartitioner()
+
 	c.JSON(200, responses.CreateEmptySuccessResponse(diskDBO))
 }
 
@@ -276,6 +280,8 @@ func DiskDelete(c *gin.Context) {
 	volume = models.Transport.GetVolume(userUUID, _disk.Volume.UUID)
 	volume.DeleteDisk(_disk.UUID)
 	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
+
+	volume.RefreshPartitioner()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }
