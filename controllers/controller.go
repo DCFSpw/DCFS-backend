@@ -78,9 +78,6 @@ func ServeBackend() {
 		authorized.POST("/files/block/:BlockUUID", UploadBlock)
 		//authorized.GET("/files/block/:BlockUUID", DownloadBlock)
 
-		authorized.POST("/file/request", FileRequest)
-		authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
-
 		authorized.PUT("/files/manage/:FileUUID", UpdateFile)
 		//authorized.DELETE("/files/manage/:FileUUID", FileRemove)
 
