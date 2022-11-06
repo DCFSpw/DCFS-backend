@@ -19,7 +19,7 @@ type Volume struct {
 	UserUUID       uuid.UUID      `json:"-"`
 	VolumeSettings VolumeSettings `gorm:"embedded" json:"settings"`
 
-	CreatedAt time.Time      `json:"-"`
+	CreatedAt time.Time      `gorm:"<-:create" json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-"`
 
 	User User `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`

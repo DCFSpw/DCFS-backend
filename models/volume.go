@@ -1,9 +1,9 @@
 package models
 
 import (
-	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/requests"
 	"github.com/google/uuid"
 	"log"
 	"math"
@@ -45,31 +45,31 @@ func (v *Volume) DeleteDisk(diskUUID uuid.UUID) {
 	delete(v.disks, diskUUID)
 }
 
-func (v *Volume) FileUploadRequest(req *apicalls.FileUploadRequest) File {
-	var f File = NewFileFromReq(req)
+func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, userUUID uuid.UUID, rootUUID uuid.UUID) RegularFile {
+	var f File = NewFileFromRequest(request, rootUUID)
 	f.SetVolume(v)
 
-	if req.Type == constants.FILE_TYPE_REGULAR {
-		var _f *RegularFile = f.(*RegularFile)
-		var blockCount int = int(math.Max(math.Ceil(float64(req.Size/v.BlockSize)), 1))
-		var cumulativeSize int = 0
+	// Prepare partition of the file
+	var _f *RegularFile = f.(*RegularFile)
+	var blockCount int = int(math.Max(math.Ceil(float64(request.File.Size/v.BlockSize)), 1))
+	var cumulativeSize int = 0
 
-		_f.Blocks = make(map[uuid.UUID]*Block)
-		for i := 0; i < blockCount; i++ {
-			var currentSize int = v.BlockSize
-			cumulativeSize += v.BlockSize
-			if cumulativeSize > f.GetSize() {
-				currentSize = v.BlockSize - (cumulativeSize - f.GetSize())
-			}
-
-			var block *Block = NewBlock(uuid.New(), req.UserUUID, &f, v.partitioner.AssignDisk(currentSize), currentSize, 0, constants.BLOCK_STATUS_QUEUED, i)
-			_f.Blocks[block.UUID] = block
+	// Partition the file into blocks
+	_f.Blocks = make(map[uuid.UUID]*Block)
+	for i := 0; i < blockCount; i++ {
+		// Compute the size of the block
+		var currentSize int = v.BlockSize
+		cumulativeSize += v.BlockSize
+		if cumulativeSize > f.GetSize() {
+			currentSize = v.BlockSize - (cumulativeSize - f.GetSize())
 		}
-	} else {
-		panic("unimplemented")
+
+		// Create a new block
+		var block *Block = NewBlock(uuid.New(), userUUID, &f, v.partitioner.AssignDisk(currentSize), currentSize, 0, constants.BLOCK_STATUS_QUEUED, i)
+		_f.Blocks[block.UUID] = block
 	}
 
-	return f
+	return *_f
 }
 
 func (v *Volume) GetVolumeDBO() dbo.Volume {

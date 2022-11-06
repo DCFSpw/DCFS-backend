@@ -56,7 +56,7 @@ func ServeBackend() {
 		authorized.DELETE("/volumes/manage/:VolumeUUID", DeleteVolume)
 
 		// Disk
-		authorized.POST("/disks/manage", DiskCreate)
+		authorized.POST("/disks/manage", CreateDisk)
 		authorized.GET("/disks/manage", GetDisks)
 
 		authorized.GET("/disks/manage/:DiskUUID", DiskGet)
@@ -71,20 +71,18 @@ func ServeBackend() {
 		authorized.GET("/files/manage/:FileUUID", GetFile)
 		authorized.GET("/files/manage", GetFiles)
 
-		//authorized.POST("/file/io/:FileUUID", FileUpload)
+		authorized.POST("/files/upload", InitFileUploadRequest)
+		//authorized.GET("/files/upload", InitFileDownloadRequest)
+		//authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
+
+		authorized.POST("/files/block/:BlockUUID", UploadBlock)
 		//authorized.GET("/file/io/:FileUUID", FileDownload)
 
 		//authorized.PUT("/file/manage/:FileUUID", FileRename)
 		//authorized.DELETE("/file/manage/:FileUUID", FileRemove)
-		//authorized.GET("/file/manage/:FileUUID", FileGet)
-
-		//authorized.GET("/file/request", FileRequest)
-		//authorized.POST("/file/request/complete/:FileUUID", FileRequestComplete)
 
 		//authorized.POST("/file/share/:FileUUID", FileShare)
 		//authorized.DELETE("/file/share/FileUUID", FileShareRemove)
-
-		//authorized.GET("/file/files", GetFiles)
 
 		// Providers
 		authorized.GET("/providers", GetProviders)

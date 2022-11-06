@@ -20,7 +20,7 @@ type File struct {
 	Size     int    `json:"size"`
 	Checksum string `json:"checksum"`
 
-	CreatedAt time.Time      `json:"creationDate"`
+	CreatedAt time.Time      `gorm:"<-:create" json:"creationDate"`
 	UpdatedAt time.Time      `json:"modificationDate"`
 	DeletedAt gorm.DeletedAt `json:"-"`
 
