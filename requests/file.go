@@ -20,7 +20,3 @@ type InitFileUploadRequest struct {
 
 type FileUploadRequest struct {
 }
-
-type FileRequestCompleteRequest struct {
-	Direction bool `json:"direction"` // true - download, false - upload
-}
