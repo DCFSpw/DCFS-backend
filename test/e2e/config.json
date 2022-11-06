@@ -1,0 +1,9 @@
+{
+  "front_url": "http://localhost:9000",
+  "back_url": "https://localhost:58729",
+  "database_address": "localhost",
+  "database_user": "root",
+  "database_password": "",
+  "database_name": "dcfs",
+  "headless": true
+}
