@@ -312,8 +312,73 @@ func UploadBlock(c *gin.Context) {
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
-func FileRename(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Rename Endpoint"})
+func UpdateFile(c *gin.Context) {
+	var requestBody requests.UpdateFileRequest
+	var fileUUID string
+	var userUUID uuid.UUID
+	var rootUUID uuid.UUID
+	var file *dbo.File
+
+	// Retrieve and validate fileUUID
+	fileUUID = c.Param("FileUUID")
+	_, err := uuid.Parse(fileUUID)
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
+		return
+	}
+
+	// Retrieve and validate data from request
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	// Retrieve rootUUID from request if provided
+	if requestBody.RootUUID != "" {
+		rootUUID, err = uuid.Parse(requestBody.RootUUID)
+		if err != nil {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
+			return
+		}
+	} else {
+		rootUUID = uuid.Nil
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Retrieve file from database
+	file, dbErr := db.FileFromDatabase(fileUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
+		return
+	}
+
+	// Verify that the user is owner of the file
+	if userUUID != file.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
+		return
+	}
+
+	// Verify that the rootUUID exists in the volume, and it's a directory
+	errCode := db.ValidateRootDirectory(rootUUID, file.VolumeUUID)
+	if errCode != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
+		return
+	}
+
+	// Update file name and root directory
+	file.Name = requestBody.Name
+	file.RootUUID = rootUUID
+
+	// Save changes to database
+	result := db.DB.DatabaseHandle.Save(&file)
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+		return
+	}
+
+	c.JSON(200, responses.NewFileDataSuccessResponse(file))
 }
 
 func FileRemove(c *gin.Context) {

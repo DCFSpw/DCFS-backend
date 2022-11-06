@@ -72,18 +72,14 @@ func ServeBackend() {
 		authorized.GET("/files/manage", GetFiles)
 
 		authorized.POST("/files/upload", InitFileUploadRequest)
+		//authorized.POST("/files/upload/:FileUUID", InitFileDownloadRequest)
 		authorized.POST("/files/upload/:FileUUID", CompleteFileUploadRequest)
 
-		//authorized.GET("/files/upload", InitFileDownloadRequest)
-
 		authorized.POST("/files/block/:BlockUUID", UploadBlock)
-		//authorized.GET("/file/io/:FileUUID", FileDownload)
+		//authorized.GET("/files/block/:BlockUUID", DownloadBlock)
 
-		//authorized.PUT("/file/manage/:FileUUID", FileRename)
-		//authorized.DELETE("/file/manage/:FileUUID", FileRemove)
-
-		//authorized.POST("/file/share/:FileUUID", FileShare)
-		//authorized.DELETE("/file/share/FileUUID", FileShareRemove)
+		authorized.PUT("/files/manage/:FileUUID", UpdateFile)
+		//authorized.DELETE("/files/manage/:FileUUID", FileRemove)
 
 		// Providers
 		authorized.GET("/providers", GetProviders)
