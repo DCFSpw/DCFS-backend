@@ -18,5 +18,7 @@ type InitFileUploadRequest struct {
 	File       FileDataRequest `json:"file" binding:"required"`
 }
 
-type FileUploadRequest struct {
+type UpdateFileRequest struct {
+	Name     string `json:"name" binding:"required,gte=1,lte=64"`
+	RootUUID string `json:"rootUUID"`
 }
