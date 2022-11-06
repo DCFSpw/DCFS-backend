@@ -10,8 +10,8 @@ const (
 
 // file types
 const (
-	FILE_TYPE_REGULAR   int = 1
-	FILE_TYPE_DIRECTORY int = 0
+	FILE_TYPE_DIRECTORY int = 1
+	FILE_TYPE_REGULAR   int = 2
 )
 
 // Backup types

@@ -19,6 +19,7 @@ type Block struct {
 
 func NewBlock(_UUID uuid.UUID, _userUUID uuid.UUID, _file *File, _disk Disk, _size int, _checksum int, _status int, _order int) *Block {
 	var block *Block = new(Block)
+
 	block.UUID = _UUID
 	block.UserUUID = _userUUID
 	block.File = _file
