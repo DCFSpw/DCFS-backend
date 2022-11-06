@@ -286,10 +286,8 @@ func UploadBlock(c *gin.Context) {
 		return
 	}
 
-	/*if readSize != file.Blocks[blockUUID].Size {
-		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_SIZE_INVALID, "block", "Invalid size of block"))
-		return
-	}*/
+	// Save real size of the block
+	file.Blocks[blockUUID].Size = readSize
 
 	// Prepare internal block metadata
 	var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
