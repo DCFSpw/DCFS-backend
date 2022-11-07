@@ -503,9 +503,11 @@ func CompleteFileUploadRequest(c *gin.Context) {
 			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 				UUID: _block.UUID,
 			},
+			FileUUID:   fileUUID,
 			UserUUID:   userUUID,
 			VolumeUUID: file.Volume.UUID,
 			DiskUUID:   _block.Disk.GetUUID(),
+			Size:       _block.Size,
 		})
 
 		if result.Error != nil {
