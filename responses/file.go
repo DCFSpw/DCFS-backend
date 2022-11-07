@@ -6,6 +6,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type FileDetailsWithPathResponse struct {
+	File dbo.File        `json:"file"`
+	Path []dbo.PathEntry `json:"path"`
+}
+
 type FileRequestBlockResponse struct {
 	UUID  uuid.UUID `json:"UUID"`
 	Order int       `json:"order"`
@@ -22,6 +27,19 @@ func NewFileDataSuccessResponse(fileData *dbo.File) *EmptySuccessResponse {
 
 	r.Success = true
 	r.Data = *fileData
+
+	return r
+}
+
+func NewFileDataWithPathSuccessResponse(fileData *dbo.File, filePath []dbo.PathEntry) *EmptySuccessResponse {
+	var r *EmptySuccessResponse = new(EmptySuccessResponse)
+	var data = new(FileDetailsWithPathResponse)
+
+	data.File = *fileData
+	data.Path = filePath
+
+	r.Success = true
+	r.Data = data
 
 	return r
 }

@@ -73,3 +73,29 @@ func ValidateRootDirectory(rootUUID uuid.UUID, volumeUUID uuid.UUID) string {
 
 	return constants.SUCCESS
 }
+
+func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
+	var path []dbo.PathEntry = make([]dbo.PathEntry, 0)
+
+	// Iterate through file's path to root directory of the volume
+	for rootUUID != uuid.Nil {
+		var parent dbo.File
+
+		// Retrieve parent directory from database
+		result := DB.DatabaseHandle.Where("uuid = ?", rootUUID).First(&parent)
+		if result.Error != nil {
+			return nil, constants.DATABASE_ERROR
+		}
+
+		// Add parent directory to path
+		path = append(path, dbo.PathEntry{
+			UUID: parent.UUID,
+			Name: parent.Name,
+		})
+
+		// Move to parent directory
+		rootUUID = parent.RootUUID
+	}
+
+	return path, constants.SUCCESS
+}
