@@ -28,8 +28,9 @@ const (
 
 // FilePartition types
 const (
-	PARTITION_TYPE_BALANCED int = 1
-	PARTITION_TYPE_PRIORITY int = 2
+	PARTITION_TYPE_BALANCED   int = 1
+	PARTITION_TYPE_PRIORITY   int = 2
+	PARTITION_TYPE_THROUGHPUT int = 3
 )
 
 // Block status

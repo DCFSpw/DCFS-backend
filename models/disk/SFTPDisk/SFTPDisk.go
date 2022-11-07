@@ -132,6 +132,10 @@ func (d *SFTPDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_SFTP)
 }
 
+func (d *SFTPDisk) GetThroughput() int {
+	return d.abstractDisk.GetThroughput()
+}
+
 func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }

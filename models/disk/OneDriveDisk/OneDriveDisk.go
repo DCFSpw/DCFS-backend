@@ -174,6 +174,10 @@ func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
 }
 
+func (d *OneDriveDisk) GetThroughput() int {
+	return d.abstractDisk.GetThroughput()
+}
+
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }

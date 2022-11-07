@@ -30,6 +30,8 @@ type Disk interface {
 	CreateCredentials(credentials string)
 	GetProviderUUID() uuid.UUID
 
+	GetThroughput() int
+
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
 	Delete() (string, error)

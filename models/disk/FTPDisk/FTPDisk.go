@@ -114,6 +114,10 @@ func (d *FTPDisk) Delete() (string, error) {
 	return d.abstractDisk.Delete()
 }
 
+func (d *FTPDisk) GetThroughput() int {
+	return d.abstractDisk.GetThroughput()
+}
+
 func (d *FTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }

@@ -78,6 +78,16 @@ func (d *AbstractDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented abstract method")
 }
 
+func (d *AbstractDisk) GetThroughput() int {
+	var throughput int = 1
+	if d.GetName() == "SFTP" {
+		throughput = 2
+	}
+
+	log.Println("Disk ", d.GetName(), " has throughput of ", throughput)
+	return throughput
+}
+
 func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	credentials := ""
 	if d.Credentials != nil {

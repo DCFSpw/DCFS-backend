@@ -35,7 +35,6 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 	}
 
 	v.disks[diskUUID] = _disk
-	v.partitioner.FetchDisks()
 }
 
 func (v *Volume) DeleteDisk(diskUUID uuid.UUID) {
@@ -97,6 +96,8 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	v.UserUUID = _volume.UserUUID
 	v.VolumeSettings = _volume.VolumeSettings
 
+	v.partitioner = CreatePartitioner(v.VolumeSettings.FilePartition, v)
+
 	for _, _d := range _disks {
 		_ = CreateDisk(CreateDiskMetadata{
 			Disk:   &_d,
@@ -104,7 +105,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 		})
 	}
 
-	v.partitioner = NewBalancedPartitioner(v)
+	v.RefreshPartitioner()
 
 	log.Println("Created a new Volume: ", v)
 	return v

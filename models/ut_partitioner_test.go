@@ -1,6 +1,7 @@
 package models
 
 import (
+	"dcfs/constants"
 	"github.com/google/uuid"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
@@ -8,7 +9,7 @@ import (
 
 func TestBalancedPartitioner(t *testing.T) {
 	var volume Volume = Volume{UUID: uuid.New()}
-	var partitioner *BalancedPartitioner = NewBalancedPartitioner(&volume)
+	var partitioner Partitioner = CreatePartitioner(constants.PARTITION_TYPE_BALANCED, &volume)
 	volume.partitioner = partitioner
 
 	var firstDisk Disk = &dummyDisk{}

@@ -101,6 +101,10 @@ func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
 }
 
+func (d *GDriveDisk) GetThroughput() int {
+	return d.abstractDisk.GetThroughput()
+}
+
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
