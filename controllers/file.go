@@ -87,6 +87,7 @@ func GetFile(c *gin.Context) {
 	var file *dbo.File
 	var fileUUID string
 	var userUUID uuid.UUID
+	var path []dbo.PathEntry
 
 	// Retrieve fileUUID from path parameters
 	fileUUID = c.Param("FileUUID")
@@ -107,8 +108,15 @@ func GetFile(c *gin.Context) {
 		return
 	}
 
+	// Retrieve file full path
+	path, dbErr = db.GenerateFileFullPath(file.RootUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
+		return
+	}
+
 	// Return volume data
-	c.JSON(200, responses.NewFileDataSuccessResponse(file))
+	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(file, path))
 }
 
 func GetFiles(c *gin.Context) {
@@ -385,10 +393,6 @@ func FileRemove(c *gin.Context) {
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Remove Endpoint"})
 }
 
-func FileGet(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Get Endpoint"})
-}
-
 func FileDownload(c *gin.Context) {
 	// Get data from request
 	//fileUUIDString := c.Param("FileUUID")
@@ -425,14 +429,6 @@ func FileDownload(c *gin.Context) {
 	}
 
 	c.JSON(200, responses.BlockDownloadResponse{Success: true, Message: "File Download Endpoint", Block: *blockMetadata.Content})
-}
-
-func FileShare(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Endpoint"})
-}
-
-func FileShareRemove(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Remove Endpoint"})
 }
 
 func CompleteFileUploadRequest(c *gin.Context) {
