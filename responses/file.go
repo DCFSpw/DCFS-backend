@@ -53,7 +53,7 @@ func NewGetFilesSuccessResponse(files []dbo.File) *EmptySuccessResponse {
 	return r
 }
 
-func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file *models.RegularFile) *EmptySuccessResponse {
+func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file models.File) *EmptySuccessResponse {
 	var r *EmptySuccessResponse = new(EmptySuccessResponse)
 	var fr *FileRequestResponse = new(FileRequestResponse)
 
@@ -62,7 +62,7 @@ func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file *models.RegularFi
 
 	// Prepare blocks for response
 	var blocks []FileRequestBlockResponse
-	for _, block := range file.Blocks {
+	for _, block := range file.GetBlocks() {
 		blocks = append(blocks, FileRequestBlockResponse{
 			UUID:  block.UUID,
 			Order: block.Order,

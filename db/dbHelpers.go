@@ -39,6 +39,17 @@ func FileFromDatabase(uuid string) (*dbo.File, string) {
 	return file, constants.SUCCESS
 }
 
+func BlocksFromDatabase(fileUUID string) ([]*dbo.Block, string) {
+	var blocks []*dbo.Block
+
+	err := DB.DatabaseHandle.Where("file_uuid = ?", fileUUID).Find(&blocks).Error
+	if err != nil {
+		return nil, constants.DATABASE_ERROR
+	}
+
+	return blocks, constants.SUCCESS
+}
+
 func IsVolumeEmpty(uuid uuid.UUID) (bool, error) {
 	var blockCount int64
 	err := DB.DatabaseHandle.Model(&dbo.Block{}).Where("volume_uuid = ?", uuid).Count(&blockCount).Error
