@@ -2,6 +2,7 @@ package models
 
 import (
 	"dcfs/apicalls"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"github.com/google/uuid"
@@ -53,4 +54,29 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 
 	return disk
+}
+
+func CreateDiskFromUUID(UUID uuid.UUID) Disk {
+	var disk dbo.Disk
+	var volume *Volume
+
+	d := Transport.FindEnqueuedDisk(UUID)
+	if d != nil {
+		return d
+	}
+
+	err := db.DB.DatabaseHandle.Where("uuid = ?", UUID).Preload("Provider").Preload("User").Preload("Volume").Find(&disk).Error
+	if err != nil {
+		return nil
+	}
+
+	volume = Transport.GetVolume(disk.VolumeUUID)
+	if volume == nil {
+		return nil
+	}
+
+	return CreateDisk(CreateDiskMetadata{
+		Disk:   &disk,
+		Volume: volume,
+	})
 }
