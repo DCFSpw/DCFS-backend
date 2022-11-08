@@ -6,8 +6,15 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"fmt"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"log"
+	"math"
 	"net/http"
+	"os"
+	"path"
+	"sync"
 	"time"
 )
 
@@ -367,6 +374,7 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 		// unblock the current file in the FileUploadQueue when this block is transferred
 		Transport.FileUploadQueue.MarkAsCompleted(UUID)
 	}
+	blockMetadata.Content = new([]uint8)
 
 	block.Status = constants.BLOCK_STATUS_QUEUED
 	rsp := block.Disk.Download(blockMetadata)
@@ -381,12 +389,291 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 	return rsp
 }
 
-func NewFileWrapper(filetype int, actualFile File) File {
+type FileWrapper struct {
+	Files []File
+	UUID  uuid.UUID
+}
+
+func (f *FileWrapper) Remove() {
+	panic("Unimplemented")
+}
+
+func (f *FileWrapper) GetUUID() uuid.UUID {
+	return f.UUID
+}
+
+func (f *FileWrapper) SetUUID(UUID uuid.UUID) {
+	f.UUID = UUID
+}
+
+func (f *FileWrapper) GetSize() int {
+	size := 0
+
+	for _, f := range f.Files {
+		size += f.GetSize()
+	}
+
+	return size
+}
+
+func (f *FileWrapper) SetSize(newSize int) {
+	panic("unimplemented")
+}
+
+func (f *FileWrapper) GetName() string {
+	if len(f.Files) == 1 {
+		return f.Files[0].GetName()
+	}
+
+	return "files.zip"
+}
+
+func (f *FileWrapper) SetName(newName string) {
+	panic("unimplemented")
+}
+
+func (f *FileWrapper) GetType() int {
+	return constants.FILE_TYPE_WRAPPER
+}
+
+func (f *FileWrapper) SetType(newType int) {
+	panic("unimplemented")
+}
+
+func (f *FileWrapper) GetRoot() uuid.UUID {
+	// all files are in the same root
+	return f.Files[0].GetRoot()
+}
+
+func (f *FileWrapper) SetRoot(rootUUID uuid.UUID) {
+	panic("unimplemented")
+}
+
+func (f *FileWrapper) GetFileDBO(userUUID uuid.UUID) dbo.File {
+	return dbo.File{
+		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+			UUID: f.UUID,
+		},
+		VolumeUUID: uuid.UUID{},
+		RootUUID:   uuid.UUID{},
+		UserUUID:   uuid.UUID{},
+		Type:       constants.FILE_TYPE_WRAPPER,
+		Name:       f.GetName(),
+		Size:       f.GetSize(),
+		Checksum:   "",
+		CreatedAt:  time.Time{},
+		UpdatedAt:  time.Time{},
+		DeletedAt:  gorm.DeletedAt{},
+		Volume:     dbo.Volume{},
+		User:       dbo.User{},
+	}
+}
+
+func (f *FileWrapper) IsCompleted() bool {
+	panic("uimplemented")
+}
+
+func (f *FileWrapper) GetVolume() *Volume {
+	// all files are on the same volume
+	return f.Files[0].GetVolume()
+}
+
+func (f *FileWrapper) SetVolume(v *Volume) {
+	panic("unimplemented")
+}
+
+func (f *FileWrapper) GetBlocks() map[uuid.UUID]*Block {
+	ret := make(map[uuid.UUID]*Block)
+	ret[f.UUID] = &Block{
+		UUID:     f.UUID,
+		UserUUID: uuid.UUID{},
+		File:     f,
+		Disk:     nil,
+		Size:     f.GetSize(),
+		Checksum: 0,
+		Status:   0,
+		Order:    0,
+	}
+
+	return ret
+}
+
+func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	downloadpath := path.Join(_path, file.GetName())
+	fail := false
+	blockSize := file.GetVolume().BlockSize
+
+	_file, err := os.Create(downloadpath)
+	if err != nil {
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REAL_FS_CREATE_FILE_ERROR,
+		}
+	}
+
+	err = _file.Close()
+	if err != nil {
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REAL_FS_CLOSE_FILE_ERROR,
+		}
+	}
+
+	var wg sync.WaitGroup
+	for _, block := range file.GetBlocks() {
+		wg.Add(1)
+
+		go func(_f *os.File, _b *Block) {
+			defer wg.Done()
+
+			bm := &apicalls.BlockMetadata{
+				Ctx:      blockMetadata.Ctx,
+				FileUUID: blockMetadata.FileUUID,
+				UUID:     _b.UUID,
+				Size:     int64(_b.Size),
+				Status:   &_b.Status,
+				Content:  new([]uint8),
+				CompleteCallback: func(UUID uuid.UUID, status *int) {
+					*status = constants.BLOCK_STATUS_TRANSFERRED
+				},
+			}
+
+			errWrapper := _b.Disk.Download(bm)
+			if errWrapper != nil {
+				// one retry
+				errWrapper = _b.Disk.Download(bm)
+				if errWrapper != nil {
+					fail = true
+					return
+				}
+			}
+
+			dest, err := os.OpenFile(downloadpath, os.O_RDWR, 777)
+			if err != nil {
+				fail = true
+				return
+			}
+
+			defer func() {
+				err := dest.Close()
+				if err != nil {
+					fail = true
+				}
+			}()
+
+			// we may assume, every block is equal size, only the last one may be bigger / smaller
+			_, err = dest.Seek(int64(_b.Order*blockSize), 0)
+			if err != nil {
+				fail = true
+				return
+			}
+
+			var n int
+			n, err = dest.Write(*bm.Content)
+
+			if err != nil {
+				fail = true
+				return
+			}
+
+			if n != _b.Size {
+				fail = true
+				return
+			}
+		}(_file, block)
+	}
+
+	wg.Wait()
+
+	if fail {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("Block downloading failed"),
+			Code:  constants.REMOTE_FAILED_JOB,
+		}
+	}
+
+	return nil
+}
+
+func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	downloadPath := path.Join(_path, dir.GetName())
+	err := os.MkdirAll(downloadPath, 777)
+	if err != nil {
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REAL_FS_CREATE_DIR_ERROR,
+		}
+	}
+
+	for _, file := range dir.Files {
+		errWrapper := f.downloadFile(downloadPath, file, blockMetadata)
+		if errWrapper != nil {
+			return errWrapper
+		}
+	}
+
+	return nil
+}
+
+func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	downloadPath := path.Join("./Download", f.GetName())
+	err := os.MkdirAll(downloadPath, 777)
+	if err != nil {
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REAL_FS_CREATE_DIR_ERROR,
+		}
+	}
+
+	for _, file := range f.Files {
+		if file.GetType() == constants.FILE_TYPE_DIRECTORY {
+			errWrapper := f.downloadDirectory(downloadPath, file.(*Directory), blockMetadata)
+			if errWrapper != nil {
+				return errWrapper
+			}
+		} else if file.GetType() == constants.FILE_TYPE_REGULAR {
+			errWrapper := f.downloadFile(downloadPath, file, blockMetadata)
+			if errWrapper != nil {
+				return errWrapper
+			}
+		} else {
+			return &apicalls.ErrorWrapper{
+				Error: nil,
+				Code:  constants.FS_BAD_FILE,
+			}
+		}
+	}
+
+	filename := f.Files[0].GetName()
+	if len(f.Files) > 1 || len(f.Files) == 1 && f.Files[0].GetType() == constants.FILE_TYPE_DIRECTORY {
+		// zip files and send the zip
+		filename = "files.zip"
+	}
+
+	blockMetadata.Ctx.File(path.Join(downloadPath, filename))
+
+	// the files should reside on the server for 1hr x 1GiB
+	t := int(math.Max(1, math.Ceil(float64(f.GetSize()/1024*1024*1024))))
+	time.AfterFunc(time.Duration(t)*60*time.Minute, func() {
+		err := os.RemoveAll(downloadPath)
+		if err != nil {
+			log.Printf("Could not remove file: %s", filename)
+		}
+	})
+
+	return nil
+}
+
+func NewFileWrapper(filetype int, actualFiles []File) File {
 	var f File
 
-	if filetype == constants.FILE_TYPE_DOWNLOAD_SMALLER {
+	if filetype == constants.FILE_TYPE_SMALLER_WRAPPER {
 		f = new(SmallerFileWrapper)
-		f.(*SmallerFileWrapper).ActualFile = actualFile
+		f.(*SmallerFileWrapper).ActualFile = actualFiles[0]
+	} else if filetype == constants.FILE_TYPE_WRAPPER {
+		f = new(FileWrapper)
+		f.(*FileWrapper).Files = actualFiles
+		f.SetUUID(uuid.New())
 	} else {
 		f = nil
 	}
@@ -458,7 +745,7 @@ func NewDirectoryFromDBO(directoryDBO *dbo.File) File {
 	var _files []dbo.File
 	var files []File
 
-	err := db.DB.DatabaseHandle.Where("parent_uuid = ?", directoryDBO.UUID.String()).Find(&_files).Error()
+	err := db.DB.DatabaseHandle.Where("parent_uuid = ?", directoryDBO.UUID.String()).Find(&_files).Error
 	if err != nil {
 		return nil
 	}

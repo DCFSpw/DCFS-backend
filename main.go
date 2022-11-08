@@ -13,12 +13,19 @@ import (
 	"flag"
 	"github.com/google/uuid"
 	"log"
+	"os"
 	"path/filepath"
 )
 
 func main() {
 	models.RootUUID, _ = uuid.Parse("91c32303-0856-43d6-8e18-1cc671e256e4")
 	// ignore error
+
+	// remove downloads
+	err := os.RemoveAll("./Download")
+	if err != nil {
+		log.Printf("Could not remove file the downloads dir")
+	}
 
 	path := flag.String("db-connection", "./connection.json", "file containing db connection info")
 	rspw := flag.Bool("respawn", false, "set to true to drop and create the database anew")
