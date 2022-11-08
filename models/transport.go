@@ -199,16 +199,16 @@ func (transport *transport) GetVolumes(userUUID uuid.UUID) []*Volume {
 //   - diskUUID
 func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	for _, instance := range transport.FileUploadQueue.Instances {
-		for _, block := range *instance.Instance.(File).GetBlocks() {
-			if block.Disk.GetUUID() == diskUUID {
+		for _, block := range instance.Instance.(File).GetBlocks() {
+			if block.Disk != nil && block.Disk.GetUUID() == diskUUID {
 				return block.Disk
 			}
 		}
 	}
 
 	for _, instance := range transport.FileDownloadQueue.Instances {
-		for _, block := range *instance.Instance.(File).GetBlocks() {
-			if block.Disk.GetUUID() == diskUUID {
+		for _, block := range instance.Instance.(File).GetBlocks() {
+			if block.Disk != nil && block.Disk.GetUUID() == diskUUID {
 				return block.Disk
 			}
 		}
@@ -223,7 +223,7 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 //   - volumeUUID
 func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 	for _, instance := range transport.FileUploadQueue.Instances {
-		for _, block := range *instance.Instance.(File).GetBlocks() {
+		for _, block := range instance.Instance.(File).GetBlocks() {
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				return volume
@@ -232,7 +232,7 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 	}
 
 	for _, instance := range transport.FileDownloadQueue.Instances {
-		for _, block := range *instance.Instance.(File).GetBlocks() {
+		for _, block := range instance.Instance.(File).GetBlocks() {
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				return volume

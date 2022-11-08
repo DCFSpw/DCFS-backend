@@ -437,13 +437,30 @@ func InitFileDownloadRequest(c *gin.Context) {
 			}
 
 			f := models.NewFileFromDBO(file)
-			f = models.NewFileWrapper(constants.FILE_TYPE_DOWNLOAD_SMALLER, f)
+			f = models.NewFileWrapper(constants.FILE_TYPE_SMALLER_WRAPPER, []models.File{f})
 			models.Transport.FileDownloadQueue.EnqueueInstance(f.GetUUID(), f)
 
 			response = responses.NewInitFileUploadRequestResponse(file.UserUUID, f)
 		}
-	} else {
-		// TODO
+	}
+
+	if response == nil {
+		var _files []models.File
+		for _, UUID := range files {
+			_f, code := db.FileFromDatabase(UUID.String())
+			if file == nil {
+				c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
+				return
+			}
+
+			f := models.NewFileFromDBO(_f)
+			_files = append(_files, f)
+		}
+
+		wrapper := models.NewFileWrapper(constants.FILE_TYPE_WRAPPER, _files)
+		models.Transport.FileDownloadQueue.EnqueueInstance(wrapper.GetUUID(), wrapper)
+
+		response = responses.NewInitFileUploadRequestResponse(file.UserUUID, wrapper)
 	}
 
 	c.JSON(200, response)
