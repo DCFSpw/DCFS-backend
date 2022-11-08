@@ -406,7 +406,7 @@ func FileRemove(c *gin.Context) {
 
 func InitFileDownloadRequest(c *gin.Context) {
 	var fileUUID uuid.UUID
-	var files []uuid.UUID = make([]uuid.UUID, 1)
+	var files []uuid.UUID = make([]uuid.UUID, 0)
 	var file *dbo.File
 	var blocks []*dbo.Block
 	var err error

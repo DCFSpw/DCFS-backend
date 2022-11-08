@@ -8,14 +8,17 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 type GDriveDisk struct {
@@ -48,8 +51,55 @@ func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	return nil
 }
 
-func (d *GDriveDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
+func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
+	var err error
+
+	srv, err := drive.NewService(blockMetadata.Ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Printf("Unable to retrieve Drive client: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	// we assume there is only one file named as the block UUID
+	files, err := srv.Files.
+		List().
+		Q(fmt.Sprintf("name = '%s'", blockMetadata.UUID.String())).
+		Do()
+	if err != nil {
+		log.Printf("unable to retreve files from gdrive: %s", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	if len(files.Files) == 0 {
+		log.Printf("file with the given blockUUID: %s not found on gdrive", blockMetadata.UUID.String())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "can't find the file with the given blockUUID: %s", blockMetadata.UUID.String())
+	}
+
+	rsp, err := srv.Files.Get(files.Files[0].Id).Download()
+	if err != nil {
+		log.Printf("download failed: %s", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
+	}
+	defer func() { _ = rsp.Body.Close() }()
+	buf := bytes.NewBuffer(nil)
+
+	n, err := io.Copy(buf, rsp.Body)
+	if err != nil {
+		log.Printf("download failed: %s", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
+	}
+
+	if n < blockMetadata.Size {
+		log.Printf("downloaded not enough bytes: %d", n)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "downloaded not enough bytes:", fmt.Sprint(n), "out of:", strconv.FormatInt(blockMetadata.Size, 10))
+	}
+
+	block := buf.Bytes()[0:blockMetadata.Size]
+	blockMetadata.Content = &block
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	return nil
 }
 
 func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
