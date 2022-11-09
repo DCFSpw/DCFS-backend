@@ -653,7 +653,7 @@ func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.
 	blockMetadata.Ctx.File(path.Join(downloadPath, filename))
 
 	// the files should reside on the server for 1hr x 1GiB
-	t := int(math.Max(1, math.Ceil(float64(f.GetSize()/1024*1024*1024))))
+	t := int(math.Max(1, math.Ceil(float64(f.GetSize())/float64(1024*1024*1024))))
 	time.AfterFunc(time.Duration(t)*60*time.Minute, func() {
 		err := os.RemoveAll(downloadPath)
 		if err != nil {
