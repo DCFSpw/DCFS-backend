@@ -8,6 +8,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
 	"io"
@@ -28,11 +29,20 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
-	err := client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
+
+	err := client.Stor(downloadPath, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 	return nil
 }
 
@@ -45,7 +55,15 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
-	reader, err := client.Retr(blockMetadata.UUID.String())
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
+
+	reader, err := client.Retr(downloadPath)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
@@ -57,6 +75,7 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 
 	return nil
 }
