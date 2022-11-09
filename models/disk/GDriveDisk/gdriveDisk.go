@@ -42,7 +42,7 @@ func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 		ProgressUpdater(func(now, size int64) { fmt.Printf("%d, %d\r", now, size) })
 	_, err = fileCreate.Do()
 	if err != nil {
-		// TODO: error handling
+		return err
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
@@ -99,10 +99,6 @@ func (d *GDriveDisk) CreateCredentials(c string) {
 
 func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
-}
-
-func (d *GDriveDisk) GetThroughput() int {
-	return d.abstractDisk.GetThroughput()
 }
 
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {

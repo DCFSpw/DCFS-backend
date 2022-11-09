@@ -29,8 +29,8 @@ const (
 // FilePartition types
 const (
 	PARTITION_TYPE_BALANCED   int = 1
-	PARTITION_TYPE_PRIORITY   int = 2
-	PARTITION_TYPE_THROUGHPUT int = 3
+	PARTITION_TYPE_PRIORITY   int = 3
+	PARTITION_TYPE_THROUGHPUT int = 2
 )
 
 // Block status
@@ -50,4 +50,9 @@ const (
 const (
 	ONEDRIVE_SIZE_LIMIT   int = 4 * 1024 * 1024
 	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
+)
+
+// Block size
+const (
+	BLOCK_SIZE int = 8 * 1024 * 1024
 )

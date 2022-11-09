@@ -1,6 +1,8 @@
 package models
 
-import "dcfs/constants"
+import (
+	"dcfs/constants"
+)
 
 type Partitioner interface {
 	AssignDisk(int) Disk
@@ -73,8 +75,8 @@ func NewBalancedPartitioner(volume *Volume) *BalancedPartitioner {
 type ThroughputPartitioner struct {
 	AbstractPartitioner
 	Disks               []Disk
-	Weights             []int
-	Allocations         []int
+	Weights             []int // Weights based on disk throughput
+	Allocations         []int // Number of blocks allocations per disk
 	LastPickedDiskIndex int
 }
 
@@ -102,7 +104,7 @@ func (p *ThroughputPartitioner) AssignDisk(size int) Disk {
 
 	// Choose the next disk
 	index := p.getNextDiskIndex(size)
-	p.Allocations[index] += size
+	p.Allocations[index] += 1
 
 	return p.Disks[index]
 }
@@ -120,7 +122,7 @@ func (p *ThroughputPartitioner) FetchDisks() {
 
 	// Compute throughput weights and reset allocations
 	for i, disk := range p.Disks {
-		p.Weights[i] = disk.GetThroughput()
+		p.Weights[i] = MeasureDiskThroughput(disk)
 		p.Allocations[i] = 0
 	}
 }

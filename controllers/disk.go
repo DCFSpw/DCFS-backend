@@ -72,6 +72,10 @@ func CreateDisk(c *gin.Context) {
 	if ok {
 		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	} else {
+		// Refresh partitioner for credential based disks
+		// OAuth disks will refresh partitioner after authorization
+		go volume.RefreshPartitioner()
 	}
 
 	// load full database object with a provider and a volume to return
@@ -81,8 +85,6 @@ func CreateDisk(c *gin.Context) {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
-
-	volume.RefreshPartitioner()
 
 	c.JSON(200, responses.CreateDiskSuccessResponse(_disk, authCode))
 }
@@ -142,6 +144,8 @@ func DiskOAuth(c *gin.Context) {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
+
+	go volume.RefreshPartitioner()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }
@@ -238,7 +242,7 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
-	volume.RefreshPartitioner()
+	go volume.RefreshPartitioner()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(diskDBO))
 }
@@ -281,7 +285,7 @@ func DiskDelete(c *gin.Context) {
 	volume.DeleteDisk(_disk.UUID)
 	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
 
-	volume.RefreshPartitioner()
+	go volume.RefreshPartitioner()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }

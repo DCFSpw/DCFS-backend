@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/sftp"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 type SFTPDisk struct {
@@ -30,20 +29,20 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
-	var filepath string = filepath.Join(d.GetCredentials().GetPath(), blockMetadata.UUID.String())
+	var filepath string = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
 
 	// Check if the file already exists
 	remoteFile, err := client.Open(filepath)
 	if err == nil {
 		remoteFile.Close()
-		return fmt.Errorf("Cannot o open remote file: %v", err)
+		return fmt.Errorf("Cannot open remote file: %v", err)
 	}
 	err = nil
 
 	// Create remote file
 	dstFile, err := client.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
-		return fmt.Errorf("Cannot o open remote file: %v", err)
+		return fmt.Errorf("Cannot open remote file %s: %v", filepath, err)
 	}
 	defer dstFile.Close()
 
@@ -130,10 +129,6 @@ func (d *SFTPDisk) CreateCredentials(c string) {
 
 func (d *SFTPDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_SFTP)
-}
-
-func (d *SFTPDisk) GetThroughput() int {
-	return d.abstractDisk.GetThroughput()
 }
 
 func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {

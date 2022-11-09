@@ -27,6 +27,8 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 		return fmt.Errorf("could not connect to the remote server")
 	}
 
+	//var filePath = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
+
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
 	err := client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
@@ -112,10 +114,6 @@ func (d *FTPDisk) GetProviderUUID() uuid.UUID {
 
 func (d *FTPDisk) Delete() (string, error) {
 	return d.abstractDisk.Delete()
-}
-
-func (d *FTPDisk) GetThroughput() int {
-	return d.abstractDisk.GetThroughput()
 }
 
 func (d *FTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {

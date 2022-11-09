@@ -44,7 +44,9 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	ft, err := filetype.Match(*blockMetadata.Content)
 	if err != nil {
-		return fmt.Errorf("file %s is corrupted", blockMetadata.FileUUID.String())
+		log.Printf("[OneDrive upload] file %s is corrupted", blockMetadata.FileUUID.String())
+	} else {
+		ft = filetype.NewType("application/octet-stream", "bin")
 	}
 	err = nil
 
@@ -172,10 +174,6 @@ func (d *OneDriveDisk) CreateCredentials(c string) {
 
 func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
-}
-
-func (d *OneDriveDisk) GetThroughput() int {
-	return d.abstractDisk.GetThroughput()
 }
 
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
