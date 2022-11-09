@@ -26,8 +26,6 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
-	//var filePath = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
-
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
 	err := client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))

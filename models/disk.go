@@ -70,7 +70,7 @@ func MeasureDiskThroughput(d Disk) int {
 
 	// Prepare test block
 	var status int
-	var size = constants.BLOCK_SIZE
+	var size = constants.DEFAULT_VOLUME_BLOCK_SIZE
 
 	var content []uint8
 	content = make([]uint8, size)

@@ -31,7 +31,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	var filepath string = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
 
 	// Check if the file already exists
-	remoteFile, err := client.Open(_filepath)
+	remoteFile, err := client.Open(filepath)
 	if err == nil {
 		remoteFile.Close()
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
@@ -39,7 +39,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	err = nil
 
 	// Create remote file
-	dstFile, err := client.OpenFile(_filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	dstFile, err := client.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
