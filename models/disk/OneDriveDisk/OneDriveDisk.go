@@ -15,6 +15,7 @@ import (
 	"github.com/h2non/filetype"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -114,8 +115,78 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	return nil
 }
 
-func (d *OneDriveDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
+type oneDriveSearchDriveItem struct {
+	DataType string `json:"@odata.type"`
+	Id       string `json:"id"`
+}
+
+type oneDriveSearchResponse struct {
+	Context string                    `json:"@odata.context"`
+	Value   []oneDriveSearchDriveItem `json:"value"`
+}
+
+func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
+	if _client == nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
+	}
+
+	var client *http.Client = _client.(*http.Client)
+	oneDriveClient := onedrive.NewClient(client)
+	var searchReqUrl string = "me/drive/root/search(q='" + url.PathEscape(blockMetadata.UUID.String()) + "')?select=id"
+
+	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
+	}
+
+	var response oneDriveSearchResponse = oneDriveSearchResponse{}
+	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file:", err.Error())
+	}
+
+	if len(response.Value) > 1 {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Block hierarchy corrupted")
+	}
+
+	if len(response.Value) == 0 {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
+	}
+
+	item, err := oneDriveClient.DriveItems.Get(blockMetadata.Ctx, response.Value[0].Id)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not download file:", err.Error())
+	}
+
+	downloadReq, err := oneDriveClient.NewRequest("GET", item.DownloadURL, nil)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file download request:", err.Error())
+	}
+
+	var downloadRsp *http.Response
+	downloadRsp, err = client.Do(downloadReq.WithContext(blockMetadata.Ctx))
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not download file:", err.Error())
+	}
+	defer func() { _ = downloadRsp.Body.Close() }()
+	buf := bytes.NewBuffer(nil)
+
+	n, err := io.Copy(buf, downloadRsp.Body)
+	if err != nil {
+		log.Printf("download failed: %s", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
+	}
+
+	if n < blockMetadata.Size {
+		log.Printf("downloaded not enough bytes: %d", n)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "downloaded not enough bytes:", fmt.Sprint(n), "out of:", strconv.FormatInt(blockMetadata.Size, 10))
+	}
+
+	block := buf.Bytes()[0:blockMetadata.Size]
+	blockMetadata.Content = &block
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	return nil
 }
 
 func (d *OneDriveDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
