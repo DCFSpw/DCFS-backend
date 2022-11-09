@@ -8,7 +8,6 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -21,10 +20,10 @@ type SFTPDisk struct {
 
 /* Mandatory Disk interface implementations */
 
-func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
+func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
-		return fmt.Errorf("cannot connect to the remote server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
 	}
 
 	var client *sftp.Client = _client.(*sftp.Client)
@@ -32,34 +31,34 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 	var filepath string = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
 
 	// Check if the file already exists
-	remoteFile, err := client.Open(filepath)
+	remoteFile, err := client.Open(_filepath)
 	if err == nil {
 		remoteFile.Close()
-		return fmt.Errorf("Cannot open remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	err = nil
 
 	// Create remote file
-	dstFile, err := client.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	dstFile, err := client.OpenFile(_filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
-		return fmt.Errorf("Cannot open remote file %s: %v", filepath, err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	defer dstFile.Close()
 
 	// Upload file content
 	_, err = io.Copy(dstFile, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
-		return fmt.Errorf("Cannot upload local file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot upload a local file:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 	return nil
 }
 
-func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
+func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
-		return fmt.Errorf("cannot connect to the remote server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
 	}
 
 	var client *sftp.Client = _client.(*sftp.Client)
@@ -68,14 +67,14 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	// Open remote file
 	remoteFile, err := client.OpenFile(blockMetadata.UUID.String(), os.O_RDONLY)
 	if err != nil {
-		return fmt.Errorf("Cannot open remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	defer remoteFile.Close()
 
 	// Download remote file
 	buff, err := io.ReadAll(remoteFile)
 	if err != nil {
-		return fmt.Errorf("Cannot download remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot download remote file:", err.Error())
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
@@ -83,11 +82,11 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *SFTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
+func (d *SFTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 
-func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
+func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 

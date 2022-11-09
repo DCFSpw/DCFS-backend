@@ -16,10 +16,10 @@ var RootUUID uuid.UUID
 var DiskTypesRegistry map[int]func() Disk = make(map[int]func() Disk)
 
 type Disk interface {
-	Upload(bm *apicalls.BlockMetadata) error
-	Download(bm *apicalls.BlockMetadata) error
-	Rename(bm *apicalls.BlockMetadata) error
-	Remove(bm *apicalls.BlockMetadata) error
+	Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+	Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+	Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+	Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 
 	SetUUID(uuid.UUID)
 	GetUUID() uuid.UUID

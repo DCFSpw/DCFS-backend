@@ -28,6 +28,11 @@ type File struct {
 	User   User   `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 }
 
+type PathEntry struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
 func NewFile() *File {
 	var f *File = new(File)
 	f.AbstractDatabaseObject.DatabaseObject = f

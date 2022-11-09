@@ -8,7 +8,6 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
 	"io"
@@ -20,11 +19,11 @@ type FTPDisk struct {
 
 /* Mandatory Disk interface methods */
 
-func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
+func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	// Create and upload remote file
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
 	//var filePath = d.GetCredentials().GetPath() + "/" + blockMetadata.UUID.String()
@@ -33,30 +32,30 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) error {
 
 	err := client.Stor(blockMetadata.UUID.String(), bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
-		return fmt.Errorf("cannot open remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 
 	return nil
 }
 
-func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
+func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	// Download remote file
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
-		return fmt.Errorf("could not connect to the remote server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
 	reader, err := client.Retr(blockMetadata.UUID.String())
 	if err != nil {
-		return fmt.Errorf("Cannot open remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 	//defer reader.Close()
 
 	buff, err := io.ReadAll(reader)
 	if err != nil {
-		return fmt.Errorf("Cannot read remote file: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
@@ -64,11 +63,11 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) error {
 	return nil
 }
 
-func (d *FTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) error {
+func (d *FTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 
-func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) error {
+func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented")
 }
 

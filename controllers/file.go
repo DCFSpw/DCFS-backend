@@ -87,6 +87,7 @@ func GetFile(c *gin.Context) {
 	var file *dbo.File
 	var fileUUID string
 	var userUUID uuid.UUID
+	var path []dbo.PathEntry
 
 	// Retrieve fileUUID from path parameters
 	fileUUID = c.Param("FileUUID")
@@ -107,8 +108,15 @@ func GetFile(c *gin.Context) {
 		return
 	}
 
+	// Retrieve file full path
+	path, dbErr = db.GenerateFileFullPath(file.RootUUID)
+	if dbErr != constants.SUCCESS {
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
+		return
+	}
+
 	// Return volume data
-	c.JSON(200, responses.NewFileDataSuccessResponse(file))
+	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(file, path))
 }
 
 func GetFiles(c *gin.Context) {
@@ -302,10 +310,10 @@ func UploadBlock(c *gin.Context) {
 		models.Transport.MarkAsCompleted(UUID)
 	}
 
-	// Upload block to target disk
-	err = file.Blocks[blockUUID].Disk.Upload(blockMetadata)
-	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_UPLOAD_FAILED, "Block loading failed: "+err.Error()))
+	// Upload file to target disk
+	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
+	if errorWrapper != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errorWrapper.Code, "Block loading failed: "+errorWrapper.Error.Error()))
 		return
 	}
 
@@ -385,10 +393,6 @@ func FileRemove(c *gin.Context) {
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Remove Endpoint"})
 }
 
-func FileGet(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Get Endpoint"})
-}
-
 func FileDownload(c *gin.Context) {
 	// Get data from request
 	//fileUUIDString := c.Param("FileUUID")
@@ -418,21 +422,13 @@ func FileDownload(c *gin.Context) {
 		return
 	}*/
 
-	err := ftpDisk.Download(&blockMetadata)
-	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + err.Error()})
+	errorWrapper := ftpDisk.Download(&blockMetadata)
+	if errorWrapper != nil {
+		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + errorWrapper.Error.Error()})
 		return
 	}
 
 	c.JSON(200, responses.BlockDownloadResponse{Success: true, Message: "File Download Endpoint", Block: *blockMetadata.Content})
-}
-
-func FileShare(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Endpoint"})
-}
-
-func FileShareRemove(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Share Remove Endpoint"})
 }
 
 func CompleteFileUploadRequest(c *gin.Context) {
@@ -503,9 +499,11 @@ func CompleteFileUploadRequest(c *gin.Context) {
 			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 				UUID: _block.UUID,
 			},
+			FileUUID:   fileUUID,
 			UserUUID:   userUUID,
 			VolumeUUID: file.Volume.UUID,
 			DiskUUID:   _block.Disk.GetUUID(),
+			Size:       _block.Size,
 		})
 
 		if result.Error != nil {

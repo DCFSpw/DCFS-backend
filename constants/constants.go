@@ -54,5 +54,5 @@ const (
 
 // Block size
 const (
-	BLOCK_SIZE int = 8 * 1024 * 1024
+	DEFAULT_VOLUME_BLOCK_SIZE int = 8 * 1024 * 1024
 )
