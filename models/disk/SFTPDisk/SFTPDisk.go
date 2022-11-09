@@ -8,11 +8,11 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
 	"os"
-	"path/filepath"
 )
 
 type SFTPDisk struct {
@@ -29,10 +29,17 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
-	var _filepath string = filepath.Join(d.GetCredentials().GetPath(), blockMetadata.UUID.String())
+
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
 
 	// Check if the file already exists
-	remoteFile, err := client.Open(_filepath)
+	remoteFile, err := client.Open(downloadPath)
 	if err == nil {
 		remoteFile.Close()
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
@@ -40,7 +47,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	err = nil
 
 	// Create remote file
-	dstFile, err := client.OpenFile(_filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	dstFile, err := client.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
@@ -65,8 +72,16 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
 
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
+
 	// Open remote file
-	remoteFile, err := client.OpenFile(blockMetadata.UUID.String(), os.O_RDONLY)
+	remoteFile, err := client.OpenFile(downloadPath, os.O_RDONLY)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
@@ -79,6 +94,7 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 
 	return nil
 }
