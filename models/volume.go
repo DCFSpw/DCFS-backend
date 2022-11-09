@@ -51,7 +51,7 @@ func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, user
 
 	// Prepare partition of the file
 	var _f *RegularFile = f.(*RegularFile)
-	var blockCount int = int(math.Max(math.Ceil(float64(request.File.Size/v.BlockSize)), 1))
+	var blockCount int = int(math.Max(math.Ceil(float64(request.File.Size)/float64(v.BlockSize)), 1))
 	var cumulativeSize int = 0
 
 	// Partition the file into blocks
