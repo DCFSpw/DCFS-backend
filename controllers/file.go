@@ -7,7 +7,6 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/middleware"
 	"dcfs/models"
-	"dcfs/models/disk/SFTPDisk"
 	"dcfs/requests"
 	"dcfs/responses"
 	"github.com/gin-gonic/gin"
@@ -51,7 +50,7 @@ func CreateDirectory(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve volume from transport
-	volume = models.Transport.GetVolume(userUUID, volumeUUID)
+	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
@@ -202,7 +201,7 @@ func InitFileUploadRequest(c *gin.Context) {
 	}
 
 	// Retrieve volume from transport
-	volume = models.Transport.GetVolume(userUUID, volumeUUID)
+	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
@@ -225,7 +224,7 @@ func InitFileUploadRequest(c *gin.Context) {
 
 	// Enqueue file for upload
 	file = volume.FileUploadRequest(&requestBody, userUUID, rootUUID)
-	models.Transport.EnqueueFileUpload(file.GetUUID(), &file)
+	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), &file)
 
 	log.Println("[Init file upload] Prepared a request with ", len(file.Blocks), " blocks")
 
@@ -271,14 +270,14 @@ func UploadBlock(c *gin.Context) {
 	}
 
 	// Lock file for upload
-	err = models.Transport.MarkAsUsed(fileUUID)
+	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
 		return
 	}
 
 	// Retrieve file from transport and set block status to uploading
-	file = models.Transport.GetEnqueuedFileUpload(fileUUID).(*models.RegularFile)
+	file = models.Transport.FileUploadQueue.GetEnqueuedInstance(fileUUID).(*models.RegularFile)
 	if file == nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_MISMATCH, "Block belongs to an unknown file"))
 		return
@@ -307,13 +306,25 @@ func UploadBlock(c *gin.Context) {
 	blockMetadata.Status = &file.Blocks[blockUUID].Status
 	blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
 		*status = constants.BLOCK_STATUS_TRANSFERRED
-		models.Transport.MarkAsCompleted(UUID)
+
+		// unblock the current file in the FileUploadQueue when this block is transferred
+		models.Transport.FileUploadQueue.MarkAsCompleted(UUID)
+	}
+
+	// block the current file in the FileUploadQueue
+	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
+		return
 	}
 
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
 	if errorWrapper != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(errorWrapper.Code, "Block loading failed: "+errorWrapper.Error.Error()))
+
+		// unblock the current file in the FileUploadQueue in case of failure
+		models.Transport.FileUploadQueue.MarkAsCompleted(fileUUID)
 		return
 	}
 
@@ -393,42 +404,108 @@ func FileRemove(c *gin.Context) {
 	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Remove Endpoint"})
 }
 
-func FileDownload(c *gin.Context) {
-	// Get data from request
-	//fileUUIDString := c.Param("FileUUID")
-	blockUUIDString := c.PostForm("blockUUID")
+func InitFileDownloadRequest(c *gin.Context) {
+	var fileUUID uuid.UUID
+	var files []uuid.UUID = make([]uuid.UUID, 0)
+	var file *dbo.File
+	var blocks []*dbo.Block
+	var err error
+	var code string
+	var response *responses.EmptySuccessResponse = nil
 
-	// Validate data
-	if blockUUIDString == "" {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Missing blockUUID"})
-		return
-	}
-
-	blockUUID, uuidError := uuid.Parse(blockUUIDString)
-	if uuidError != nil {
-		c.JSON(422, responses.ValidationErrorResponse{Success: false, Message: "Invalid blockUUID"})
-		return
-	}
-
-	// FTP demo
-	var blockMetadata = apicalls.BlockMetadata{
-		UUID: blockUUID}
-
-	var ftpDisk = SFTPDisk.NewSFTPDisk()
-	ftpDisk.CreateCredentials("...")
-	/*err := ftpDisk.Connect(nil)
+	fileUUID, err = uuid.Parse(c.Param("FileUUID"))
 	if err != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "FTP connection failed: " + err.Error()})
-		return
-	}*/
-
-	errorWrapper := ftpDisk.Download(&blockMetadata)
-	if errorWrapper != nil {
-		c.JSON(500, responses.OperationFailureResponse{Success: false, Message: "Block download failed: " + errorWrapper.Error.Error()})
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
 
-	c.JSON(200, responses.BlockDownloadResponse{Success: true, Message: "File Download Endpoint", Block: *blockMetadata.Content})
+	// potentially backend could receive an array of fileUUIDs to download
+	files = append(files, fileUUID)
+
+	if len(files) == 1 {
+		file, code = db.FileFromDatabase(fileUUID.String())
+		if file == nil {
+			c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
+			return
+		}
+
+		if file.Size <= constants.FRONT_RAM_CAPACITY {
+			blocks, code = db.BlocksFromDatabase(fileUUID.String())
+			if blocks == nil {
+				c.JSON(405, responses.NewOperationFailureResponse(code, "File corrupted"))
+				return
+			}
+
+			f := models.NewFileFromDBO(file)
+			f = models.NewFileWrapper(constants.FILE_TYPE_SMALLER_WRAPPER, []models.File{f})
+			models.Transport.FileDownloadQueue.EnqueueInstance(f.GetUUID(), f)
+
+			response = responses.NewInitFileUploadRequestResponse(file.UserUUID, f)
+		}
+	}
+
+	if response == nil {
+		var _files []models.File
+		for _, UUID := range files {
+			_f, code := db.FileFromDatabase(UUID.String())
+			if file == nil {
+				c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
+				return
+			}
+
+			f := models.NewFileFromDBO(_f)
+			_files = append(_files, f)
+		}
+
+		wrapper := models.NewFileWrapper(constants.FILE_TYPE_WRAPPER, _files)
+		models.Transport.FileDownloadQueue.EnqueueInstance(wrapper.GetUUID(), wrapper)
+
+		response = responses.NewInitFileUploadRequestResponse(file.UserUUID, wrapper)
+	}
+
+	c.JSON(200, response)
+}
+
+func DownloadBlock(c *gin.Context) {
+	fileUUID, err := uuid.Parse(c.PostForm("fileUUID"))
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
+		return
+	}
+
+	blockUUID, err := uuid.Parse(c.Param("BlockUUID"))
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "BlockUUID", "Provided BlockUUID is not a valid UUID"))
+		return
+	}
+
+	file := models.Transport.FileDownloadQueue.GetEnqueuedInstance(fileUUID).(models.File)
+	if file == nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "A file with the given UUID is not enqueued for download"))
+		return
+	}
+
+	bm := apicalls.BlockMetadata{
+		Ctx:              c,
+		FileUUID:         fileUUID,
+		UUID:             blockUUID,
+		Size:             0,
+		Status:           nil,
+		Content:          nil,
+		CompleteCallback: nil,
+	}
+
+	// block the current file in the FileUploadQueue
+	err = models.Transport.FileDownloadQueue.MarkAsUsed(fileUUID)
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
+		return
+	}
+
+	errorWrapper := file.Download(&bm)
+	if errorWrapper != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
+	}
 }
 
 func CompleteFileUploadRequest(c *gin.Context) {
@@ -450,7 +527,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 	}
 
 	// Retrieve file from transport
-	file = *models.Transport.GetEnqueuedFileUpload(fileUUID).(*models.RegularFile)
+	file = *models.Transport.FileUploadQueue.GetEnqueuedInstance(fileUUID).(*models.RegularFile)
 
 	// Verify whether blocks were successfully uploaded
 	for _, _block := range file.Blocks {
@@ -504,6 +581,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 			VolumeUUID: file.Volume.UUID,
 			DiskUUID:   _block.Disk.GetUUID(),
 			Size:       _block.Size,
+			Order:      _block.Order,
 		})
 
 		if result.Error != nil {
@@ -513,7 +591,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 	}
 
 	// Remove file from transport
-	models.Transport.RemoveEnqueuedFileUpload(fileUUID)
+	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(fileUUID)
 
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }

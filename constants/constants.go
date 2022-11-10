@@ -10,8 +10,10 @@ const (
 
 // file types
 const (
-	FILE_TYPE_DIRECTORY int = 1
-	FILE_TYPE_REGULAR   int = 2
+	FILE_TYPE_DIRECTORY       int = 1
+	FILE_TYPE_REGULAR         int = 2
+	FILE_TYPE_SMALLER_WRAPPER int = 3
+	FILE_TYPE_WRAPPER         int = 4
 )
 
 // Backup types
@@ -52,7 +54,8 @@ const (
 	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
 )
 
-// Block size
+// sizes
 const (
 	DEFAULT_VOLUME_BLOCK_SIZE int = 8 * 1024 * 1024
+	FRONT_RAM_CAPACITY        int = 8 * 1024 * 1024
 )

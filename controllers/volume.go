@@ -41,7 +41,7 @@ func CreateVolume(c *gin.Context) {
 	}
 
 	// Initiate volume in transport
-	_ = models.Transport.GetVolume(user.UUID, volume.UUID)
+	_ = models.Transport.GetVolume(volume.UUID)
 
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
@@ -99,7 +99,7 @@ func UpdateVolume(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve volume from transport
-	volume = models.Transport.GetVolume(userUUID, volumeUUID)
+	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
@@ -154,7 +154,7 @@ func DeleteVolume(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve volume from transport
-	volume = models.Transport.GetVolume(userUUID, volumeUUID)
+	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
@@ -175,7 +175,7 @@ func DeleteVolume(c *gin.Context) {
 	}
 
 	// Trigger delete process
-	errCode, err = models.Transport.DeleteVolume(userUUID, volumeUUID)
+	errCode, err = models.Transport.DeleteVolume(volumeUUID)
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion request failed: "+err.Error()))
 		return

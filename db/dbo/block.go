@@ -6,18 +6,19 @@ import (
 
 type Block struct {
 	AbstractDatabaseObject
-	UserUUID   uuid.UUID
-	VolumeUUID uuid.UUID
-	DiskUUID   uuid.UUID
-	FileUUID   uuid.UUID
+	UserUUID   uuid.UUID `json:"-"`
+	VolumeUUID uuid.UUID `json:"-"`
+	DiskUUID   uuid.UUID `json:"-"`
+	FileUUID   uuid.UUID `json:"-"`
 
-	Size     int
-	Checksum string
+	Size     int    `json:"size"`
+	Order    int    `json:"order"`
+	Checksum string `json:"-"`
 
 	//User   User   `gorm:"foreignKey:UserUUID;references:UUID"`
-	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID"`
-	Disk   Disk   `gorm:"foreignKey:DiskUUID;references:UUID"`
-	File   File   `gorm:"foreignKey:FileUUID;references:UUID"`
+	Volume Volume `gorm:"foreignKey:VolumeUUID;references:UUID" json:"-"`
+	Disk   Disk   `gorm:"foreignKey:DiskUUID;references:UUID" json:"-"`
+	File   File   `gorm:"foreignKey:FileUUID;references:UUID" json:"-"`
 }
 
 func NewBlock() *Block {
