@@ -126,6 +126,10 @@ func (instances *ConcurrentInstances) GetEnqueuedInstance(key uuid.UUID) interfa
 		return nil
 	}
 
+	if instances.Instances[key] == nil {
+		return nil
+	}
+
 	return instances.Instances[key].Instance
 }
 

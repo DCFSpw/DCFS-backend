@@ -597,7 +597,7 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 
 func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	downloadPath := path.Join(_path, dir.GetName())
-	err := os.MkdirAll(downloadPath, 777)
+	err := os.MkdirAll(downloadPath, 0777)
 	if err != nil {
 		return &apicalls.ErrorWrapper{
 			Error: err,
@@ -617,7 +617,7 @@ func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetad
 
 func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	downloadPath := path.Join("./Download", f.GetName())
-	err := os.MkdirAll(downloadPath, 777)
+	err := os.MkdirAll(downloadPath, 0777)
 	if err != nil {
 		return &apicalls.ErrorWrapper{
 			Error: err,

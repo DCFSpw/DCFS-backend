@@ -480,6 +480,11 @@ func DownloadBlock(c *gin.Context) {
 	}
 
 	file := models.Transport.FileDownloadQueue.GetEnqueuedInstance(fileUUID).(models.File)
+	if file == nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "A file with the given UUID is not enqueued for download"))
+		return
+	}
+
 	bm := apicalls.BlockMetadata{
 		Ctx:              c,
 		FileUUID:         fileUUID,
