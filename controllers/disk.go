@@ -153,14 +153,35 @@ func DiskOAuth(c *gin.Context) {
 func DiskGet(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
+	var volumeModel *models.Volume
+	var diskModel models.Disk
 	var err error
 
+	// Retrieve disk UUID from request
 	_diskUUID = c.Param("DiskUUID")
+
+	// Retrieve disk from database
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
 		return
 	}
+
+	// Compute free and total disk space
+	volumeModel = models.Transport.GetVolume(_disk.VolumeUUID)
+	if volumeModel == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
+		return
+	}
+
+	diskModel = volumeModel.GetDisk(_disk.UUID)
+	if diskModel == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
+		return
+	}
+
+	_disk.FreeSpace = models.ComputeFreeSpace(diskModel)
+	_disk.TotalSpace = diskModel.GetTotalSize()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }

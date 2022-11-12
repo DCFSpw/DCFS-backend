@@ -18,6 +18,9 @@ type AbstractDisk struct {
 	BlockSize   int
 	Volume      *models.Volume
 	Name        string
+
+	Size      uint64
+	UsedSpace uint64
 }
 
 /* Mandatory Disk interface implementations */
@@ -76,6 +79,18 @@ func (d *AbstractDisk) CreateCredentials(credentials string) {
 
 func (d *AbstractDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented abstract method")
+}
+
+func (d *AbstractDisk) GetProviderFreeSpace() (uint64, string) {
+	panic("Unimplemented abstract method")
+}
+
+func (d *AbstractDisk) GetTotalSize() uint64 {
+	return d.Size
+}
+
+func (d *AbstractDisk) GetUsedSpace() uint64 {
+	return d.UsedSpace
 }
 
 func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {

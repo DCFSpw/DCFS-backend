@@ -13,6 +13,10 @@ type Disk struct {
 	Credentials  string    `json:"credentials"`
 	Name         string    `json:"name"`
 
+	UsedSpace  uint64 `json:"-"`
+	FreeSpace  uint64 `gorm:"-" json:"freeSpace"`
+	TotalSpace uint64 `gorm:"-" json:"totalSpace"`
+
 	CreatedAt time.Time `gorm:"<-:create" json:"-"`
 
 	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
