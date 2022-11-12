@@ -467,7 +467,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 }
 
 func DownloadBlock(c *gin.Context) {
-	fileUUID, err := uuid.Parse(c.PostForm("fileUUID"))
+	fileUUID, err := uuid.Parse(c.Query("fileUUID"))
 	if err != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
