@@ -9,6 +9,7 @@ import (
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -17,6 +18,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strconv"
 )
@@ -150,8 +152,33 @@ func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
 }
 
-func (d *GDriveDisk) GetProviderFreeSpace() (uint64, string) {
-	return 0, constants.OPERATION_NOT_SUPPORTED
+func (d *GDriveDisk) GetProviderSpace() (uint64, uint64, string) {
+	var err error
+
+	// Prepare test context
+	writer := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(writer)
+
+	// Authenticate to the remote server
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
+	if client == nil {
+		return 0, 0, constants.REMOTE_CANNOT_AUTHENTICATE
+	}
+
+	// Connect to the remote server
+	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return 0, 0, constants.REMOTE_CLIENT_UNAVAILABLE
+	}
+
+	// Get the disk stats from the remote server
+	about, err := srv.About.Get().Fields("storageQuota").Do()
+	if err != nil {
+		return 0, 0, constants.REMOTE_CANNOT_GET_STATS
+	}
+
+	return uint64(about.StorageQuota.Usage), uint64(about.StorageQuota.Limit), constants.SUCCESS
 }
 
 func (d *GDriveDisk) SetTotalSpace(quota uint64) {
