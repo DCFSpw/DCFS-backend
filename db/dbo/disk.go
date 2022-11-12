@@ -14,8 +14,8 @@ type Disk struct {
 	Name         string    `json:"name"`
 
 	UsedSpace  uint64 `json:"-"`
+	TotalSpace uint64 `json:"totalSpace"`
 	FreeSpace  uint64 `gorm:"-" json:"freeSpace"`
-	TotalSpace uint64 `gorm:"-" json:"totalSpace"`
 
 	CreatedAt time.Time `gorm:"<-:create" json:"-"`
 

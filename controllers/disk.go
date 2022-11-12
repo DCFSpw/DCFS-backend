@@ -57,6 +57,8 @@ func CreateDisk(c *gin.Context) {
 		Credentials:  requestBody.Credentials.ToString(),
 		Provider:     *provider,
 		Name:         requestBody.Name,
+		UsedSpace:    0,
+		TotalSpace:   requestBody.TotalSpace,
 	}
 	disk := models.CreateDisk(models.CreateDiskMetadata{
 		Disk:   &_disk,
@@ -181,7 +183,7 @@ func DiskGet(c *gin.Context) {
 	}
 
 	_disk.FreeSpace = models.ComputeFreeSpace(diskModel)
-	_disk.TotalSpace = diskModel.GetTotalSize()
+	_disk.TotalSpace = diskModel.GetTotalSpace()
 
 	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
 }

@@ -266,8 +266,12 @@ func (d *OneDriveDisk) GetProviderFreeSpace() (uint64, string) {
 	return uint64(data.Drives[0].Quota.Used), constants.SUCCESS
 }
 
-func (d *OneDriveDisk) GetTotalSize() uint64 {
-	return d.abstractDisk.GetTotalSize()
+func (d *OneDriveDisk) SetTotalSpace(quota uint64) {
+	d.abstractDisk.SetTotalSpace(quota)
+}
+
+func (d *OneDriveDisk) GetTotalSpace() uint64 {
+	return d.abstractDisk.GetTotalSpace()
 }
 
 func (d *OneDriveDisk) GetUsedSpace() uint64 {

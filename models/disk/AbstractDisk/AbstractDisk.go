@@ -85,7 +85,11 @@ func (d *AbstractDisk) GetProviderFreeSpace() (uint64, string) {
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) GetTotalSize() uint64 {
+func (d *AbstractDisk) SetTotalSpace(quota uint64) {
+	d.Size = quota
+}
+
+func (d *AbstractDisk) GetTotalSpace() uint64 {
 	return d.Size
 }
 
