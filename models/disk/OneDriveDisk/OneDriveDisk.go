@@ -45,7 +45,7 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 	ft, err := filetype.Match(*blockMetadata.Content)
 	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.FS_BAD_FILE, "file:", blockMetadata.FileUUID.String(), "is corrupted")
+		log.Printf("[OneDrive upload] file %s is corrupted", blockMetadata.FileUUID.String())
 	}
 
 	if size <= constants.ONEDRIVE_SIZE_LIMIT {

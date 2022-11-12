@@ -55,6 +55,10 @@ func (d *dummyDisk) GetName() string {
 	return d.Name
 }
 
+func (d *dummyDisk) GetThroughput() int {
+	panic("Unimplemented")
+}
+
 func (d *dummyDisk) GetCredentials() credentials.Credentials {
 	panic("Unimplemented")
 }
