@@ -155,6 +155,47 @@ func (d *SFTPDisk) Delete() (string, error) {
 	return d.abstractDisk.Delete()
 }
 
+func (d *SFTPDisk) GetProviderFreeSpace() (uint64, string) {
+	var stats *sftp.StatVFS
+	var err error
+
+	// Authenticate to the remote server
+	var _client interface{} = d.GetCredentials().Authenticate(nil)
+	if _client == nil {
+		return 0, constants.REMOTE_CANNOT_AUTHENTICATE
+	}
+
+	// Connect to the remote server
+	var client *sftp.Client = _client.(*sftp.Client)
+	defer client.Close()
+
+	path := d.abstractDisk.Credentials.GetPath()
+	if path == "" {
+		path = "/"
+	}
+
+	// Get the disk stats from the remote server
+	stats, err = client.StatVFS(path)
+
+	if err != nil {
+		return 0, constants.OPERATION_NOT_SUPPORTED
+	}
+
+	return stats.FreeSpace(), constants.SUCCESS
+}
+
+func (d *SFTPDisk) SetTotalSpace(quota uint64) {
+	d.abstractDisk.SetTotalSpace(quota)
+}
+
+func (d *SFTPDisk) GetTotalSpace() uint64 {
+	return d.abstractDisk.GetTotalSpace()
+}
+
+func (d *SFTPDisk) GetUsedSpace() uint64 {
+	return d.abstractDisk.GetUsedSpace()
+}
+
 /* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)
