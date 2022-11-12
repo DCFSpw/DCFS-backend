@@ -37,7 +37,8 @@ type Disk interface {
 	GetProviderUUID() uuid.UUID
 
 	GetProviderFreeSpace() (uint64, string)
-	GetTotalSize() uint64
+	SetTotalSpace(quota uint64)
+	GetTotalSpace() uint64
 	GetUsedSpace() uint64
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
@@ -60,6 +61,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.CreateCredentials(cdm.Disk.Credentials)
 	disk.SetUUID(cdm.Disk.UUID)
 	disk.SetName(cdm.Disk.Name)
+	disk.SetTotalSpace(cdm.Disk.TotalSpace)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 
 	return disk
@@ -146,7 +148,7 @@ func ComputeFreeSpace(d Disk) uint64 {
 	var freeSpace uint64
 
 	// Get needed values
-	totalSize := d.GetTotalSize()
+	totalSize := d.GetTotalSpace()
 	usedSpace := d.GetUsedSpace()
 	providerFreeSpace, errCode := d.GetProviderFreeSpace()
 

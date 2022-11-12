@@ -42,6 +42,7 @@ func StringToOAuthCredentials(cred string) *OAuthCredentials {
 
 type DiskCreateRequest struct {
 	Name         string         `json:"name" binding:"required,gte=1,lte=64"`
+	TotalSpace   uint64         `json:"totalSpace" binding:"required,min=1"`
 	ProviderUUID string         `json:"providerUUID" binding:"required"`
 	VolumeUUID   string         `json:"volumeUUID" binding:"required"`
 	Credentials  FTPCredentials `json:"credentials" binding:"required"`

@@ -150,6 +150,22 @@ func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
 }
 
+func (d *GDriveDisk) GetProviderFreeSpace() (uint64, string) {
+	return 0, constants.OPERATION_NOT_SUPPORTED
+}
+
+func (d *GDriveDisk) SetTotalSpace(quota uint64) {
+	d.abstractDisk.SetTotalSpace(quota)
+}
+
+func (d *GDriveDisk) GetTotalSpace() uint64 {
+	return d.abstractDisk.GetTotalSpace()
+}
+
+func (d *GDriveDisk) GetUsedSpace() uint64 {
+	return d.abstractDisk.GetUsedSpace()
+}
+
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
