@@ -173,5 +173,7 @@ func ComputeFreeSpace(d Disk) uint64 {
 		freeSpace = providerDefinedSpace
 	}
 
+	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes)")
+
 	return freeSpace
 }

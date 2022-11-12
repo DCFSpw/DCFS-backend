@@ -10,6 +10,7 @@ import (
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/responses"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/goh-chunlin/go-onedrive/onedrive"
 	"github.com/google/uuid"
 	"github.com/h2non/filetype"
@@ -19,6 +20,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"strconv"
@@ -235,6 +237,41 @@ func (d *OneDriveDisk) CreateCredentials(c string) {
 
 func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
+}
+
+func (d *OneDriveDisk) GetProviderFreeSpace() (uint64, string) {
+	var err error
+
+	// Prepare test context
+	writer := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(writer)
+
+	// Authenticate to the remote server
+	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
+	if _client == nil {
+		return 0, constants.REMOTE_CANNOT_AUTHENTICATE
+	}
+
+	// Connect to the remote server
+	var client *http.Client = _client.(*http.Client)
+	oneDriveClient := onedrive.NewClient(client)
+
+	// Get the disk stats from the remote server
+	data, err := oneDriveClient.Drives.List(ctx)
+
+	if err != nil || len(data.Drives) == 0 {
+		return 0, constants.REMOTE_CANNOT_GET_STATS
+	}
+
+	return uint64(data.Drives[0].Quota.Used), constants.SUCCESS
+}
+
+func (d *OneDriveDisk) GetTotalSize() uint64 {
+	return d.abstractDisk.GetTotalSize()
+}
+
+func (d *OneDriveDisk) GetUsedSpace() uint64 {
+	return d.abstractDisk.GetUsedSpace()
 }
 
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
