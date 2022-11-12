@@ -63,6 +63,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 
 func MeasureDiskThroughput(d Disk) int {
 	var uploadTime time.Duration
+	var downloadTime time.Duration
 	var throughput int
 
 	// Prepare test context
@@ -90,21 +91,23 @@ func MeasureDiskThroughput(d Disk) int {
 	}
 
 	// Measure upload time
-	start := time.Now()
-
+	uploadStart := time.Now()
 	d.Upload(blockMetadata)
+	uploadEnd := time.Now()
+	uploadTime = uploadEnd.Sub(uploadStart)
 
-	end := time.Now()
-	uploadTime = end.Sub(start)
-
-	// TO DO: Measure download time
+	// Measure download time
+	downloadStart := time.Now()
+	d.Download(blockMetadata)
+	downloadEnd := time.Now()
+	downloadTime = downloadEnd.Sub(downloadStart)
 
 	// TO DO: Remove test block
 
 	// Calculate throughput
-	throughput = int(uploadTime.Milliseconds() + 1)
+	throughput = int((uploadTime.Milliseconds()+downloadTime.Milliseconds())/2 + 1)
 
-	log.Println("Disk ", d.GetName(), " has throughput time of ", uploadTime.Milliseconds(), " ms")
+	log.Println("Disk ", d.GetName(), " has throughput of ", throughput, "(upload: ", uploadTime.Milliseconds(), " ms, download: ", downloadTime.Milliseconds(), " ms).")
 	return throughput
 }
 
