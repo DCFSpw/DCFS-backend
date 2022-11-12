@@ -12,7 +12,7 @@ type FileDetailsWithPathResponse struct {
 }
 
 type FileRequestBlockResponse struct {
-	UUID  uuid.UUID `json:"UUID"`
+	UUID  uuid.UUID `json:"uuid"`
 	Order int       `json:"order"`
 	Size  int       `json:"size"`
 }
