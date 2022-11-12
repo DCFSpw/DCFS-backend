@@ -67,6 +67,8 @@ func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, user
 		// Create a new block
 		var block *Block = NewBlock(uuid.New(), userUUID, f, v.partitioner.AssignDisk(currentSize), currentSize, 0, constants.BLOCK_STATUS_QUEUED, i)
 		_f.Blocks[block.UUID] = block
+
+		log.Println("Block ", i, " assigned to", block.Disk.GetName())
 	}
 
 	return *_f
@@ -81,9 +83,12 @@ func (v *Volume) GetVolumeDBO() dbo.Volume {
 	}
 }
 
+func (v *Volume) RefreshPartitioner() {
+	v.partitioner.FetchDisks()
+}
+
 func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	var v *Volume = new(Volume)
-	v.partitioner = NewDummyPartitioner(v)
 	v.UUID = _volume.UUID
 	v.BlockSize = constants.DEFAULT_VOLUME_BLOCK_SIZE
 
@@ -91,12 +96,16 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	v.UserUUID = _volume.UserUUID
 	v.VolumeSettings = _volume.VolumeSettings
 
+	v.partitioner = CreatePartitioner(v.VolumeSettings.FilePartition, v)
+
 	for _, _d := range _disks {
 		_ = CreateDisk(CreateDiskMetadata{
 			Disk:   &_d,
 			Volume: v,
 		})
 	}
+
+	v.RefreshPartitioner()
 
 	log.Println("Created a new Volume: ", v)
 	return v
