@@ -80,6 +80,12 @@ func CreateDisk(c *gin.Context) {
 		go volume.RefreshPartitioner()
 	}
 
+	// TO DO! Verify that the disk space quota is valid
+	/*_, totalSpace, errCode := disk.GetProviderSpace()
+	if errCode == constants.SUCCESS && totalSpace < _disk.TotalSpace {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space exceeds the disk space quota"))
+	}*/
+
 	// load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", disk.GetUUID().String()).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {

@@ -132,8 +132,8 @@ func (d *FTPDisk) Delete() (string, error) {
 	return d.abstractDisk.Delete()
 }
 
-func (d *FTPDisk) GetProviderFreeSpace() (uint64, string) {
-	return 0, constants.OPERATION_NOT_SUPPORTED
+func (d *FTPDisk) GetProviderSpace() (uint64, uint64, string) {
+	return 0, 0, constants.OPERATION_NOT_SUPPORTED
 }
 
 func (d *FTPDisk) SetTotalSpace(quota uint64) {
