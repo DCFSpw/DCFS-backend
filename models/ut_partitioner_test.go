@@ -21,6 +21,8 @@ func TestBalancedPartitioner(t *testing.T) {
 	volume.AddDisk(firstDisk.GetUUID(), firstDisk)
 	volume.AddDisk(secondDisk.GetUUID(), secondDisk)
 
+	volume.RefreshPartitioner()
+
 	Convey("Test if partitioner assigns disks correctly", t, func() {
 		Convey("First disk for the first time", func() {
 			So(partitioner.AssignDisk(0), ShouldEqual, firstDisk)
