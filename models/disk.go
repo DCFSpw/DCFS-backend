@@ -92,7 +92,7 @@ func MeasureDiskThroughput(d Disk) int {
 	// Measure upload time
 	start := time.Now()
 
-	err := d.Upload(blockMetadata)
+	d.Upload(blockMetadata)
 
 	end := time.Now()
 	uploadTime = end.Sub(start)
@@ -104,7 +104,7 @@ func MeasureDiskThroughput(d Disk) int {
 	// Calculate throughput
 	throughput = int(uploadTime.Milliseconds() + 1)
 
-	log.Println("Disk ", d.GetName(), " has throughput of ", uploadTime.Milliseconds(), blockMetadata.UUID, err, size)
+	log.Println("Disk ", d.GetName(), " has throughput time of ", uploadTime.Milliseconds(), " ms")
 	return throughput
 }
 

@@ -32,7 +32,7 @@ const (
 const (
 	PARTITION_TYPE_BALANCED   int = 1
 	PARTITION_TYPE_PRIORITY   int = 3
-	PARTITION_TYPE_THROUGHPUT int = 2
+	PARTITION_TYPE_THROUGHPUT int = 2 // TO DO: Change to 3 when frontend is updated
 )
 
 // Block status

@@ -131,6 +131,9 @@ func UpdateVolume(c *gin.Context) {
 		return
 	}
 
+	// Invalidate volume in transport
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
+
 	// Return volume data
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(&volumeDBO))
 }

@@ -67,7 +67,6 @@ func NewBalancedPartitioner(volume *Volume) *BalancedPartitioner {
 	var p BalancedPartitioner
 
 	p.AbstractPartitioner.Volume = volume
-	//p.FetchDisks()
 
 	return &p
 }
@@ -131,7 +130,6 @@ func NewThroughputPartitioner(volume *Volume) *ThroughputPartitioner {
 	var p ThroughputPartitioner
 
 	p.AbstractPartitioner.Volume = volume
-	//p.FetchDisks()
 
 	return &p
 }
