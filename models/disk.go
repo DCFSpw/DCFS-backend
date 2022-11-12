@@ -36,7 +36,7 @@ type Disk interface {
 	CreateCredentials(credentials string)
 	GetProviderUUID() uuid.UUID
 
-	GetProviderFreeSpace() (uint64, string)
+	GetProviderSpace() (uint64, uint64, string)
 	SetTotalSpace(quota uint64)
 	GetTotalSpace() uint64
 	GetUsedSpace() uint64
@@ -148,19 +148,22 @@ func ComputeFreeSpace(d Disk) uint64 {
 	var freeSpace uint64
 
 	// Get needed values
-	totalSize := d.GetTotalSpace()
-	usedSpace := d.GetUsedSpace()
-	providerFreeSpace, errCode := d.GetProviderFreeSpace()
+	userTotalSpace := d.GetTotalSpace()
+	userUsedSpace := d.GetUsedSpace()
+	providerUsedSpace, providerTotalSpace, errCode := d.GetProviderSpace()
 
 	// Compute free space based on disk quota provided by the user
-	userDefinedSpace = totalSize - usedSpace
-	if totalSize < usedSpace {
+	userDefinedSpace = userTotalSpace - userUsedSpace
+	if userTotalSpace < userUsedSpace {
 		userDefinedSpace = 0
 	}
 
 	// Compute free space based on the disk quota provided by the provider
 	if errCode == constants.SUCCESS {
-		providerDefinedSpace = providerFreeSpace
+		providerDefinedSpace = providerTotalSpace - providerUsedSpace
+		if providerTotalSpace < providerUsedSpace {
+			providerDefinedSpace = 0
+		}
 	} else if errCode == constants.OPERATION_NOT_SUPPORTED {
 		// In case the provider does not support this operation,
 		// we assume that the real disk space is equal to user defined space
@@ -169,13 +172,13 @@ func ComputeFreeSpace(d Disk) uint64 {
 		providerDefinedSpace = 0
 	}
 
-	// Return the minimum of the two
+	// Return the minimum of user defined space and provider defined space
 	freeSpace = userDefinedSpace
 	if providerDefinedSpace < freeSpace {
 		freeSpace = providerDefinedSpace
 	}
 
-	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes)")
+	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes, provider total:", providerTotalSpace, "bytes)")
 
 	return freeSpace
 }

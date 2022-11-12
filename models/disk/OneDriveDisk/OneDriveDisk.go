@@ -239,7 +239,7 @@ func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
 }
 
-func (d *OneDriveDisk) GetProviderFreeSpace() (uint64, string) {
+func (d *OneDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	var err error
 
 	// Prepare test context
@@ -249,7 +249,7 @@ func (d *OneDriveDisk) GetProviderFreeSpace() (uint64, string) {
 	// Authenticate to the remote server
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
-		return 0, constants.REMOTE_CANNOT_AUTHENTICATE
+		return 0, 0, constants.REMOTE_CANNOT_AUTHENTICATE
 	}
 
 	// Connect to the remote server
@@ -260,10 +260,10 @@ func (d *OneDriveDisk) GetProviderFreeSpace() (uint64, string) {
 	data, err := oneDriveClient.Drives.List(ctx)
 
 	if err != nil || len(data.Drives) == 0 {
-		return 0, constants.REMOTE_CANNOT_GET_STATS
+		return 0, 0, constants.REMOTE_CANNOT_GET_STATS
 	}
 
-	return uint64(data.Drives[0].Quota.Used), constants.SUCCESS
+	return uint64(data.Drives[0].Quota.Used), uint64(data.Drives[0].Quota.Total), constants.SUCCESS
 }
 
 func (d *OneDriveDisk) SetTotalSpace(quota uint64) {
