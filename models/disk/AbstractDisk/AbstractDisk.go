@@ -81,7 +81,7 @@ func (d *AbstractDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) GetProviderFreeSpace() (uint64, string) {
+func (d *AbstractDisk) GetProviderSpace() (uint64, uint64, string) {
 	panic("Unimplemented abstract method")
 }
 
