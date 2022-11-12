@@ -36,6 +36,10 @@ type Disk interface {
 	CreateCredentials(credentials string)
 	GetProviderUUID() uuid.UUID
 
+	GetProviderFreeSpace() (uint64, string)
+	GetTotalSize() uint64
+	GetUsedSpace() uint64
+
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
 	Delete() (string, error)
@@ -134,4 +138,40 @@ func CreateDiskFromUUID(UUID uuid.UUID) Disk {
 		Disk:   &disk,
 		Volume: volume,
 	})
+}
+
+func ComputeFreeSpace(d Disk) uint64 {
+	var userDefinedSpace uint64
+	var providerDefinedSpace uint64
+	var freeSpace uint64
+
+	// Get needed values
+	totalSize := d.GetTotalSize()
+	usedSpace := d.GetUsedSpace()
+	providerFreeSpace, errCode := d.GetProviderFreeSpace()
+
+	// Compute free space based on disk quota provided by the user
+	userDefinedSpace = totalSize - usedSpace
+	if totalSize < usedSpace {
+		userDefinedSpace = 0
+	}
+
+	// Compute free space based on the disk quota provided by the provider
+	if errCode == constants.SUCCESS {
+		providerDefinedSpace = providerFreeSpace
+	} else if errCode == constants.OPERATION_NOT_SUPPORTED {
+		// In case the provider does not support this operation,
+		// we assume that the real disk space is equal to user defined space
+		providerDefinedSpace = userDefinedSpace
+	} else {
+		providerDefinedSpace = 0
+	}
+
+	// Return the minimum of the two
+	freeSpace = userDefinedSpace
+	if providerDefinedSpace < freeSpace {
+		freeSpace = providerDefinedSpace
+	}
+
+	return freeSpace
 }
