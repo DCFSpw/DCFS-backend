@@ -75,6 +75,18 @@ func (d *dummyDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented")
 }
 
+func (d *dummyDisk) GetProviderFreeSpace() (uint64, string) {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) GetTotalSize() uint64 {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) GetUsedSpace() uint64 {
+	panic("Unimplemented")
+}
+
 func (d *dummyDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	panic("Unimplemented")
 }
