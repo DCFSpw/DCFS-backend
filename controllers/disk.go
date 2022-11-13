@@ -256,6 +256,18 @@ func DiskUpdate(c *gin.Context) {
 
 	disk.SetName(body.Name)
 
+	// Verify that the disk space quota is valid
+	_, totalSpace, errCode := disk.GetProviderSpace()
+	if errCode == constants.SUCCESS {
+		if totalSpace < body.TotalSpace {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space exceeds the disk space quota"))
+			return
+		} else if disk.GetUsedSpace() > body.TotalSpace {
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space is lower than currently used space"))
+			return
+		}
+	}
+
 	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), volume.UUID)
 	err = db.DB.DatabaseHandle.Save(&diskDBO).Error
 	if err != nil {

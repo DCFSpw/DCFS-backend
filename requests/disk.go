@@ -53,6 +53,7 @@ type OAuthRequest struct {
 }
 
 type DiskUpdateRequest struct {
-	Name        string         `json:"name"`
-	Credentials FTPCredentials `json:"credentials"`
+	Name        string         `json:"name" binding:"required,gte=1,lte=64"`
+	TotalSpace  uint64         `json:"totalSpace" binding:"required,min=1"`
+	Credentials FTPCredentials `json:"credentials" binding:"required"`
 }
