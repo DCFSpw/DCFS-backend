@@ -204,9 +204,9 @@ func DiskUpdate(c *gin.Context) {
 	var volume *models.Volume = nil
 	var disk models.Disk = nil
 
-	err = c.ShouldBindJSON(&body)
-	if err != nil {
-		c.JSON(401, responses.NewValidationErrorResponse(err))
+	// Retrieve and validate data from request
+	if err = c.ShouldBindJSON(&body); err != nil {
+		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
 
