@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
 	"io"
+	"time"
 )
 
 type FTPDisk struct {
@@ -122,6 +123,14 @@ func (d *FTPDisk) SetCredentials(credentials credentials.Credentials) {
 
 func (d *FTPDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewFTPCredentials(c)
+}
+
+func (d *FTPDisk) SetCreationTime(creationTime time.Time) {
+	d.abstractDisk.SetCreationTime(creationTime)
+}
+
+func (d *FTPDisk) GetCreationTime() time.Time {
+	return d.abstractDisk.GetCreationTime()
 }
 
 func (d *FTPDisk) GetProviderUUID() uuid.UUID {

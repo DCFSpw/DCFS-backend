@@ -9,6 +9,7 @@ import (
 	"dcfs/models/credentials"
 	"github.com/google/uuid"
 	"log"
+	"time"
 )
 
 type AbstractDisk struct {
@@ -18,6 +19,8 @@ type AbstractDisk struct {
 	BlockSize   int
 	Volume      *models.Volume
 	Name        string
+
+	CreationTime time.Time
 
 	Size      uint64
 	UsedSpace uint64
@@ -83,6 +86,14 @@ func (d *AbstractDisk) GetProviderUUID() uuid.UUID {
 
 func (d *AbstractDisk) GetProviderSpace() (uint64, uint64, string) {
 	panic("Unimplemented abstract method")
+}
+
+func (d *AbstractDisk) SetCreationTime(creationTime time.Time) {
+	d.CreationTime = creationTime
+}
+
+func (d *AbstractDisk) GetCreationTime() time.Time {
+	return d.CreationTime
 }
 
 func (d *AbstractDisk) SetTotalSpace(quota uint64) {
