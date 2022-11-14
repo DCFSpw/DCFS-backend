@@ -36,6 +36,9 @@ type Disk interface {
 	CreateCredentials(credentials string)
 	GetProviderUUID() uuid.UUID
 
+	SetCreationTime(creationTime time.Time)
+	GetCreationTime() time.Time
+
 	GetProviderSpace() (uint64, uint64, string)
 	SetTotalSpace(quota uint64)
 	GetTotalSpace() uint64
@@ -65,6 +68,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.SetName(cdm.Disk.Name)
 	disk.SetUsedSpace(cdm.Disk.UsedSpace)
 	disk.SetTotalSpace(cdm.Disk.TotalSpace)
+	disk.SetCreationTime(cdm.Disk.CreatedAt)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 
 	return disk
