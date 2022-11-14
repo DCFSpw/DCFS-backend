@@ -307,11 +307,11 @@ func UploadBlock(c *gin.Context) {
 	blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
 		*status = constants.BLOCK_STATUS_TRANSFERRED
 
-		// unblock the current file in the FileUploadQueue when this block is transferred
+		// Unblock the current file in the FileUploadQueue when this block is transferred
 		models.Transport.FileUploadQueue.MarkAsCompleted(UUID)
 	}
 
-	// block the current file in the FileUploadQueue
+	// Block the current file in the FileUploadQueue
 	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
@@ -323,10 +323,13 @@ func UploadBlock(c *gin.Context) {
 	if errorWrapper != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(errorWrapper.Code, "Block loading failed: "+errorWrapper.Error.Error()))
 
-		// unblock the current file in the FileUploadQueue in case of failure
+		// Unblock the current file in the FileUploadQueue in case of failure
 		models.Transport.FileUploadQueue.MarkAsCompleted(fileUUID)
 		return
 	}
+
+	// Update target disk usage
+	file.Blocks[blockUUID].Disk.UpdateUsedSpace(int64(file.Blocks[blockUUID].Size))
 
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
