@@ -5,6 +5,7 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"github.com/google/uuid"
+	"time"
 )
 
 type dummyDisk struct {
@@ -83,7 +84,35 @@ func (d *dummyDisk) GetTotalSize() uint64 {
 	panic("Unimplemented")
 }
 
+func (d *dummyDisk) SetUsedSpace(usage uint64) {
+	panic("Unimplemented")
+}
+
 func (d *dummyDisk) GetUsedSpace() uint64 {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) GetProviderSpace() (uint64, uint64, string) {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) SetTotalSpace(quota uint64) {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) GetTotalSpace() uint64 {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) UpdateUsedSpace(change int64) {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) SetCreationTime(creationTime time.Time) {
+	panic("Unimplemented")
+}
+
+func (d *dummyDisk) GetCreationTime() time.Time {
 	panic("Unimplemented")
 }
 
