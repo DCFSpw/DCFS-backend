@@ -278,6 +278,10 @@ func (d *OneDriveDisk) GetUsedSpace() uint64 {
 	return d.abstractDisk.GetUsedSpace()
 }
 
+func (d *OneDriveDisk) UpdateUsedSpace(change int64) {
+	d.abstractDisk.UpdateUsedSpace(change)
+}
+
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }

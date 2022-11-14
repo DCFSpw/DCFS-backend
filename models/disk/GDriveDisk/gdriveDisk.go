@@ -193,6 +193,10 @@ func (d *GDriveDisk) GetUsedSpace() uint64 {
 	return d.abstractDisk.GetUsedSpace()
 }
 
+func (d *GDriveDisk) UpdateUsedSpace(change int64) {
+	d.abstractDisk.UpdateUsedSpace(change)
+}
+
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
