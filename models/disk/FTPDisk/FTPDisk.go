@@ -144,6 +144,10 @@ func (d *FTPDisk) GetTotalSpace() uint64 {
 	return d.abstractDisk.GetTotalSpace()
 }
 
+func (d *FTPDisk) SetUsedSpace(usage uint64) {
+	d.abstractDisk.SetUsedSpace(usage)
+}
+
 func (d *FTPDisk) GetUsedSpace() uint64 {
 	return d.abstractDisk.GetUsedSpace()
 }

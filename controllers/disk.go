@@ -342,23 +342,12 @@ func GetDisks(c *gin.Context) {
 
 	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Preload("Provider").Preload("Volume").Find(&_disks)
 	for _, disk := range _disks {
+		// Update disk spaced based on local data (for performance reasons)
+		disk.FreeSpace = disk.TotalSpace - disk.UsedSpace
+		disk.TotalSpace = disk.TotalSpace
+
+		// Append disk to the list
 		disks = append(disks, disk)
-
-		// Compute free and total disk space
-		volumeModel := models.Transport.GetVolume(disk.VolumeUUID)
-		if volumeModel == nil {
-			c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
-			return
-		}
-
-		diskModel := volumeModel.GetDisk(disk.UUID)
-		if diskModel == nil {
-			c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
-			return
-		}
-
-		disk.FreeSpace = models.ComputeFreeSpace(diskModel)
-		disk.TotalSpace = diskModel.GetTotalSpace()
 	}
 
 	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
