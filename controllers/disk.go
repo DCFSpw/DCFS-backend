@@ -207,6 +207,7 @@ func DiskUpdate(c *gin.Context) {
 	err = c.ShouldBindJSON(&body)
 	if err != nil {
 		c.JSON(401, responses.NewValidationErrorResponse(err))
+		return
 	}
 
 	userData, _ := c.Get("UserData")
