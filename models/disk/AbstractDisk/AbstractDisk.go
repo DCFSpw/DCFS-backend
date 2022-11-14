@@ -93,6 +93,10 @@ func (d *AbstractDisk) GetTotalSpace() uint64 {
 	return d.Size
 }
 
+func (d *AbstractDisk) SetUsedSpace(usage uint64) {
+	d.UsedSpace = usage
+}
+
 func (d *AbstractDisk) GetUsedSpace() uint64 {
 	return d.UsedSpace
 }
@@ -107,7 +111,7 @@ func (d *AbstractDisk) UpdateUsedSpace(change int64) {
 
 	// Update disk usage in database
 	diskDBO := d.GetDiskDBO(uuid.Nil, uuid.Nil, uuid.Nil)
-	db.DB.DatabaseHandle.Model(&diskDBO).Update("total_space", d.UsedSpace)
+	db.DB.DatabaseHandle.Model(&diskDBO).Update("used_space", d.UsedSpace)
 }
 
 func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {

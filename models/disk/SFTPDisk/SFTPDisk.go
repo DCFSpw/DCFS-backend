@@ -42,7 +42,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	remoteFile, err := client.Open(downloadPath)
 	if err == nil {
 		remoteFile.Close()
-		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", "File already exists")
 	}
 	err = nil
 
@@ -190,6 +190,10 @@ func (d *SFTPDisk) SetTotalSpace(quota uint64) {
 
 func (d *SFTPDisk) GetTotalSpace() uint64 {
 	return d.abstractDisk.GetTotalSpace()
+}
+
+func (d *SFTPDisk) SetUsedSpace(usage uint64) {
+	d.abstractDisk.SetUsedSpace(usage)
 }
 
 func (d *SFTPDisk) GetUsedSpace() uint64 {

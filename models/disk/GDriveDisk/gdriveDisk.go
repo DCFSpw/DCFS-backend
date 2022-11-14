@@ -189,6 +189,10 @@ func (d *GDriveDisk) GetTotalSpace() uint64 {
 	return d.abstractDisk.GetTotalSpace()
 }
 
+func (d *GDriveDisk) SetUsedSpace(usage uint64) {
+	d.abstractDisk.SetUsedSpace(usage)
+}
+
 func (d *GDriveDisk) GetUsedSpace() uint64 {
 	return d.abstractDisk.GetUsedSpace()
 }

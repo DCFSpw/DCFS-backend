@@ -39,6 +39,7 @@ type Disk interface {
 	GetProviderSpace() (uint64, uint64, string)
 	SetTotalSpace(quota uint64)
 	GetTotalSpace() uint64
+	SetUsedSpace(usage uint64)
 	GetUsedSpace() uint64
 	UpdateUsedSpace(change int64)
 
@@ -62,6 +63,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.CreateCredentials(cdm.Disk.Credentials)
 	disk.SetUUID(cdm.Disk.UUID)
 	disk.SetName(cdm.Disk.Name)
+	disk.SetUsedSpace(cdm.Disk.UsedSpace)
 	disk.SetTotalSpace(cdm.Disk.TotalSpace)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 
