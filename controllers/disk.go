@@ -68,23 +68,25 @@ func CreateDisk(c *gin.Context) {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
-	db.DB.DatabaseHandle.Create(&_disk)
 
 	_, ok := disk.(OAuthDisk.OAuthDisk)
 	if ok {
 		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	} else {
+		// Retrieve disk quota from provider
+		// OAuth disks will retrieve quota after authorization
+		_, totalSpace, errCode := disk.GetProviderSpace()
+		if errCode == constants.SUCCESS && totalSpace < _disk.TotalSpace {
+			_disk.TotalSpace = totalSpace
+		}
+
 		// Refresh partitioner for credential based disks
 		// OAuth disks will refresh partitioner after authorization
 		go volume.RefreshPartitioner()
 	}
 
-	// TO DO! Verify that the disk space quota is valid
-	/*_, totalSpace, errCode := disk.GetProviderSpace()
-	if errCode == constants.SUCCESS && totalSpace < _disk.TotalSpace {
-		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space exceeds the disk space quota"))
-	}*/
+	db.DB.DatabaseHandle.Create(&_disk)
 
 	// load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", disk.GetUUID().String()).Preload("Provider").Preload("Volume").Find(&_disk).Error
@@ -143,6 +145,13 @@ func DiskOAuth(c *gin.Context) {
 	}
 
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
+
+	// Retrieve disk quota from provider
+	_, totalSpace, errCode := disk.GetProviderSpace()
+	if errCode == constants.SUCCESS && totalSpace < disk.GetTotalSpace() {
+		disk.SetTotalSpace(totalSpace)
+	}
+
 	db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
 
 	// load full database object with a provider and a volume to return
