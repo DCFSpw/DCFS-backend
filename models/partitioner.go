@@ -2,6 +2,7 @@ package models
 
 import (
 	"dcfs/constants"
+	"sort"
 )
 
 type Partitioner interface {
@@ -14,7 +15,7 @@ func CreatePartitioner(partitionerType int, volume *Volume) Partitioner {
 	case constants.PARTITION_TYPE_BALANCED:
 		return NewBalancedPartitioner(volume)
 	case constants.PARTITION_TYPE_PRIORITY:
-		return NewBalancedPartitioner(volume)
+		return NewPriorityPartitioner(volume)
 	case constants.PARTITION_TYPE_THROUGHPUT:
 		return NewThroughputPartitioner(volume)
 
@@ -56,7 +57,9 @@ func (p *BalancedPartitioner) FetchDisks() {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
 	for _, disk := range p.AbstractPartitioner.Volume.disks {
-		p.Disks = append(p.Disks, disk)
+		if ComputeFreeSpace(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
+			p.Disks = append(p.Disks, disk)
+		}
 	}
 
 	// Reset last picked disk index
@@ -65,6 +68,72 @@ func (p *BalancedPartitioner) FetchDisks() {
 
 func NewBalancedPartitioner(volume *Volume) *BalancedPartitioner {
 	var p BalancedPartitioner
+
+	p.AbstractPartitioner.Volume = volume
+
+	return &p
+}
+
+type PriorityPartitioner struct {
+	AbstractPartitioner
+	Disks           []Disk
+	CachedFreeSpace []uint64
+}
+
+func (p *PriorityPartitioner) getNextDiskIndex(size int) int {
+	// Find first disk which has enough free space
+	for i, _ := range p.Disks {
+		if p.CachedFreeSpace[i] >= uint64(size) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func (p *PriorityPartitioner) AssignDisk(size int) Disk {
+	// If there are no disks, return nil
+	if len(p.Disks) == 0 {
+		return nil
+	}
+
+	// Choose the next disk
+	index := p.getNextDiskIndex(size)
+	if index == -1 {
+		// All disks are full
+		return nil
+	}
+	p.CachedFreeSpace[index] -= uint64(size)
+
+	return p.Disks[index]
+}
+
+func (p *PriorityPartitioner) FetchDisks() {
+	// Load disk list again in case something has changed in volume
+	var _disks []Disk = make([]Disk, 0)
+	for _, disk := range p.AbstractPartitioner.Volume.disks {
+		_disks = append(_disks, disk)
+	}
+
+	// Sort disks by creation order
+	sort.Slice(_disks, func(i, j int) bool {
+		return _disks[i].GetCreationTime().Before(_disks[j].GetCreationTime())
+	})
+
+	// Compute free space for each disk
+	p.Disks = make([]Disk, 0)
+	p.CachedFreeSpace = make([]uint64, 0)
+	for _, disk := range _disks {
+		freeSpace := ComputeFreeSpace(disk)
+		if freeSpace > uint64(p.AbstractPartitioner.Volume.BlockSize) {
+			p.Disks = append(p.Disks, disk)
+			p.CachedFreeSpace = append(p.CachedFreeSpace, freeSpace)
+		}
+	}
+}
+
+func NewPriorityPartitioner(volume *Volume) *PriorityPartitioner {
+	var p PriorityPartitioner
 
 	p.AbstractPartitioner.Volume = volume
 
@@ -112,7 +181,9 @@ func (p *ThroughputPartitioner) FetchDisks() {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
 	for _, disk := range p.AbstractPartitioner.Volume.disks {
-		p.Disks = append(p.Disks, disk)
+		if ComputeFreeSpace(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
+			p.Disks = append(p.Disks, disk)
+		}
 	}
 
 	// Reset weights and allocations

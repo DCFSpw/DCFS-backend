@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"time"
 )
 
 type GDriveDisk struct {
@@ -146,6 +147,14 @@ func (d *GDriveDisk) SetCredentials(credentials credentials.Credentials) {
 
 func (d *GDriveDisk) CreateCredentials(c string) {
 	d.abstractDisk.Credentials = credentials.NewOauthCredentials(c)
+}
+
+func (d *GDriveDisk) SetCreationTime(creationTime time.Time) {
+	d.abstractDisk.SetCreationTime(creationTime)
+}
+
+func (d *GDriveDisk) GetCreationTime() time.Time {
+	return d.abstractDisk.GetCreationTime()
 }
 
 func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
