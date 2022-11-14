@@ -196,6 +196,10 @@ func (d *SFTPDisk) GetUsedSpace() uint64 {
 	return d.abstractDisk.GetUsedSpace()
 }
 
+func (d *SFTPDisk) UpdateUsedSpace(change int64) {
+	d.abstractDisk.UpdateUsedSpace(change)
+}
+
 /* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)

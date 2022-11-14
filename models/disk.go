@@ -40,6 +40,7 @@ type Disk interface {
 	SetTotalSpace(quota uint64)
 	GetTotalSpace() uint64
 	GetUsedSpace() uint64
+	UpdateUsedSpace(change int64)
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
