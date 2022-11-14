@@ -2,6 +2,7 @@ package models
 
 import (
 	"dcfs/apicalls"
+	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
 	"github.com/google/uuid"
@@ -76,24 +77,16 @@ func (d *dummyDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) GetProviderFreeSpace() (uint64, string) {
-	panic("Unimplemented")
-}
-
-func (d *dummyDisk) GetTotalSize() uint64 {
-	panic("Unimplemented")
-}
-
 func (d *dummyDisk) SetUsedSpace(usage uint64) {
 	panic("Unimplemented")
 }
 
 func (d *dummyDisk) GetUsedSpace() uint64 {
-	panic("Unimplemented")
+	return 0
 }
 
 func (d *dummyDisk) GetProviderSpace() (uint64, uint64, string) {
-	panic("Unimplemented")
+	return 0, 0, constants.OPERATION_NOT_SUPPORTED
 }
 
 func (d *dummyDisk) SetTotalSpace(quota uint64) {
@@ -101,7 +94,7 @@ func (d *dummyDisk) SetTotalSpace(quota uint64) {
 }
 
 func (d *dummyDisk) GetTotalSpace() uint64 {
-	panic("Unimplemented")
+	return 1024 * 1024 * 1024
 }
 
 func (d *dummyDisk) UpdateUsedSpace(change int64) {
