@@ -28,7 +28,6 @@ func CreateDisk(c *gin.Context) {
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
-	requestBody.TotalSpace = 5368709120
 
 	log.Println("requests body: ", requestBody)
 	log.Println("userUUID: ", userUUID)
