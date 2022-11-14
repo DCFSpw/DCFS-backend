@@ -266,6 +266,8 @@ func DiskUpdate(c *gin.Context) {
 		} else if disk.GetUsedSpace() > body.TotalSpace {
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space is lower than currently used space"))
 			return
+		} else {
+			disk.SetTotalSpace(body.TotalSpace)
 		}
 	}
 
