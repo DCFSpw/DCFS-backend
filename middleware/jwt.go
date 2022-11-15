@@ -19,8 +19,18 @@ type JWTClaim struct {
 	jwt.StandardClaims
 }
 
+// Secret key used to sign JTW tokens
 var jwtKey = []byte("DCFS_JWT_KEY")
 
+// GenerateToken - generate JWT token for the user
+//
+// This function generated JWT token which contains UUID and e-mail of
+// the requesting user. Token is then signed using secret JWT key, which
+// guarantees integrity of the token on authentication.
+//
+// return type:
+//   - signedToken string: JWT token signed using secret JWT key
+//   - err error: error if signing failed, nil otherwise
 func GenerateToken(uuid uuid.UUID, email string) (signedToken string, err error) {
 	// Create the claims
 	expirationTime := time.Now().Add(constants.JWT_TOKEN_EXPIRATION_TIME)
@@ -40,7 +50,7 @@ func GenerateToken(uuid uuid.UUID, email string) (signedToken string, err error)
 	return
 }
 
-func ValidateToken(signedToken string) (claims *JWTClaim, errCode string) {
+func validateToken(signedToken string) (claims *JWTClaim, errCode string) {
 	// Parse the token
 	token, err := jwt.ParseWithClaims(
 		signedToken,
@@ -67,6 +77,18 @@ func ValidateToken(signedToken string) (claims *JWTClaim, errCode string) {
 	return claims, constants.SUCCESS
 }
 
+// Authenticate - authenticate user using JWT token
+//
+// This function provides functionality of JWT token authentication for
+// incoming API requests. It's used by Gin engine as one of the middlewares.
+// It retrieves the bearer token from the request and validates it.
+// If the token is valid and not expired, it saves the user UUID (embedded in
+// the token) in the context of the request. Validation whether the user with
+// such UUID exists in the database or is owner of the requested resource
+// is performed in the request handlers on the need basis.
+//
+// return type:
+//   - gin.HandlerFunc: gin middleware function for authentication
 func Authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the JWT token from the header
@@ -86,7 +108,7 @@ func Authenticate() gin.HandlerFunc {
 		tokenString = tokenString[7:]
 
 		// Validate the token
-		claims, errCode := ValidateToken(tokenString)
+		claims, errCode := validateToken(tokenString)
 		if errCode != constants.SUCCESS {
 			c.JSON(401, responses.NewOperationFailureResponse(errCode, "Unauthorized"))
 			c.Abort()
