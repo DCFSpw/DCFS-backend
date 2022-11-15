@@ -16,11 +16,11 @@ type OperationFailureResponse struct {
 // NewOperationFailureResponse - create generic operation failure response
 //
 // params:
-//   - code - string with error code
-//   - message - string with error message
+//   - code string: error code
+//   - message string: with error message
 //
 // return type:
-//   - response: OperationFailureResponse with error data
+//   - *OperationFailureResponse: response with error data
 func NewOperationFailureResponse(code string, message string) *OperationFailureResponse {
 	var r *OperationFailureResponse = new(OperationFailureResponse)
 
@@ -39,11 +39,11 @@ type NotFoundErrorResponse struct {
 // NewNotFoundErrorResponse - create not found error response
 //
 // params:
-//   - code - string with error code
-//   - message - string with error message
+//   - code string - error code
+//   - message string - error message
 //
 // return type:
-//   - response: NotFoundErrorResponse with error data
+//   - *NotFoundErrorResponse: response with error data
 func NewNotFoundErrorResponse(code string, message string) *NotFoundErrorResponse {
 	var r *NotFoundErrorResponse = new(NotFoundErrorResponse)
 

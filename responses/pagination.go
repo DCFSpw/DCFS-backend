@@ -13,10 +13,10 @@ type PaginationData struct {
 // NewPaginationResponse - create init file upload success response
 //
 // params:
-//   - paginationData - PaginationData object with pagination and data for target page
+//   - paginationData PaginationData: pagination and data for target page
 //
 // return type:
-//   - response: SuccessResponse with pagination data and target page data
+//   - *SuccessResponse: response with pagination data and target page data
 func NewPaginationResponse(paginationData PaginationData) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 	var _data *PaginationResponseData = new(PaginationResponseData)
