@@ -31,10 +31,10 @@ type LoginSuccessResponse struct {
 // NewUserDataSuccessResponse - create user data success response
 //
 // params:
-//   - userData: dbo.User object with user data to return
+//   - userData dbo.User: user data to return
 //
 // return type:
-//   - response: UserDataSuccessResponse with logged user data
+//   - *UserDataSuccessResponse: response with logged user data
 func NewUserDataSuccessResponse(userData *dbo.User) *UserDataSuccessResponse {
 	var r *UserDataSuccessResponse = new(UserDataSuccessResponse)
 
@@ -50,11 +50,11 @@ func NewUserDataSuccessResponse(userData *dbo.User) *UserDataSuccessResponse {
 // NewLoginSuccessResponse - create login success response
 //
 // params:
-//   - userData: dbo.User object with user data to return
-//   - token: string with JTW bearer authorization token
+//   - userData dbo.User: user data to return
+//   - token string: JTW bearer authorization token
 //
 // return type:
-//   - response: LoginSuccessResponse with logged user data and auth token
+//   - *LoginSuccessResponse: response with logged user data and auth token
 func NewLoginSuccessResponse(userData *dbo.User, token string) *LoginSuccessResponse {
 	var r *LoginSuccessResponse = new(LoginSuccessResponse)
 
@@ -71,7 +71,7 @@ func NewLoginSuccessResponse(userData *dbo.User, token string) *LoginSuccessResp
 // NewInvalidCredentialsResponse - create invalid credentials response
 //
 // return type:
-//   - response: OperationFailureResponse with authorization error information
+//   - *OperationFailureResponse: response with authorization error information
 func NewInvalidCredentialsResponse() *OperationFailureResponse {
 	var r *OperationFailureResponse = new(OperationFailureResponse)
 

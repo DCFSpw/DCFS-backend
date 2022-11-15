@@ -7,10 +7,10 @@ import (
 // NewGetProvidersSuccessResponse - create get providers success response
 //
 // params:
-//   - paginationData - PaginationData object with pagination and data for target page
+//   - paginationData PaginationData: pagination information and data for target page
 //
 // return type:
-//   - response: SuccessResponse with pagination data and target page data
+//   - *SuccessResponse: response with pagination data and target page data
 func NewGetProvidersSuccessResponse(providers []dbo.Provider) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 

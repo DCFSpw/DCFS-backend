@@ -10,11 +10,11 @@ type DiskCreateSuccessResponse struct {
 // NewCreateDiskSuccessResponse - create disk creation success response
 //
 // params:
-//   - diskData: dbo.Disk object with disk data to return
-//   - link: string with authorization link for OAuth disks
+//   - diskData dbo.Disk: disk data to return
+//   - link string: authorization link for OAuth disks
 //
 // return type:
-//   - response: SuccessResponse with disk data
+//   - *SuccessResponse: response with disk data
 func NewCreateDiskSuccessResponse(diskData interface{}, link string) *SuccessResponse {
 	_data := DiskCreateSuccessResponse{
 		Disk: diskData,

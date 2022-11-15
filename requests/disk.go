@@ -17,29 +17,6 @@ type OAuthCredentials struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-func (cred *FTPCredentials) ToString() string {
-	if cred.Port == "" || cred.Login == "" || cred.Host == "" {
-		return ""
-	}
-
-	ret, _ := json.Marshal(cred)
-	return string(ret)
-}
-
-func StringToFTPCredentials(cred string) *FTPCredentials {
-	var ret *FTPCredentials = &FTPCredentials{}
-	_ = json.Unmarshal([]byte(cred), ret)
-
-	return ret
-}
-
-func StringToOAuthCredentials(cred string) *OAuthCredentials {
-	var ret *OAuthCredentials = &OAuthCredentials{}
-	_ = json.Unmarshal([]byte(cred), ret)
-
-	return ret
-}
-
 type DiskCreateRequest struct {
 	Name         string         `json:"name" binding:"required,gte=1,lte=64"`
 	TotalSpace   uint64         `json:"totalSpace" binding:"required,min=1"`
@@ -56,4 +33,45 @@ type DiskUpdateRequest struct {
 	Name        string         `json:"name" binding:"required,gte=1,lte=64"`
 	TotalSpace  uint64         `json:"totalSpace" binding:"required,min=1"`
 	Credentials FTPCredentials `json:"credentials" binding:"required"`
+}
+
+// ToString - convert FTP credentials to JSON string
+//
+// return type:
+//   - string: credentials converted to JSON string
+func (cred *FTPCredentials) ToString() string {
+	if cred.Port == "" || cred.Login == "" || cred.Host == "" {
+		return ""
+	}
+
+	ret, _ := json.Marshal(cred)
+	return string(ret)
+}
+
+// StringToFTPCredentials - convert JSON string to FTP credentials
+//
+// params:
+//   - cred string: JSON representation of FTP credentials
+//
+// return type:
+//   - *FTPCredentials: converted FTP credentials
+func StringToFTPCredentials(cred string) *FTPCredentials {
+	var ret *FTPCredentials = &FTPCredentials{}
+	_ = json.Unmarshal([]byte(cred), ret)
+
+	return ret
+}
+
+// StringToOAuthCredentials - convert JSON string to OAuth credentials
+//
+// params:
+//   - cred string: JSON representation of OAuth credentials
+//
+// return type:
+//   - *OAuthCredentials: converted OAuth credentials
+func StringToOAuthCredentials(cred string) *OAuthCredentials {
+	var ret *OAuthCredentials = &OAuthCredentials{}
+	_ = json.Unmarshal([]byte(cred), ret)
+
+	return ret
 }

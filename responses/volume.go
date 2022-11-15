@@ -5,10 +5,10 @@ import "dcfs/db/dbo"
 // NewVolumeDataSuccessResponse - create volume data success response
 //
 // params:
-//   - volumeData: dbo.Volume pointer with volume data to return
+//   - volumeData *dbo.Volume: volume data to return
 //
 // return type:
-//   - response: SuccessResponse with volume data
+//   - *SuccessResponse: response with volume data
 func NewVolumeDataSuccessResponse(volumeData *dbo.Volume) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 

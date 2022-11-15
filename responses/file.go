@@ -25,10 +25,10 @@ type FileRequestResponse struct {
 // NewFileDataSuccessResponse - create file data success response
 //
 // params:
-//   - fileData: dbo.File pointer with file data to return
+//   - fileData dbo.File: file data to return
 //
 // return type:
-//   - response: SuccessResponse with file data
+//   - *SuccessResponse: response with file data
 func NewFileDataSuccessResponse(fileData *dbo.File) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
@@ -41,11 +41,11 @@ func NewFileDataSuccessResponse(fileData *dbo.File) *SuccessResponse {
 // NewFileDataWithPathSuccessResponse - create file data with DCFS filesystem path success response
 //
 // params:
-//   - fileData: dbo.File pointer with file data to return
-//   - path - array of dbo.PathEntry objects containing elements of DCFS filesystem path of the file (from file level up to root level)
+//   - fileData dbo.File: file data to return
+//   - path []dbo.PathEntry- array of elements of DCFS filesystem path of the file (from file level up to root level)
 //
 // return type:
-//   - response: SuccessResponse with file and path data
+//   - *SuccessResponse: response with file and path data
 func NewFileDataWithPathSuccessResponse(fileData *dbo.File, filePath []dbo.PathEntry) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 	var data = new(FileDetailsWithPathResponse)
@@ -62,10 +62,10 @@ func NewFileDataWithPathSuccessResponse(fileData *dbo.File, filePath []dbo.PathE
 // NewGetFilesSuccessResponse - create get files success response
 //
 // params:
-//   - filesData: array of dbo.File with files data from one directory to return
+//   - filesData []dbo.File: array of files data from single directory to return
 //
 // return type:
-//   - response: SuccessResponse with files data
+//   - *SuccessResponse: response with files data
 func NewGetFilesSuccessResponse(filesData []dbo.File) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
@@ -78,11 +78,11 @@ func NewGetFilesSuccessResponse(filesData []dbo.File) *SuccessResponse {
 // NewInitFileUploadRequestResponse - create init file upload success response
 //
 // params:
-//   - userUUID - uuid.UUID with UUID of owner of the file
-//   - filesData: models.File object with file and block data to return
+//   - userUUID uuid.UUID: UUID of owner of the file
+//   - filesData models.File: file and block data to return
 //
 // return type:
-//   - response: SuccessResponse with file data
+//   - *SuccessResponse: response with file data
 func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file models.File) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 	var fr *FileRequestResponse = new(FileRequestResponse)
@@ -111,10 +111,10 @@ func NewInitFileUploadRequestResponse(userUUID uuid.UUID, file models.File) *Suc
 // NewBlockTransferFailureResponse - create block transfer failure response
 //
 // params:
-//   - blocks - array of FileRequestBlockResponse with data of blocks that failed to transfer
+//   - blocks []FileRequestBlockResponse: array of data of blocks that failed to transfer
 //
 // return type:
-//   - response: SuccessResponse with list of blocks that failed to transfer
+//   - *SuccessResponse: response with list of blocks that failed to transfer
 func NewBlockTransferFailureResponse(blocks []FileRequestBlockResponse) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
