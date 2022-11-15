@@ -10,6 +10,14 @@ type Partitioner interface {
 	FetchDisks()
 }
 
+// CreatePartitioner - create a partitioner based on the partitioner type
+//
+// params:
+//   - partitionerType int: partitioner type (from constants)
+//   - volume *models.Volume: volume to create partitioner for
+//
+// return type:
+//   - models.Partitioner: created partitioner of appropriate type or nil if type is invalid
 func CreatePartitioner(partitionerType int, volume *Volume) Partitioner {
 	switch partitionerType {
 	case constants.PARTITION_TYPE_BALANCED:
@@ -42,6 +50,16 @@ type BalancedPartitioner struct {
 	LastPickedDiskIndex int
 }
 
+// AssignDisk - assign a disk to write a block of given size to
+//
+// Balanced partitioner will assign a next disk to write a block of given
+// size to in a round-robin fashion.
+//
+// params:
+//   - size int: size of the block to write
+//
+// return type:
+//   - *models.Disk: disk to write to or nil if no disk is available
 func (p *BalancedPartitioner) AssignDisk(size int) Disk {
 	// If there are no disks, return nil
 	if len(p.Disks) == 0 {
@@ -53,6 +71,7 @@ func (p *BalancedPartitioner) AssignDisk(size int) Disk {
 	return p.Disks[p.LastPickedDiskIndex]
 }
 
+// FetchDisks - fetch disks from volume and reset last picked disk index
 func (p *BalancedPartitioner) FetchDisks() {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
@@ -66,6 +85,10 @@ func (p *BalancedPartitioner) FetchDisks() {
 	p.LastPickedDiskIndex = -1
 }
 
+// NewBalancedPartitioner - create new balanced partitioner object
+//
+// return type:
+//   - *models.BalancedPartitioner: created partitioner object
 func NewBalancedPartitioner(volume *Volume) *BalancedPartitioner {
 	var p BalancedPartitioner
 
@@ -91,6 +114,16 @@ func (p *PriorityPartitioner) getNextDiskIndex(size int) int {
 	return -1
 }
 
+// AssignDisk - assign a disk to write a block of given size to
+//
+// Balanced partitioner will assign a next disk based on the creation
+// order of the disks. First disk with enough free space will be returned.
+//
+// params:
+//   - size int: size of the block to write
+//
+// return type:
+//   - *models.Disk: disk to write to or nil if no disk is available
 func (p *PriorityPartitioner) AssignDisk(size int) Disk {
 	// If there are no disks, return nil
 	if len(p.Disks) == 0 {
@@ -108,6 +141,7 @@ func (p *PriorityPartitioner) AssignDisk(size int) Disk {
 	return p.Disks[index]
 }
 
+// FetchDisks - fetch disks from volume and retrieve free space
 func (p *PriorityPartitioner) FetchDisks() {
 	// Load disk list again in case something has changed in volume
 	var _disks []Disk = make([]Disk, 0)
@@ -132,6 +166,10 @@ func (p *PriorityPartitioner) FetchDisks() {
 	}
 }
 
+// NewPriorityPartitioner - create new priority partitioner object
+//
+// return type:
+//   - *models.PriorityPartitioner: created partitioner object
 func NewPriorityPartitioner(volume *Volume) *PriorityPartitioner {
 	var p PriorityPartitioner
 
@@ -164,6 +202,17 @@ func (p *ThroughputPartitioner) getNextDiskIndex(size int) int {
 	return minValueIdx
 }
 
+// AssignDisk - assign a disk to write a block of given size to
+//
+// Throughput partitioner will assign a next disk based on the disk
+// throughput weights and number of allocations. Disk with the lowest
+// coefficient will be returned.
+//
+// params:
+//   - size int: size of the block to write
+//
+// return type:
+//   - *models.Disk: disk to write to or nil if no disk is available
 func (p *ThroughputPartitioner) AssignDisk(size int) Disk {
 	// If there are no disks, return nil
 	if len(p.Disks) == 0 {
@@ -177,6 +226,7 @@ func (p *ThroughputPartitioner) AssignDisk(size int) Disk {
 	return p.Disks[index]
 }
 
+// FetchDisks - fetch disks from volume and compute weights based on throughput
 func (p *ThroughputPartitioner) FetchDisks() {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
@@ -197,6 +247,10 @@ func (p *ThroughputPartitioner) FetchDisks() {
 	}
 }
 
+// NewThroughputPartitioner - create new throughput partitioner object
+//
+// return type:
+//   - *models.ThroughputPartitioner: created partitioner object
 func NewThroughputPartitioner(volume *Volume) *ThroughputPartitioner {
 	var p ThroughputPartitioner
 
