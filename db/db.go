@@ -58,13 +58,13 @@ func (db *DatabaseConnection) parseConnection(filepath string) error {
 
 /* public methods */
 
-// Connect - connect to a db, specified in the provided json file
+// Connect - connect to a databased, specified in the provided JSON file
 //
 // params:
-//   - filepath string: path to the json file containing the needed connection string
+//   - filepath string: path to the JSON file containing the needed connection string
 //
 // return type:
-//   - error (nil when no error occurred)
+//   - error: nil when no error occurred
 func (db *DatabaseConnection) Connect(filepath string) error {
 	err := db.parseConnection(filepath)
 	if err != nil {
@@ -93,27 +93,13 @@ func (db *DatabaseConnection) Connect(filepath string) error {
 	return nil
 }
 
-// PerformOperation - perform a db operation on the database handle
-// DEPRECATED - TO BE DELETED - db handle is made public instead
+// RegisterTable - register model as a table in database
 //
 // params:
-//   - operation func(handle *gorm.DB) error: a function that performs the desired operation on the db handle
-//
-// return type:
-//   - error (nil on success)
-func (db *DatabaseConnection) PerformOperation(operation func(handle *gorm.DB) error) error {
-	err := operation(db.DatabaseHandle)
-	if err != nil {
-		fmt.Println("Could not perform a database operation with error: ", err)
-		return err
-	}
-
-	return nil
-}
-
+//   - obj dbo.DatabaseObject: abstract database object representing one of the models
 func (db *DatabaseConnection) RegisterTable(obj dbo.DatabaseObject) {
 	db.Tables = append(db.Tables, obj)
 }
 
-// DB - a global db object
+// DB - a global database object
 var DB *DatabaseConnection = new(DatabaseConnection)

@@ -1,5 +1,7 @@
 package seeder
 
+// TODO: Move seeding to another package to avoid cyclic imports
+
 import (
 	"dcfs/constants"
 	"dcfs/db"
@@ -8,7 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: move seeding to another package to avoid cyclic imports
+// Seed - add necessary entries to database
+//
+// This function adds necessary entries to empty database or database which
+// doesn't contain these entries. It creates providers for disks and sample
+// user account with empty volume.
 func Seed() {
 	rootUUID := models.RootUUID
 	volume := dbo.Volume{}
