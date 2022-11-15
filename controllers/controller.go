@@ -74,7 +74,7 @@ func ServeBackend() {
 		authorized.GET("/files/block/:BlockUUID", DownloadBlock)
 
 		authorized.PUT("/files/manage/:FileUUID", UpdateFile)
-		//authorized.DELETE("/files/manage/:FileUUID", RemoveFile)
+		//authorized.DELETE("/files/manage/:FileUUID", DeleteFile)
 
 		// Providers
 		authorized.GET("/providers", GetProviders)
