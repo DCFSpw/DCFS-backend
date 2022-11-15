@@ -455,6 +455,6 @@ func GetDisks(c *gin.Context) {
 
 	// Prepare pagination
 	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
-	
+
 	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }
