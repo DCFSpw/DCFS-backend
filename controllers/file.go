@@ -404,7 +404,7 @@ func UpdateFile(c *gin.Context) {
 }
 
 func FileRemove(c *gin.Context) {
-	c.JSON(200, responses.SuccessResponse{Success: true, Message: "File Remove Endpoint"})
+	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
 func InitFileDownloadRequest(c *gin.Context) {
@@ -414,7 +414,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 	var blocks []*dbo.Block
 	var err error
 	var code string
-	var response *responses.EmptySuccessResponse = nil
+	var response *responses.SuccessResponse = nil
 
 	fileUUID, err = uuid.Parse(c.Param("FileUUID"))
 	if err != nil {
