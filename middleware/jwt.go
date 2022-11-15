@@ -72,14 +72,14 @@ func Authenticate() gin.HandlerFunc {
 		// Get the JWT token from the header
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_JWT_MISSING})
+			c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_MISSING, "Unauthorized"))
 			c.Abort()
 			return
 		}
 
 		// Check if the token is bearer token and if it is, remove the bearer part
 		if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
-			c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_JWT_NOT_BEARER})
+			c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_NOT_BEARER, "Unauthorized"))
 			c.Abort()
 			return
 		}
@@ -88,7 +88,7 @@ func Authenticate() gin.HandlerFunc {
 		// Validate the token
 		claims, errCode := ValidateToken(tokenString)
 		if errCode != constants.SUCCESS {
-			c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: errCode})
+			c.JSON(401, responses.NewOperationFailureResponse(errCode, "Unauthorized"))
 			c.Abort()
 			return
 		}

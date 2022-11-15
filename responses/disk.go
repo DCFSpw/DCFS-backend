@@ -1,15 +1,24 @@
 package responses
 
 type DiskCreateSuccessResponse struct {
-	// do not import the 'modules' package here
+	// Do not import the 'modules' package here
+	// to avoid circular dependencies
 	Disk interface{} `json:"disk"`
 	Link string      `json:"link"`
 }
 
-func CreateDiskSuccessResponse(disk interface{}, link string) *EmptySuccessResponse {
+// NewCreateDiskSuccessResponse - create disk creation success response
+//
+// params:
+//   - diskData: dbo.Disk object with disk data to return
+//   - link: string with authorization link for OAuth disks
+//
+// return type:
+//   - response: SuccessResponse with disk data
+func NewCreateDiskSuccessResponse(diskData interface{}, link string) *SuccessResponse {
 	_data := DiskCreateSuccessResponse{
-		Disk: disk,
+		Disk: diskData,
 		Link: link,
 	}
-	return CreateEmptySuccessResponse(_data)
+	return NewSuccessResponse(_data)
 }
