@@ -7,6 +7,14 @@ type ErrorWrapper struct {
 	Code  string
 }
 
+// CreateErrorWrapper - combine multiple errors into single error
+//
+// params:
+//   - code string: completion code
+//   - errorMessages ...string: list of error messages to combined
+//
+// return type:
+//   - *ErrorWrapper: combined error
 func CreateErrorWrapper(code string, errorMessages ...string) *ErrorWrapper {
 	var msg string = ""
 
