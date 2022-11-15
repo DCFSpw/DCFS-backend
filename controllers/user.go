@@ -54,21 +54,21 @@ func LoginUser(c *gin.Context) {
 	// Check if user exists
 	result := db.DB.DatabaseHandle.Where("email = ?", requestBody.Email).First(&user)
 	if result.Error != nil {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Invalid credentials", Code: constants.AUTH_INVALID_EMAIL})
+		c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_INVALID_EMAIL, "Unauthorized"))
 		return
 	}
 
 	// Check if password is correct
 	errCode := validators.ValidateUserPassword(user.Password, requestBody.Password)
 	if errCode != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Invalid credentials", Code: constants.AUTH_INVALID_PASSWORD})
+		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
 	// Generate JWT token
 	signedToken, err := middleware.GenerateToken(user.UUID, user.Email)
 	if err != nil {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Invalid credentials", Code: constants.AUTH_JWT_FAILURE})
+		c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_FAILURE, "Unauthorized"))
 		return
 	}
 
@@ -81,7 +81,7 @@ func GetUserProfile(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
@@ -102,7 +102,7 @@ func UpdateUserProfile(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
@@ -133,7 +133,7 @@ func ChangeUserPassword(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
-		c.JSON(401, responses.InvalidCredentialsResponse{Success: false, Message: "Unauthorized", Code: constants.AUTH_UNAUTHORIZED})
+		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 

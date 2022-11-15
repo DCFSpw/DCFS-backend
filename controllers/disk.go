@@ -96,7 +96,7 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, responses.CreateDiskSuccessResponse(_disk, authCode))
+	c.JSON(200, responses.NewCreateDiskSuccessResponse(_disk, authCode))
 }
 
 func DiskOAuth(c *gin.Context) {
@@ -164,7 +164,7 @@ func DiskOAuth(c *gin.Context) {
 
 	go volume.RefreshPartitioner()
 
-	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
+	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
 func DiskGet(c *gin.Context) {
@@ -200,7 +200,7 @@ func DiskGet(c *gin.Context) {
 	_disk.FreeSpace = models.ComputeFreeSpace(diskModel)
 	_disk.TotalSpace = diskModel.GetTotalSpace()
 
-	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
+	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
 func DiskUpdate(c *gin.Context) {
@@ -297,7 +297,7 @@ func DiskUpdate(c *gin.Context) {
 
 	go volume.RefreshPartitioner()
 
-	c.JSON(200, responses.CreateEmptySuccessResponse(diskDBO))
+	c.JSON(200, responses.NewSuccessResponse(diskDBO))
 }
 
 func DiskDelete(c *gin.Context) {
@@ -337,7 +337,7 @@ func DiskDelete(c *gin.Context) {
 
 	go volume.RefreshPartitioner()
 
-	c.JSON(200, responses.CreateEmptySuccessResponse(_disk))
+	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
 func GetDisks(c *gin.Context) {
