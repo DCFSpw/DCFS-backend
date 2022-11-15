@@ -21,6 +21,10 @@ type Block struct {
 	File   File   `gorm:"foreignKey:FileUUID;references:UUID" json:"-"`
 }
 
+// NewBlock - create new block object
+//
+// return type:
+//   - *dbo.Block: created block DBO
 func NewBlock() *Block {
 	var f *Block = new(Block)
 	f.AbstractDatabaseObject.DatabaseObject = f
