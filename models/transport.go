@@ -252,7 +252,7 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 // fields:
 //   - volumeUUID
 func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
-	// TO DO: deletion process worker
+	// TODO: Implement deletion process worker
 	var errCode string
 	var err error
 	var volume *Volume
