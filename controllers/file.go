@@ -14,6 +14,16 @@ import (
 	"log"
 )
 
+// CreateDirectory - handler for Create directory request
+//
+// Create directory (POST /files/manage) - creating a new directory
+// in the file system.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func CreateDirectory(c *gin.Context) {
 	var requestBody requests.DirectoryCreateRequest
 	var userUUID uuid.UUID
@@ -82,6 +92,16 @@ func CreateDirectory(c *gin.Context) {
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
+// GetFile - handler for Get file details request
+//
+// Get file details (GET /files/manage/{fileUUID}) - retrieving metadata
+// of the specified file.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func GetFile(c *gin.Context) {
 	var file *dbo.File
 	var fileUUID string
@@ -118,6 +138,16 @@ func GetFile(c *gin.Context) {
 	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(file, path))
 }
 
+// GetFiles - handler for Get list of files request
+//
+// Get list of files (GET /files/manage) - retrieving list of files in
+// the specified directory of the file system.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func GetFiles(c *gin.Context) {
 	var files []dbo.File
 	var userUUID uuid.UUID
@@ -164,6 +194,17 @@ func GetFiles(c *gin.Context) {
 	c.JSON(200, responses.NewGetFilesSuccessResponse(files))
 }
 
+// InitFileUploadRequest - handler for Init file upload request
+//
+// Init file upload request (POST /files/upload - initiating the process of
+// uploading a file and retrieving a list of blocks to partition the file
+// for upload.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func InitFileUploadRequest(c *gin.Context) {
 	var requestBody requests.InitFileUploadRequest
 	var userUUID uuid.UUID
@@ -231,6 +272,17 @@ func InitFileUploadRequest(c *gin.Context) {
 	c.JSON(200, responses.NewInitFileUploadRequestResponse(userUUID, &file))
 }
 
+// UploadBlock - handler for Upload block details request
+//
+// Upload block (POST /files/upload/{fileUUID}) - uploading a single block of
+// a file (according to the partitioning scheme returned by
+// the Init file upload request).
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func UploadBlock(c *gin.Context) {
 	var fileUUID uuid.UUID
 	var blockUUID uuid.UUID
@@ -334,6 +386,16 @@ func UploadBlock(c *gin.Context) {
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
+// UpdateFile - handler for Update file request
+//
+// Update file (PUT /files/manage/{fileUUID}) - updating the name or location
+// of the specified file.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func UpdateFile(c *gin.Context) {
 	var requestBody requests.UpdateFileRequest
 	var fileUUID string
@@ -403,10 +465,30 @@ func UpdateFile(c *gin.Context) {
 	c.JSON(200, responses.NewFileDataSuccessResponse(file))
 }
 
-func FileRemove(c *gin.Context) {
+// DeleteFile - handler for Delete file request
+//
+// Delete file (DELETE /files/manage/fileUUID) - deleting the specified file.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
+func DeleteFile(c *gin.Context) {
+	// TODO: Implement deletion of the file
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
+// InitFileDownloadRequest - handler for Init file download request
+//
+// Init file download request (POST /files/download/{fileUUID}) - initiating
+// the process of downloading a file and retrieving a list of blocks.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func InitFileDownloadRequest(c *gin.Context) {
 	var fileUUID uuid.UUID
 	var files []uuid.UUID = make([]uuid.UUID, 0)
@@ -416,13 +498,14 @@ func InitFileDownloadRequest(c *gin.Context) {
 	var code string
 	var response *responses.SuccessResponse = nil
 
+	// Retrieve and validate fileUUID from params
 	fileUUID, err = uuid.Parse(c.Param("FileUUID"))
 	if err != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
 
-	// potentially backend could receive an array of fileUUIDs to download
+	// Potentially backend could receive an array of fileUUIDs to download
 	files = append(files, fileUUID)
 
 	if len(files) == 1 {
@@ -469,25 +552,40 @@ func InitFileDownloadRequest(c *gin.Context) {
 	c.JSON(200, response)
 }
 
+// DownloadBlock - handler for Download block request
+//
+// Download block (POST /files/download/{fileUUID}) - downloading a single
+// block of a file (according to the partitioning scheme returned by
+// the Init file download request).
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func DownloadBlock(c *gin.Context) {
+	// Retrieve and validate fileUUID from query
 	fileUUID, err := uuid.Parse(c.Query("fileUUID"))
 	if err != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
 
+	// Retrieve and validate blockUUID from param
 	blockUUID, err := uuid.Parse(c.Param("BlockUUID"))
 	if err != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "BlockUUID", "Provided BlockUUID is not a valid UUID"))
 		return
 	}
 
+	// Retrieve file from transport queue
 	file := models.Transport.FileDownloadQueue.GetEnqueuedInstance(fileUUID).(models.File)
 	if file == nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "A file with the given UUID is not enqueued for download"))
 		return
 	}
 
+	// Prepare internal request data
 	bm := apicalls.BlockMetadata{
 		Ctx:              c,
 		FileUUID:         fileUUID,
@@ -498,19 +596,32 @@ func DownloadBlock(c *gin.Context) {
 		CompleteCallback: nil,
 	}
 
-	// block the current file in the FileUploadQueue
+	// Block the current file in the FileUploadQueue
 	err = models.Transport.FileDownloadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
 		return
 	}
 
+	// Download block and return it via callback
 	errorWrapper := file.Download(&bm)
 	if errorWrapper != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
 	}
 }
 
+// CompleteFileUploadRequest - handler for Complete file upload request
+//
+// Complete file upload request (POST /files/upload/{fileUUID}) - notifying
+// that all blocks should have been uploaded which results in an integrity
+// check on the backend side. In case of failure, it will return the list
+// of blocks that need to be reuploaded.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func CompleteFileUploadRequest(c *gin.Context) {
 	var fileUUID uuid.UUID
 	var _fileUUID string
