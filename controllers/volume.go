@@ -12,6 +12,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// CreateVolume - handler for Create volume request
+//
+// Create volume (POST /volumes/manage) - creating a new volume.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func CreateVolume(c *gin.Context) {
 	var requestBody requests.VolumeCreateRequest
 	var user *dbo.User
@@ -46,6 +55,16 @@ func CreateVolume(c *gin.Context) {
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
+// GetVolume - handler for Get volume details request
+//
+// Get volume details (GET /volumes/manage/{volumeUUID}) - retrieving details
+// of the specified volume.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func GetVolume(c *gin.Context) {
 	var volume *dbo.Volume
 	var volumeUUID string
@@ -74,6 +93,17 @@ func GetVolume(c *gin.Context) {
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
+// UpdateVolume - handler for Update volume details request
+//
+// Update volume details (PUT /volumes/manage/{volumeUUID}) - updating the name
+// or settings (such as backup, partition and encryption modes) of the specified
+// volume.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func UpdateVolume(c *gin.Context) {
 	var requestBody requests.VolumeCreateRequest
 	var volume *models.Volume
@@ -138,6 +168,16 @@ func UpdateVolume(c *gin.Context) {
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(&volumeDBO))
 }
 
+// DeleteVolume - handler for Delete volume request
+//
+// Delete volume (DELETE /volumes/manage/{volumeUUID}) - deleting the specified
+// volume (and all associated disks and files).
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func DeleteVolume(c *gin.Context) {
 	var volume *models.Volume
 	var volumeDBO dbo.Volume
@@ -197,6 +237,16 @@ func DeleteVolume(c *gin.Context) {
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
+// GetVolumes - handler for Get list of volumes request
+//
+// Get list of volumes (GET /volumes/manage) - retrieving a paginated list of
+// volumes owned by a user.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func GetVolumes(c *gin.Context) {
 	var volumes []dbo.Volume
 	var volumesPagination []interface{}
