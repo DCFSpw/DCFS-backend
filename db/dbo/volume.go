@@ -38,7 +38,7 @@ func NewVolume() *Volume {
 // NewVolumeFromRequest - create volume DBO from volume create request
 //
 // params:
-//   - request *requests.requests.VolumeCreateRequest: volume create request data from API request
+//   - request *requests.VolumeCreateRequest: volume create request data from API request
 //   - userUUID uuid.UUID: UUID of the user who is creating the volume
 //
 // return type:

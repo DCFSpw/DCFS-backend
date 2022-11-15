@@ -7,6 +7,10 @@ type Provider struct {
 	Logo string `json:"logo"`
 }
 
+// NewProvider - create new provider object
+//
+// return type:
+//   - *dbo.Provider: created provider DBO
 func NewProvider() *Provider {
 	var p *Provider = new(Provider)
 	p.AbstractDatabaseObject.DatabaseObject = p

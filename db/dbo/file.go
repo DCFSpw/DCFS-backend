@@ -33,12 +33,25 @@ type PathEntry struct {
 	Name string    `json:"name"`
 }
 
+// NewFile - create new file object
+//
+// return type:
+//   - *dbo.File: created file DBO
 func NewFile() *File {
 	var f *File = new(File)
 	f.AbstractDatabaseObject.DatabaseObject = f
 	return f
 }
 
+// NewDirectoryFromRequest - create abstract file DBO from directory create request
+//
+// params:
+//   - request *requests.DirectoryCreateRequest: directory create request data from API request
+//   - userUUID uuid.UUID: UUID of the user who is creating the directory
+//   - rootUUID uuid.UUID: UUID of the parent directory
+//
+// return type:
+//   - *dbo.File: created abstract file DBO
 func NewDirectoryFromRequest(request *requests.DirectoryCreateRequest, userUUID uuid.UUID, rootUUID uuid.UUID) *File {
 	var d *File = NewFile()
 
