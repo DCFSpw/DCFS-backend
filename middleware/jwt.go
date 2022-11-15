@@ -28,6 +28,10 @@ var jwtKey = []byte("DCFS_JWT_KEY")
 // the requesting user. Token is then signed using secret JWT key, which
 // guarantees integrity of the token on authentication.
 //
+// params:
+//   - uuid uuid.UUID: UUID of the requesting user
+//   - email string: email of the requesting user
+//
 // return type:
 //   - signedToken string: JWT token signed using secret JWT key
 //   - err error: error if signing failed, nil otherwise
