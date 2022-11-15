@@ -56,6 +56,16 @@ type CreateDiskMetadata struct {
 	Volume *Volume
 }
 
+// CreateDisk - create new disk model based on provided metadata
+//
+// This function creates disk model used internally by backend based on
+// provided metadata.
+//
+// params:
+//   - cdm CreateDiskMetadata: disk data
+//
+// return type:
+//   - models.Disk: created disk model, nil if provider is invalid
 func CreateDisk(cdm CreateDiskMetadata) Disk {
 	if DiskTypesRegistry[cdm.Disk.Provider.Type] == nil {
 		return nil
@@ -74,6 +84,110 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	return disk
 }
 
+// CreateDiskFromUUID - retrieve disk from database and create disk model
+//
+// params:
+//   - uuid uuid.UUID: disk data
+//
+// return type:
+//   - models.Disk: created disk model, nil if database operations failed
+func CreateDiskFromUUID(uuid uuid.UUID) Disk {
+	var disk dbo.Disk
+	var volume *Volume
+
+	d := Transport.FindEnqueuedDisk(uuid)
+	if d != nil {
+		return d
+	}
+
+	err := db.DB.DatabaseHandle.Where("uuid = ?", uuid).Preload("Provider").Preload("User").Preload("Volume").Find(&disk).Error
+	if err != nil {
+		return nil
+	}
+
+	volume = Transport.GetVolume(disk.VolumeUUID)
+	if volume == nil {
+		return nil
+	}
+
+	return CreateDisk(CreateDiskMetadata{
+		Disk:   &disk,
+		Volume: volume,
+	})
+}
+
+// ComputeFreeSpace - compute free space on disk
+//
+// This function calculates free space on disk based on two data sources:
+// 1. Disk quota provided by the user and space used by DCFS (stored in database),
+// 2. Disk quota provided by the provider and used space reported by provider.
+// If disk quota provided by user is smaller than real disk quota, then free space
+// will be limited to disk quota provided by user. If real usage of cloud drive
+// exceeds theoretical free space (calculated based on user-provided quota and local
+// data sum), then free space will be limited to real available space.
+// In case of lack support of obtaining provider-based data (indicated by
+// constants.OPERATION_NOT_SUPPORTED), only user-provided (local) data will be used.
+// This is the case in FTP drive and SFTP drive, if server doesn't support VSTATS
+// SFTP extension.
+//
+// params:
+//   - d models.Disk: disk to compute free space for
+//
+// return type:
+//   - uint64: free space in bytes
+func ComputeFreeSpace(d Disk) uint64 {
+	var userDefinedSpace uint64
+	var providerDefinedSpace uint64
+	var freeSpace uint64
+
+	// Get needed values
+	userTotalSpace := d.GetTotalSpace()
+	userUsedSpace := d.GetUsedSpace()
+	providerUsedSpace, providerTotalSpace, errCode := d.GetProviderSpace()
+
+	// Compute free space based on disk quota provided by the user
+	userDefinedSpace = userTotalSpace - userUsedSpace
+	if userTotalSpace < userUsedSpace {
+		userDefinedSpace = 0
+	}
+
+	// Compute free space based on the disk quota provided by the provider
+	if errCode == constants.SUCCESS {
+		providerDefinedSpace = providerTotalSpace - providerUsedSpace
+		if providerTotalSpace < providerUsedSpace {
+			providerDefinedSpace = 0
+		}
+	} else if errCode == constants.OPERATION_NOT_SUPPORTED {
+		// In case the provider does not support this operation,
+		// we assume that the real disk space is equal to user defined space
+		providerDefinedSpace = userDefinedSpace
+	} else {
+		providerDefinedSpace = 0
+	}
+
+	// Return the minimum of user defined space and provider defined space
+	freeSpace = userDefinedSpace
+	if providerDefinedSpace < freeSpace {
+		freeSpace = providerDefinedSpace
+	}
+
+	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes, provider total:", providerTotalSpace, "bytes)")
+
+	return freeSpace
+}
+
+// MeasureDiskThroughput - measure disk throughput and calculate throughput weight
+//
+// This function measures disk throughput and calculates throughput weight for
+// throughput partitioner. Throughput weight is calculated as an average of
+// upload and download time for sample block (size of volume block size).
+// Throughput time is measured in miliseconds.
+//
+// params:
+//   - d models.Disk: disk to measure throughput
+//
+// return type:
+//   - int: throughput weight of the disk
 func MeasureDiskThroughput(d Disk) int {
 	var uploadTime time.Duration
 	var downloadTime time.Duration
@@ -115,77 +229,11 @@ func MeasureDiskThroughput(d Disk) int {
 	downloadEnd := time.Now()
 	downloadTime = downloadEnd.Sub(downloadStart)
 
-	// TO DO: Remove test block
+	// TODO: Remove test block
 
 	// Calculate throughput
 	throughput = int((uploadTime.Milliseconds()+downloadTime.Milliseconds())/2 + 1)
 
 	log.Println("Disk ", d.GetName(), " has throughput of ", throughput, "(upload: ", uploadTime.Milliseconds(), " ms, download: ", downloadTime.Milliseconds(), " ms).")
 	return throughput
-}
-
-func CreateDiskFromUUID(UUID uuid.UUID) Disk {
-	var disk dbo.Disk
-	var volume *Volume
-
-	d := Transport.FindEnqueuedDisk(UUID)
-	if d != nil {
-		return d
-	}
-
-	err := db.DB.DatabaseHandle.Where("uuid = ?", UUID).Preload("Provider").Preload("User").Preload("Volume").Find(&disk).Error
-	if err != nil {
-		return nil
-	}
-
-	volume = Transport.GetVolume(disk.VolumeUUID)
-	if volume == nil {
-		return nil
-	}
-
-	return CreateDisk(CreateDiskMetadata{
-		Disk:   &disk,
-		Volume: volume,
-	})
-}
-
-func ComputeFreeSpace(d Disk) uint64 {
-	var userDefinedSpace uint64
-	var providerDefinedSpace uint64
-	var freeSpace uint64
-
-	// Get needed values
-	userTotalSpace := d.GetTotalSpace()
-	userUsedSpace := d.GetUsedSpace()
-	providerUsedSpace, providerTotalSpace, errCode := d.GetProviderSpace()
-
-	// Compute free space based on disk quota provided by the user
-	userDefinedSpace = userTotalSpace - userUsedSpace
-	if userTotalSpace < userUsedSpace {
-		userDefinedSpace = 0
-	}
-
-	// Compute free space based on the disk quota provided by the provider
-	if errCode == constants.SUCCESS {
-		providerDefinedSpace = providerTotalSpace - providerUsedSpace
-		if providerTotalSpace < providerUsedSpace {
-			providerDefinedSpace = 0
-		}
-	} else if errCode == constants.OPERATION_NOT_SUPPORTED {
-		// In case the provider does not support this operation,
-		// we assume that the real disk space is equal to user defined space
-		providerDefinedSpace = userDefinedSpace
-	} else {
-		providerDefinedSpace = 0
-	}
-
-	// Return the minimum of user defined space and provider defined space
-	freeSpace = userDefinedSpace
-	if providerDefinedSpace < freeSpace {
-		freeSpace = providerDefinedSpace
-	}
-
-	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes, provider total:", providerTotalSpace, "bytes)")
-
-	return freeSpace
 }
