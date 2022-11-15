@@ -19,7 +19,7 @@ type JWTClaim struct {
 	jwt.StandardClaims
 }
 
-// Secret key used to sign JTW tokens
+// jwtKey - secret key used to sign JTW tokens
 var jwtKey = []byte("DCFS_JWT_KEY")
 
 // GenerateToken - generate JWT token for the user
