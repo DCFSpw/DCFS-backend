@@ -1,6 +1,6 @@
 package constants
 
-// provider types
+// Provider types
 const (
 	PROVIDER_TYPE_SFTP     int = 1
 	PROVIDER_TYPE_GDRIVE   int = 2
@@ -8,7 +8,7 @@ const (
 	PROVIDER_TYPE_FTP      int = 4
 )
 
-// file types
+// File types
 const (
 	FILE_TYPE_DIRECTORY       int = 1
 	FILE_TYPE_REGULAR         int = 2
@@ -43,18 +43,18 @@ const (
 	BLOCK_STATUS_FAILED      int = 3
 )
 
-// Pagination
+// Pagination constants
 const (
 	PAGINATION_RECORDS_PER_PAGE int = 12
 )
 
-// OneDrive
+// OneDrive constants
 const (
 	ONEDRIVE_SIZE_LIMIT   int = 4 * 1024 * 1024
 	ONEDRIVE_UPLOAD_LIMIT int = 192 * 320 * 1024 // 60 MiB
 )
 
-// sizes
+// Sizes constants
 const (
 	DEFAULT_VOLUME_BLOCK_SIZE int = 8 * 1024 * 1024
 	FRONT_RAM_CAPACITY        int = 8 * 1024 * 1024
