@@ -8,10 +8,11 @@ import (
 	"time"
 )
 
+// ServeBackend - serve API backend using Gin framework
 func ServeBackend() {
 	r := gin.New()
 
-	// Cors
+	// Cors configuration
 	corsConfig := cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
@@ -21,6 +22,7 @@ func ServeBackend() {
 	}
 	r.Use(cors.New(corsConfig))
 
+	// Logger middleware for printing logs
 	// TODO: rethink logger here
 	r.Use(gin.Logger())
 
@@ -28,16 +30,9 @@ func ServeBackend() {
 	r.Use(gin.Recovery())
 
 	// Unauthorized requests
-	// 	Authorization
 	unauthorized := r.Group("/")
 	unauthorized.POST("/auth/register", RegisterUser)
 	unauthorized.POST("/auth/login", LoginUser)
-
-	// volume
-
-	// disk
-
-	// file
 
 	// Authorized requests
 	authorized := r.Group("/")
@@ -59,9 +54,9 @@ func ServeBackend() {
 		authorized.POST("/disks/manage", CreateDisk)
 		authorized.GET("/disks/manage", GetDisks)
 
-		authorized.GET("/disks/manage/:DiskUUID", DiskGet)
-		authorized.PUT("/disks/manage/:DiskUUID", DiskUpdate)
-		authorized.DELETE("/disks/manage/:DiskUUID", DiskDelete)
+		authorized.GET("/disks/manage/:DiskUUID", GetDisk)
+		authorized.PUT("/disks/manage/:DiskUUID", UpdateDisk)
+		authorized.DELETE("/disks/manage/:DiskUUID", DeleteDisk)
 
 		authorized.POST("/disks/oauth/:DiskUUID", DiskOAuth)
 
@@ -79,13 +74,13 @@ func ServeBackend() {
 		authorized.GET("/files/block/:BlockUUID", DownloadBlock)
 
 		authorized.PUT("/files/manage/:FileUUID", UpdateFile)
-		//authorized.DELETE("/files/manage/:FileUUID", FileRemove)
+		//authorized.DELETE("/files/manage/:FileUUID", RemoveFile)
 
 		// Providers
 		authorized.GET("/providers", GetProviders)
 	}
 
-	// Listen and serve on 0.0.0.0:8080
+	// Listen and serve on localhost:8080
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatal(err)
