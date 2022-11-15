@@ -25,12 +25,24 @@ type Volume struct {
 	User User `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 }
 
+// NewVolume - create new volume object
+//
+// return type:
+//   - *dbo.Volume: created volume DBO
 func NewVolume() *Volume {
 	var v *Volume = new(Volume)
 	v.AbstractDatabaseObject.DatabaseObject = v
 	return v
 }
 
+// NewVolumeFromRequest - create volume DBO from volume create request
+//
+// params:
+//   - request *requests.requests.VolumeCreateRequest: volume create request data from API request
+//   - userUUID uuid.UUID: UUID of the user who is creating the volume
+//
+// return type:
+//   - *dbo.Volume: created volume DBO
 func NewVolumeFromRequest(request *requests.VolumeCreateRequest, userUUID uuid.UUID) *Volume {
 	var v *Volume = NewVolume()
 
@@ -45,6 +57,10 @@ func NewVolumeFromRequest(request *requests.VolumeCreateRequest, userUUID uuid.U
 	return v
 }
 
+// GetCreationTime - get creation time of the volume
+//
+// return type:
+//   - time.Time: creation time of the volume
 func (v Volume) GetCreationTime() time.Time {
 	return v.CreatedAt
 }
