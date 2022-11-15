@@ -12,13 +12,13 @@ type Block struct {
 	Disk     Disk
 
 	Size     int
-	Checksum int
+	Checksum string
 
 	Status int
 	Order  int
 }
 
-func NewBlock(_UUID uuid.UUID, _userUUID uuid.UUID, _file File, _disk Disk, _size int, _checksum int, _status int, _order int) *Block {
+func NewBlock(_UUID uuid.UUID, _userUUID uuid.UUID, _file File, _disk Disk, _size int, _checksum string, _status int, _order int) *Block {
 	var block *Block = new(Block)
 
 	block.UUID = _UUID
@@ -40,7 +40,7 @@ func NewBlockFromDBO(_block *dbo.Block) *Block {
 		File:     nil,
 		Disk:     nil,
 		Size:     _block.Size,
-		Checksum: 0, // TODO: why is checksum a string in the db
+		Checksum: "",
 		Status:   0,
 		Order:    _block.Order,
 	}
