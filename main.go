@@ -17,16 +17,18 @@ import (
 	"path/filepath"
 )
 
+// main - entry point for the server application
 func main() {
+	// Prepare sample account UUID for development purposes
 	models.RootUUID, _ = uuid.Parse("91c32303-0856-43d6-8e18-1cc671e256e4")
-	// ignore error
 
-	// remove downloads
+	// Remove local downloaded files
 	err := os.RemoveAll("./Download")
 	if err != nil {
-		log.Printf("Could not remove file the downloads dir")
+		log.Printf("Could not remove file the downloads directory")
 	}
 
+	// Parse settings and options
 	path := flag.String("db-connection", "./connection.json", "file containing db connection info")
 	rspw := flag.Bool("respawn", false, "set to true to drop and create the database anew")
 	flag.Parse()
@@ -36,6 +38,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Connect to database
 	err = db.DB.Connect(absolutePath)
 	if err != nil {
 		log.Fatal(err)
@@ -62,7 +65,9 @@ func main() {
 		}
 	}
 
+	// Seed required data
 	seeder.Seed()
 
+	// Serve API backend using Gin framework
 	controllers.ServeBackend()
 }
