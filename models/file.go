@@ -681,6 +681,13 @@ func NewFileWrapper(filetype int, actualFiles []File) File {
 	return f
 }
 
+// NewFile - create new file model
+//
+// params:
+//   - filetype int: type of file (constant: regular or directory)
+//
+// return type:
+//   - models.File: created file model
 func NewFile(filetype int) File {
 	var f File
 	if filetype == constants.FILE_TYPE_REGULAR {
@@ -695,6 +702,16 @@ func NewFile(filetype int) File {
 	return f
 }
 
+// NewFileFromDBO - create new abstract file model based on file DBO
+//
+// This function creates abstract file model used internally by backend
+// based on file data obtained from database.
+//
+// params:
+//   - fileDBO *dbo.File: file DBO data (from database)
+//
+// return type:
+//   - *models.File: created abstract file model
 func NewFileFromDBO(fileDBO *dbo.File) File {
 	if fileDBO.Type == constants.FILE_TYPE_DIRECTORY {
 		return NewDirectoryFromDBO(fileDBO)
@@ -737,6 +754,16 @@ func NewFileFromDBO(fileDBO *dbo.File) File {
 	return file
 }
 
+// NewDirectoryFromDBO - create new abstract file model based on directory DBO
+//
+// This function creates abstract file model used internally by backend
+// based on directory data obtained from database.
+//
+// params:
+//   - directoryDBO *dbo.File: file DBO data (from database)
+//
+// return type:
+//   - *models.File: created abstract file model
 func NewDirectoryFromDBO(directoryDBO *dbo.File) File {
 	if directoryDBO.Type != constants.FILE_TYPE_DIRECTORY {
 		return nil
@@ -769,6 +796,14 @@ func NewDirectoryFromDBO(directoryDBO *dbo.File) File {
 	}
 }
 
+// NewFileFromRequest - create new abstract file model based on init file upload request
+//
+// params:
+//   - request *requests.InitFileUploadRequest: init file upload request with file data
+//   - rootUUID uuid.UUID: UUID of the parent directory of the file
+//
+// return type:
+//   - *models.File: created abstract file model
 func NewFileFromRequest(request *requests.InitFileUploadRequest, rootUUID uuid.UUID) File {
 	var f File = NewFile(request.File.Type)
 	f.SetName(request.File.Name)
