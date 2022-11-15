@@ -26,8 +26,8 @@ type Block struct {
 // params:
 //   - _UUID uuid.UUID: block UUID
 //   - _userUUID uuid.UUID: UUID of the user who owns the block
-//   - _file File: UUID of the file to which the block belongs
-//   - _disk Disk: UUID of the disk on which the block is stored
+//   - _file models.File: UUID of the file to which the block belongs
+//   - _disk models.Disk: UUID of the disk on which the block is stored
 //   - _size int: size of the block in bytes
 //   - _checksum string: checksum of the block
 //   - _status int: transport status of the block

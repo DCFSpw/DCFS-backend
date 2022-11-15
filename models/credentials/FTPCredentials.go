@@ -18,6 +18,13 @@ type FTPCredentials struct {
 	Path     string
 }
 
+// Authenticate - authenticate to remote server using saved credentials
+//
+// params:
+//   - md *apicalls.CredentialsAuthenticateMetadata: not used
+//
+// return type:
+//   - *FTPCredentials: FTP client object
 func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
 	log.Printf("Connecting to %s ...\n", credentials.Host)
 
@@ -42,15 +49,30 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 	return conn
 }
 
+// ToString - convert credentials to JSON string
+//
+// return type:
+//   - string: JSON credential string
 func (credentials *FTPCredentials) ToString() string {
 	ret, _ := json.Marshal(credentials)
 	return string(ret)
 }
 
+// GetPath - get remote path from credentials
+//
+// return type:
+//   - string: remote path
 func (credentials *FTPCredentials) GetPath() string {
 	return credentials.Path
 }
 
+// NewFTPCredentials - create new FTP credentials object based on JSON credential string
+//
+// params:
+//   - cred string: JSON credential string
+//
+// return type:
+//   - *FTPCredentials: created credentials object
 func NewFTPCredentials(cred string) *FTPCredentials {
 	var _credentials *requests.FTPCredentials = requests.StringToFTPCredentials(cred)
 
