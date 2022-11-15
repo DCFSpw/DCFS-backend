@@ -24,6 +24,15 @@ type SortablePaginationData interface {
 	GetCreationTime() time.Time
 }
 
+// Paginate - create pagination data from slice of sortable data
+//
+// params:
+//   - collection []interface{}: slice of data implementing SortablePaginationData interface
+//   - page int: page number to get
+//   - _perPage int: number of records per page
+//
+// return type:
+//   - *PaginationData: pagination data containing requested page of data
 func Paginate(collection []interface{}, page int, _perPage int) *PaginationData {
 	var paginationData *PaginationData = new(PaginationData)
 	var totalPages int = int(math.Ceil(float64(len(collection)) / float64(_perPage)))
