@@ -490,7 +490,7 @@ func (f *FileWrapper) GetBlocks() map[uuid.UUID]*Block {
 		File:     f,
 		Disk:     nil,
 		Size:     f.GetSize(),
-		Checksum: 0,
+		Checksum: "",
 		Status:   0,
 		Order:    0,
 	}

@@ -91,7 +91,7 @@ func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, user
 		}
 
 		// Create a new block
-		var block *Block = NewBlock(uuid.New(), userUUID, f, v.partitioner.AssignDisk(currentSize), currentSize, 0, constants.BLOCK_STATUS_QUEUED, i)
+		var block *Block = NewBlock(uuid.New(), userUUID, f, v.partitioner.AssignDisk(currentSize), currentSize, "", constants.BLOCK_STATUS_QUEUED, i)
 		_f.Blocks[block.UUID] = block
 
 		log.Println("Block ", i, " assigned to", block.Disk.GetName())
