@@ -3,7 +3,6 @@ package credentials
 import (
 	"dcfs/apicalls"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"time"
@@ -17,9 +16,14 @@ type SFTPCredentials struct {
 	FTPCredentials
 }
 
+// Authenticate - authenticate to remote server using saved credentials
+//
+// params:
+//   - md *apicalls.CredentialsAuthenticateMetadata: not used
+//
+// return type:
+//   - *SFTPCredentials: SFTP client object
 func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
-	log.Printf("Connecting to %s ...\n", credentials.Host)
-
 	// Try to use $SSH_AUTH_SOCK which contains the path of the unix file socket that the sshd agent uses
 	// for communication with other processes.
 	var auths []ssh.AuthMethod
@@ -46,31 +50,41 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 	// Connect to SFTP server
 	conn, err := ssh.Dial("tcp", addr, &config)
 	if err != nil {
-		log.Printf("Failed to connect to SFTP server [%s]: %v", addr, err)
 		return nil
 	}
 
 	// Create new SFTP client
 	sftpClient, err := sftp.NewClient(conn)
 	if err != nil {
-		log.Printf("Unable to create SFTP client: %v", err)
 		return nil
 	}
-	//defer credentials.Client.Close()
-
-	log.Printf("Connected to %s ...\n", credentials.Host)
 
 	return sftpClient
 }
 
+// ToString - convert credentials to JSON string
+//
+// return type:
+//   - string: JSON credential string
 func (credentials *SFTPCredentials) ToString() string {
 	return credentials.FTPCredentials.ToString()
 }
 
+// GetPath - get remote path from credentials
+//
+// return type:
+//   - string: remote path
 func (credentials *SFTPCredentials) GetPath() string {
 	return credentials.Path
 }
 
+// NewSFTPCredentials - create new SFTP credentials object based on JSON credential string
+//
+// params:
+//   - cred string: JSON credential string
+//
+// return type:
+//   - *SFTPCredentials: created credentials object
 func NewSFTPCredentials(cred string) *SFTPCredentials {
 	credentials := SFTPCredentials{
 		FTPCredentials: *NewFTPCredentials(cred),
