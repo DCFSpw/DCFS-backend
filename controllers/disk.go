@@ -13,15 +13,26 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
-	"log"
 )
 
+// CreateDisk - handler for Create disk request
+//
+// Create disk (POST /disks/manage) - creating a new disk. This is the final
+// creation request for the credential-based disks.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func CreateDisk(c *gin.Context) {
 	var requestBody requests.DiskCreateRequest = requests.DiskCreateRequest{}
 	var provider *dbo.Provider = dbo.NewProvider()
 	var authCode string = ""
-	userData, _ := c.Get("UserData")
-	userUUID := userData.(middleware.UserData).UserUUID
+	var userUUID uuid.UUID
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -29,24 +40,28 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
-	log.Println("requests body: ", requestBody)
-	log.Println("userUUID: ", userUUID)
-
 	// Get provider info
-	db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider)
+	dbErr := db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider)
+	if dbErr != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "ProviderUUID", "A provider with provided UUID does not exists"))
+		return
+	}
 
+	// Parse volumeUUID from request
 	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
 		return
 	}
 
+	// Retrieve volume from transport
 	volume := models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "A volume of provided UUID does not exist"))
 		return
 	}
 
+	// Create disk object
 	_disk := dbo.Disk{
 		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 			UUID: uuid.New(),
@@ -69,6 +84,7 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
+	// Prepare OAuth disk config
 	_, ok := disk.(OAuthDisk.OAuthDisk)
 	if ok {
 		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
@@ -86,12 +102,16 @@ func CreateDisk(c *gin.Context) {
 		go volume.RefreshPartitioner()
 	}
 
-	db.DB.DatabaseHandle.Create(&_disk)
+	// Save disk to database
+	result := db.DB.DatabaseHandle.Create(&_disk)
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+		return
+	}
 
-	// load full database object with a provider and a volume to return
+	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", disk.GetUUID().String()).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
-		// this should never happen
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
@@ -99,10 +119,21 @@ func CreateDisk(c *gin.Context) {
 	c.JSON(200, responses.NewCreateDiskSuccessResponse(_disk, authCode))
 }
 
+// DiskOAuth - handler for Provide OAuth token for disk request
+//
+// Provide OAuth token for disk (POST /disks/oauth/{diskUUID}) - providing an
+// OAuth token for OAuth-based disks.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func DiskOAuth(c *gin.Context) {
 	var requestBody requests.OAuthRequest
 	var _diskUUID string
 	var diskUUID uuid.UUID
+	var userUUID uuid.UUID
 	var err error
 	var _disk dbo.Disk
 
@@ -112,18 +143,21 @@ func DiskOAuth(c *gin.Context) {
 		return
 	}
 
-	userData, _ := c.Get("UserData")
-	userUUID := userData.(middleware.UserData).UserUUID
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
+	// Retrieve nad parse diskUUID from param
 	_diskUUID = c.Param("DiskUUID")
 	diskUUID, err = uuid.Parse(_diskUUID)
 
+	// Retrieve disk from database
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
 		return
 	}
 
+	// Retrieve volume from transport
 	volume := models.Transport.GetVolume(_disk.VolumeUUID)
 	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
@@ -136,6 +170,7 @@ func DiskOAuth(c *gin.Context) {
 		return
 	}
 
+	// Exchange OAuth token for refresh token
 	config := disk.GetConfig()
 	config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 	tok, err := config.Exchange(c, requestBody.Code)
@@ -144,6 +179,7 @@ func DiskOAuth(c *gin.Context) {
 		return
 	}
 
+	// Save refresh token to disk credentials
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
 
 	// Retrieve disk quota from provider
@@ -152,12 +188,16 @@ func DiskOAuth(c *gin.Context) {
 		disk.SetTotalSpace(totalSpace)
 	}
 
-	db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
+	// Save disk credentials to database
+	result := db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+		return
+	}
 
-	// load full database object with a provider and a volume to return
+	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
-		// this should never happen
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
@@ -167,7 +207,17 @@ func DiskOAuth(c *gin.Context) {
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
-func DiskGet(c *gin.Context) {
+// GetDisk - handler for Get disk details request
+//
+// Get disk details (GET /disks/manage/{diskUUID}) - retrieving details of
+// the specified disk.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
+func GetDisk(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
 	var volumeModel *models.Volume
@@ -203,10 +253,21 @@ func DiskGet(c *gin.Context) {
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
-func DiskUpdate(c *gin.Context) {
+// UpdateDisk - handler for Update disk details request
+//
+// Update disk details (PUT /disks/manage/{diskUUID}) - updating the name or
+// credentials of specified disk.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
+func UpdateDisk(c *gin.Context) {
 	var body requests.DiskUpdateRequest
 	var _diskUUID string
 	var diskUUID uuid.UUID
+	var userUUID uuid.UUID
 	var err error
 	var volumes []*models.Volume
 	var volume *models.Volume = nil
@@ -218,9 +279,10 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
-	userData, _ := c.Get("UserData")
-	userUUID := userData.(middleware.UserData).UserUUID
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
+	// Parse diskUUID from request
 	_diskUUID = c.Param("DiskUUID")
 	diskUUID, err = uuid.Parse(_diskUUID)
 	if err != nil {
@@ -228,12 +290,14 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
+	// Retrieve volumes from transport
 	volumes = models.Transport.GetVolumes(userUUID)
 	if volumes == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find volume with provided UUID"))
 		return
 	}
 
+	// Find volume associated with provided disk
 	for _, _volume := range volumes {
 		disk = _volume.GetDisk(diskUUID)
 		if disk != nil {
@@ -247,12 +311,15 @@ func DiskUpdate(c *gin.Context) {
 		return
 	}
 
+	// Check whether disk is enqueued for IO operation
+	// Changes cannot be performed on busy disk.
 	_disk := models.Transport.FindEnqueuedDisk(diskUUID)
 	if _disk != nil {
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't update it now"))
 		return
 	}
 
+	// Convert credentials to JSON string
 	cred := body.Credentials.ToString()
 	if cred != "" {
 		_, ok := disk.(OAuthDisk.OAuthDisk)
@@ -264,6 +331,7 @@ func DiskUpdate(c *gin.Context) {
 		disk.CreateCredentials(cred)
 	}
 
+	// Change name of the disk
 	disk.SetName(body.Name)
 
 	// Verify that the disk space quota is valid
@@ -280,17 +348,17 @@ func DiskUpdate(c *gin.Context) {
 		}
 	}
 
+	// Save disk details to database
 	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), volume.UUID)
-	err = db.DB.DatabaseHandle.Save(&diskDBO).Error
-	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
+	result := db.DB.DatabaseHandle.Save(&diskDBO)
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
-	// load full database object with a provider and a volume to return
+	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&diskDBO).Error
 	if err != nil {
-		// this should never happen
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
@@ -300,13 +368,23 @@ func DiskUpdate(c *gin.Context) {
 	c.JSON(200, responses.NewSuccessResponse(diskDBO))
 }
 
-func DiskDelete(c *gin.Context) {
+// DeleteDisk - handler for Delete disk request
+//
+// Delete disk (DELETE /disks/manage/{diskUUID}) - deleting the specified disk.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
+func DeleteDisk(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
 	var _blocks []dbo.Block
 	var volume *models.Volume
 	var err error
 
+	// Retrieve disk from database
 	_diskUUID = c.Param("DiskUUID")
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
@@ -314,12 +392,14 @@ func DiskDelete(c *gin.Context) {
 		return
 	}
 
+	// Check whether disk is not enqueued for IO operation
 	_d := models.Transport.FindEnqueuedDisk(_disk.UUID)
 	if _d != nil {
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't delete it now"))
 		return
 	}
 
+	// Check whether disk is empty
 	err = db.DB.DatabaseHandle.Where("disk_uuid = ?", _diskUUID).Find(&_blocks).Error
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
@@ -331,6 +411,7 @@ func DiskDelete(c *gin.Context) {
 		return
 	}
 
+	// Trigger disk deletion
 	volume = models.Transport.GetVolume(_disk.Volume.UUID)
 	volume.DeleteDisk(_disk.UUID)
 	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
@@ -340,27 +421,40 @@ func DiskDelete(c *gin.Context) {
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
+// GetDisks - handler for Get list of disks request
+//
+// Get list of disks (GET /disks/manage) - retrieving a paginated list of
+// disks owned by a user.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
 func GetDisks(c *gin.Context) {
 	var userUUID uuid.UUID
 	var _disks []dbo.Disk
 	var disks []interface{}
 	var page int
 
+	// Retrieve page from query
 	page = requests.GetPageFromQuery(c)
 
-	userData, _ := c.Get("UserData")
-	userUUID = userData.(middleware.UserData).UserUUID
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
+	// Load list of disks from database
 	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Preload("Provider").Preload("Volume").Find(&_disks)
 	for _, disk := range _disks {
 		// Update disk spaced based on local data (for performance reasons)
 		disk.FreeSpace = disk.TotalSpace - disk.UsedSpace
-		disk.TotalSpace = disk.TotalSpace
 
 		// Append disk to the list
 		disks = append(disks, disk)
 	}
 
+	// Prepare pagination
 	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
+	
 	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }
