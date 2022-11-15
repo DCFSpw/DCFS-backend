@@ -11,7 +11,7 @@ type SuccessResponse struct {
 // NewEmptySuccessResponse - create success response with no data
 //
 // return type:
-//   - response: SuccessResponse with no data
+//   - SuccessResponse: response with no data
 func NewEmptySuccessResponse() *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
@@ -24,10 +24,10 @@ func NewEmptySuccessResponse() *SuccessResponse {
 // NewSuccessResponse - create success response with provided data
 //
 // params:
-//   - data - object to return inside response
+//   - data interface{} - object to return inside response
 //
 // return type:
-//   - response: SuccessResponse with provided data
+//   - *SuccessResponse: response with provided data
 func NewSuccessResponse(data interface{}) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
