@@ -1,13 +1,8 @@
 package responses
 
-type data struct {
+type PaginationResponseData struct {
 	Pagination interface{} `json:"pagination"`
 	Data       interface{} `json:"data"`
-}
-
-type PaginationResponse struct {
-	Success bool `json:"success"`
-	Data    data `json:"data"`
 }
 
 type PaginationData struct {
@@ -15,12 +10,22 @@ type PaginationData struct {
 	Data       interface{} `json:"data"`
 }
 
-func NewPaginationResponse(paginationData PaginationData) PaginationResponse {
-	var r *PaginationResponse = new(PaginationResponse)
+// NewPaginationResponse - create init file upload success response
+//
+// params:
+//   - paginationData - PaginationData object with pagination and data for target page
+//
+// return type:
+//   - response: SuccessResponse with pagination data and target page data
+func NewPaginationResponse(paginationData PaginationData) *SuccessResponse {
+	var r *SuccessResponse = new(SuccessResponse)
+	var _data *PaginationResponseData = new(PaginationResponseData)
+
+	_data.Pagination = paginationData.Pagination
+	_data.Data = paginationData.Data
 
 	r.Success = true
-	r.Data.Pagination = paginationData.Pagination
-	r.Data.Data = paginationData.Data
-	
-	return *r
+	r.Data = _data
+
+	return r
 }

@@ -4,13 +4,15 @@ import (
 	"dcfs/db/dbo"
 )
 
-type GetProvidersSuccessResponse struct {
-	Success bool           `json:"success"`
-	Data    []dbo.Provider `json:"data"`
-}
-
-func NewGetProvidersSuccessResponse(providers []dbo.Provider) *GetProvidersSuccessResponse {
-	var r *GetProvidersSuccessResponse = new(GetProvidersSuccessResponse)
+// NewGetProvidersSuccessResponse - create get providers success response
+//
+// params:
+//   - paginationData - PaginationData object with pagination and data for target page
+//
+// return type:
+//   - response: SuccessResponse with pagination data and target page data
+func NewGetProvidersSuccessResponse(providers []dbo.Provider) *SuccessResponse {
+	var r *SuccessResponse = new(SuccessResponse)
 
 	r.Success = true
 	r.Data = providers

@@ -3,30 +3,17 @@ package responses
 type Response interface {
 }
 
-type EmptySuccessResponse struct {
+type SuccessResponse struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data"`
 }
 
-type SuccessResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type FailureResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Code    string `json:"code"`
-}
-
-type BlockDownloadResponse struct {
-	Success bool    `json:"success"`
-	Message string  `json:"message"`
-	Block   []uint8 `json:"block"`
-}
-
-func NewEmptySuccessResponse() *EmptySuccessResponse {
-	var r *EmptySuccessResponse = new(EmptySuccessResponse)
+// NewEmptySuccessResponse - create success response with no data
+//
+// return type:
+//   - response: SuccessResponse with no data
+func NewEmptySuccessResponse() *SuccessResponse {
+	var r *SuccessResponse = new(SuccessResponse)
 
 	r.Success = true
 	r.Data = nil
@@ -34,9 +21,18 @@ func NewEmptySuccessResponse() *EmptySuccessResponse {
 	return r
 }
 
-func CreateEmptySuccessResponse(data interface{}) *EmptySuccessResponse {
-	return &EmptySuccessResponse{
-		Success: true,
-		Data:    data,
-	}
+// NewSuccessResponse - create success response with provided data
+//
+// params:
+//   - data - object to return inside response
+//
+// return type:
+//   - response: SuccessResponse with provided data
+func NewSuccessResponse(data interface{}) *SuccessResponse {
+	var r *SuccessResponse = new(SuccessResponse)
+
+	r.Success = true
+	r.Data = data
+
+	return r
 }
