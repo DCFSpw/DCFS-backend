@@ -41,7 +41,7 @@ func CreateDisk(c *gin.Context) {
 	}
 
 	// Get provider info
-	dbErr := db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider)
+	dbErr := db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider).Error
 	if dbErr != nil {
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "ProviderUUID", "A provider with provided UUID does not exists"))
 		return
