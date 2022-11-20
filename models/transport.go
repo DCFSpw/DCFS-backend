@@ -31,7 +31,7 @@ func NewConcurrentInstances() *ConcurrentInstances {
 func (instances *ConcurrentInstances) updateCounter(key uuid.UUID) {
 	instances.Instances[key].Counter++
 
-	time.AfterFunc(6*time.Minute, func() {
+	time.AfterFunc(Transport.WaitTime, func() {
 		instances.InstanceMutex.Lock()
 		defer instances.InstanceMutex.Unlock()
 
@@ -76,7 +76,7 @@ func (instances *ConcurrentInstances) MarkAsUsed(key uuid.UUID) error {
 // fields:
 //   - key - UUID of the instance to be marked
 func (instances *ConcurrentInstances) MarkAsCompleted(key uuid.UUID) {
-	time.AfterFunc(6*time.Minute, func() {
+	time.AfterFunc(Transport.WaitTime, func() {
 		instances.InstanceMutex.Lock()
 		defer instances.InstanceMutex.Unlock()
 
@@ -152,6 +152,8 @@ type transport struct {
 	ActiveVolumes     *ConcurrentInstances
 	FileDownloadQueue *ConcurrentInstances
 	FileUploadQueue   *ConcurrentInstances
+
+	WaitTime time.Duration
 }
 
 /* public methods */
@@ -175,7 +177,12 @@ func (transport *transport) GetVolume(volumeUUID uuid.UUID) *Volume {
 	transport.ActiveVolumes.InstanceMutex.Lock()
 	defer transport.ActiveVolumes.InstanceMutex.Unlock()
 
-	return transport.getVolumeContainer(volumeUUID).Instance.(*Volume)
+	c := transport.getVolumeContainer(volumeUUID).Instance
+	if c == nil {
+		return nil
+	}
+
+	return c.(*Volume)
 }
 
 // GetVolumes - gets an array of volume handles belonging to the given user
@@ -315,6 +322,7 @@ func NewTransport() *transport {
 		ActiveVolumes:     NewConcurrentInstances(),
 		FileDownloadQueue: NewConcurrentInstances(),
 		FileUploadQueue:   NewConcurrentInstances(),
+		WaitTime:          6 * time.Minute,
 	}
 }
 

@@ -1,17 +1,20 @@
-package models
+package mock
 
 import (
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/models"
 	"dcfs/models/credentials"
+	"fmt"
 	"github.com/google/uuid"
+	"os"
 	"time"
 )
 
 type dummyDisk struct {
 	UUID   uuid.UUID
-	Volume *Volume
+	Volume *models.Volume
 	Name   string
 }
 
@@ -33,11 +36,11 @@ func (d *dummyDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) SetVolume(volume *Volume) {
+func (d *dummyDisk) SetVolume(volume *models.Volume) {
 	d.Volume = volume
 }
 
-func (d *dummyDisk) GetVolume() *Volume {
+func (d *dummyDisk) GetVolume() *models.Volume {
 	return d.Volume
 }
 
@@ -115,4 +118,51 @@ func (d *dummyDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volum
 
 func (d *dummyDisk) Delete() (string, error) {
 	panic("Unimplemented")
+}
+
+func GetDiskDBOs(number int) []dbo.Disk {
+	var ret []dbo.Disk = make([]dbo.Disk, 0)
+
+	for i := 0; i < number; i++ {
+		providerDbo, creds := GetRandomProviderDBO()
+
+		ret = append(ret, dbo.Disk{
+			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+				UUID: uuid.New(),
+			},
+			UserUUID:     UserUUID,
+			VolumeUUID:   VolumeUUID,
+			ProviderUUID: providerDbo.UUID,
+			Credentials:  creds,
+			Name:         fmt.Sprintf("mock disk no. #%d", i),
+			UsedSpace:    0,
+			TotalSpace:   15 * 1024 * 1024 * 1024,
+			FreeSpace:    15 * 1024 * 1024 * 1024,
+			CreatedAt:    time.Time{},
+			User:         *UserDBO,
+			Volume:       *VolumeDBO,
+			Provider:     *providerDbo,
+		})
+	}
+
+	return ret
+}
+
+func GetDummyDisks(number int) []*dummyDisk {
+	var ret []*dummyDisk = make([]*dummyDisk, 0)
+
+	for i := 0; i < number; i++ {
+		ret = append(ret, &dummyDisk{
+			UUID:   uuid.New(),
+			Volume: nil,
+			Name:   fmt.Sprintf("mock dummy disk no. #%d", i),
+		})
+	}
+
+	return ret
+}
+
+func init() {
+	// change path so that there are no problems with the credential files
+	_ = os.Chdir("../../")
 }
