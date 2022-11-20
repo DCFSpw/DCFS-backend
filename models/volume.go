@@ -148,10 +148,14 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 	v.partitioner = CreatePartitioner(v.VolumeSettings.FilePartition, v)
 
 	for _, _d := range _disks {
-		_ = CreateDisk(CreateDiskMetadata{
+		d := CreateDisk(CreateDiskMetadata{
 			Disk:   &_d,
 			Volume: v,
 		})
+
+		if d != nil {
+			v.AddDisk(d.GetUUID(), d)
+		}
 	}
 
 	v.RefreshPartitioner()

@@ -6,15 +6,16 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/db/seeder"
 	"dcfs/models"
-	_ "dcfs/models/disk/FTPDisk"
-	_ "dcfs/models/disk/GDriveDisk"
-	_ "dcfs/models/disk/OneDriveDisk"
-	_ "dcfs/models/disk/SFTPDisk"
 	"flag"
 	"github.com/google/uuid"
 	"log"
 	"os"
 	"path/filepath"
+
+	_ "dcfs/models/disk/FTPDisk"
+	_ "dcfs/models/disk/GDriveDisk"
+	_ "dcfs/models/disk/OneDriveDisk"
+	_ "dcfs/models/disk/SFTPDisk"
 )
 
 // main - entry point for the server application
