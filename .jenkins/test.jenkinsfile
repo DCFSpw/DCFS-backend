@@ -11,8 +11,25 @@ pipeline {
                     changeRequest target: 'develop'
                 }
             }
+            environment {
+                GDRIVE_DEVELOPMENT = credentials('gdrive-development-oauth-configuration')
+                GDRIVE_PRODUCTION = credentials('gdrive-production-oauth-configuration')
+                ONEDRIVE_DEVELOPMENT = credentials('onedrive-development-oauth-configuration')
+                ONEDRIVE_PRODUCTION = credentials('onedrive-production-oauth-configuration')
+            }
             steps {
-                sh 'go test -v ./...'
+                script {
+                    sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
+
+                    if (env.BRANCH_NAME == 'develop') {
+                        sh('echo $GDRIVE_DEVELOPMENT > ./models/disk/GDriveDisk/credentials.json')
+                        sh('echo $ONEDRIVE_DEVELOPMENT > ./models/disk/OneDriveDisk/credentials.json')
+                    } else {
+                        sh('echo $GDRIVE_PRODUCTION > ./models/disk/GDriveDisk/credentials.json')
+                        sh('echo $ONEDRIVE_PRODUCTION > ./models/disk/OneDriveDisk/credentials.json')
+                    }
+                }
+                sh 'go test -cover -coverpkg "./models" -v ./test/unit'
                 cleanWs()
             }
         }
