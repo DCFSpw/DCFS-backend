@@ -88,7 +88,7 @@ func CreateDisk(c *gin.Context) {
 	_, ok := disk.(OAuthDisk.OAuthDisk)
 	if ok {
 		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
-		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	} else {
 		// Retrieve disk quota from provider
 		// OAuth disks will retrieve quota after authorization
@@ -173,7 +173,7 @@ func DiskOAuth(c *gin.Context) {
 	// Exchange OAuth token for refresh token
 	config := disk.GetConfig()
 	config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
-	tok, err := config.Exchange(c, requestBody.Code)
+	tok, err := config.Exchange(c, requestBody.Code, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	if err != nil {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.OAUTH_BAD_CODE, "Could not retrieve the oauth token"))
 		return
