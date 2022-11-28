@@ -192,12 +192,52 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 	return nil
 }
 
-func (d *OneDriveDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
-}
-
 func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
+	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
+	if _client == nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
+	}
+
+	var client *http.Client = _client.(*http.Client)
+	oneDriveClient := onedrive.NewClient(client)
+	var searchReqUrl string = "me/drive/root/search(q='" + url.PathEscape(blockMetadata.UUID.String()) + "')?select=id"
+
+	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
+	}
+
+	var response oneDriveSearchResponse = oneDriveSearchResponse{}
+	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file:", err.Error())
+	}
+
+	if len(response.Value) > 1 {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Block hierarchy corrupted")
+	}
+
+	if len(response.Value) == 0 {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
+	}
+
+	item, err := oneDriveClient.DriveItems.Get(blockMetadata.Ctx, response.Value[0].Id)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not retrieve file data:", err.Error())
+	}
+
+	removeReq, err := oneDriveClient.NewRequest("DELETE", item.DownloadURL, nil)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file remove request:", err.Error())
+	}
+
+	_, err = client.Do(removeReq.WithContext(blockMetadata.Ctx))
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not remove file:", err.Error())
+	}
+
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	return nil
 }
 
 func (d *OneDriveDisk) SetUUID(uuid uuid.UUID) {
@@ -297,10 +337,6 @@ func (d *OneDriveDisk) UpdateUsedSpace(change int64) {
 
 func (d *OneDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
-}
-
-func (d *OneDriveDisk) Delete() (string, error) {
-	return d.abstractDisk.Delete()
 }
 
 /* Mandatory OAuthDisk interface implementations */

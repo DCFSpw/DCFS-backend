@@ -2,13 +2,11 @@ package AbstractDisk
 
 import (
 	"dcfs/apicalls"
-	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"github.com/google/uuid"
-	"log"
 	"time"
 )
 
@@ -154,10 +152,4 @@ func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {
 	}
 
 	return provider.UUID
-}
-
-func (d *AbstractDisk) Delete() (string, error) {
-	// TO DO: deletion process worker
-	log.Println("Deleting disk" + d.UUID.String())
-	return constants.SUCCESS, nil
 }

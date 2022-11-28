@@ -105,12 +105,40 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	return nil
 }
 
-func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
-}
-
 func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: bm.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
+	var fileDelete *drive.FilesDeleteCall
+	var err error
+
+	srv, err := drive.NewService(bm.Ctx, option.WithHTTPClient(client))
+	if err != nil {
+		log.Printf("Unable to retrieve Drive client: %v", err)
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	files, err := srv.Files.
+		List().
+		Q(fmt.Sprintf("name = '%s'", bm.UUID.String())).
+		Do()
+	if err != nil {
+		log.Printf("unable to retreve files from gdrive: %s", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	if len(files.Files) == 0 {
+		log.Printf("file with the given blockUUID: %s not found on gdrive", bm.UUID.String())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "can't find the file with the given blockUUID: %s", bm.UUID.String())
+	}
+
+	fileDelete = srv.Files.Delete(files.Files[0].Id)
+	err = fileDelete.Do()
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Failed to remove block:", bm.UUID.String(), "with err:", err.Error())
+	}
+
+	bm.CompleteCallback(bm.FileUUID, bm.Status)
+	return nil
 }
 
 func (d *GDriveDisk) SetUUID(uuid uuid.UUID) {
@@ -212,10 +240,6 @@ func (d *GDriveDisk) UpdateUsedSpace(change int64) {
 
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
-}
-
-func (d *GDriveDisk) Delete() (string, error) {
-	return d.abstractDisk.Delete()
 }
 
 /* Mandatory OAuthDisk interface methods */

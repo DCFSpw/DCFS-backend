@@ -19,7 +19,6 @@ var DiskTypesRegistry map[int]func() Disk = make(map[int]func() Disk)
 type Disk interface {
 	Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 	Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
-	Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 	Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 
 	SetUUID(uuid.UUID)
@@ -47,8 +46,6 @@ type Disk interface {
 	UpdateUsedSpace(change int64)
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
-
-	Delete() (string, error)
 }
 
 type CreateDiskMetadata struct {

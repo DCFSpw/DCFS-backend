@@ -220,7 +220,7 @@ func DeleteVolume(c *gin.Context) {
 	// Trigger delete process
 	errCode, err = models.Transport.DeleteVolume(volumeUUID)
 	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion request failed: "+err.Error()))
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Volume deletion request failed: "+err.Error()))
 		return
 	}
 

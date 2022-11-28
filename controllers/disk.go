@@ -380,8 +380,6 @@ func UpdateDisk(c *gin.Context) {
 func DeleteDisk(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
-	var _blocks []dbo.Block
-	var volume *models.Volume
 	var err error
 
 	// Retrieve disk from database
@@ -399,24 +397,20 @@ func DeleteDisk(c *gin.Context) {
 		return
 	}
 
-	// Check whether disk is empty
-	err = db.DB.DatabaseHandle.Where("disk_uuid = ?", _diskUUID).Find(&_blocks).Error
-	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
+	// Retrieve volume from transport
+	_v := models.Transport.GetVolume(_d.GetVolume().UUID)
+	if _v == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
-	if len(_blocks) > 0 {
-		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "The provided disk is not empty and thus cannot be deleted"))
+	// Trigger delete process
+	errCode, err := models.Transport.DeleteDisk(_d, _v, constants.DELETION)
+
+	if errCode != constants.SUCCESS {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the disk failed: "+err.Error()))
 		return
 	}
-
-	// Trigger disk deletion
-	volume = models.Transport.GetVolume(_disk.Volume.UUID)
-	volume.DeleteDisk(_disk.UUID)
-	db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Delete(&_disk)
-
-	go volume.RefreshPartitioner()
 
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }

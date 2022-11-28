@@ -1,12 +1,17 @@
 package models
 
 import (
+	"context"
+	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
+	"net/http/httptest"
 	"sync"
 	"time"
 )
@@ -254,14 +259,11 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 	return nil
 }
 
-// DeleteVolume - deletes the given volume from the ActiveVolumes array.
+// DeleteVolume - deletes the given volume, its disks and removes it from the ActiveVolumes array.
 //
 // fields:
 //   - volumeUUID
 func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
-	// TODO: Implement deletion process worker
-	var errCode string
-	var err error
 	var volume *Volume
 
 	// Retrieve volume from transport
@@ -271,15 +273,88 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	}
 
 	// Trigger delete process in all disks assigned to this volume
+	waitGroup, _ := errgroup.WithContext(context.Background())
+
 	for _, disk := range volume.disks {
-		errCode, err = disk.Delete()
-		if err != nil {
-			return errCode, err
-		}
+		waitGroup.Go(func() error {
+			errCode, err := transport.DeleteDisk(disk, volume, constants.DELETION)
+			if errCode != constants.SUCCESS {
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	err := waitGroup.Wait()
+	if err != nil {
+		return constants.OPERATION_FAILED, err
 	}
 
 	// Remove volume from transport
 	transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
+
+	return constants.SUCCESS, nil
+}
+
+func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool) (string, error) {
+	var blocks []dbo.Block
+
+	// Disattach disk from volume
+	volume.DeleteDisk(disk.GetUUID())
+
+	// Retrieve list of blocks on disk
+	dBErr := db.DB.DatabaseHandle.Where("disk_uuid = ?", disk.GetUUID()).Find(&blocks).Error
+	if dBErr != nil {
+		return constants.DATABASE_ERROR, dBErr
+	}
+
+	// Delete blocks from disk
+	waitGroup, _ := errgroup.WithContext(context.Background())
+
+	for _, block := range blocks {
+		waitGroup.Go(func() error {
+			// Prepare test context
+			writer := httptest.NewRecorder()
+			_ctx, _ := gin.CreateTestContext(writer)
+
+			// Prepare apicall metadata
+			var status int
+			//var content []uint8 = make([]uint8, block.Size)
+			var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
+			blockMetadata.Ctx = _ctx
+			blockMetadata.FileUUID = block.FileUUID
+			blockMetadata.Content = nil //&content
+			blockMetadata.UUID = block.UUID
+			blockMetadata.Size = int64(block.Size)
+			blockMetadata.Status = &status
+			blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
+			}
+
+			// Delete block from current disk
+			var result *apicalls.ErrorWrapper
+
+			result = disk.Remove(blockMetadata)
+			if result != nil {
+				return result.Error
+			}
+
+			return nil
+		})
+	}
+	err := waitGroup.Wait()
+	if err != nil {
+		return constants.OPERATION_FAILED, err
+	}
+
+	// Remove disk from database
+	dbErr := db.DB.DatabaseHandle.Delete(&dbo.Disk{}, disk.GetUUID()).Error
+	if dbErr != nil {
+		return constants.DATABASE_ERROR, dbErr
+	}
+
+	// Refresh volume partitioner after disk list change
+	go volume.RefreshPartitioner()
 
 	return constants.SUCCESS, nil
 }
