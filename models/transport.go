@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
+	"log"
 	"net/http/httptest"
 	"sync"
 	"time"
@@ -310,21 +311,26 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 	}
 
 	// Delete blocks from disk
-	waitGroup, _ := errgroup.WithContext(context.Background())
+	var waitGroup sync.WaitGroup
+	var taskCompleted bool = true
+
+	waitGroup.Add(len(blocks))
 
 	for _, block := range blocks {
-		waitGroup.Go(func() error {
+		go func(block dbo.Block) {
+			log.Println("Deleting block", block.UUID)
+			defer waitGroup.Done()
+
 			// Prepare test context
 			writer := httptest.NewRecorder()
 			_ctx, _ := gin.CreateTestContext(writer)
 
 			// Prepare apicall metadata
 			var status int
-			//var content []uint8 = make([]uint8, block.Size)
 			var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
 			blockMetadata.Ctx = _ctx
 			blockMetadata.FileUUID = block.FileUUID
-			blockMetadata.Content = nil //&content
+			blockMetadata.Content = nil
 			blockMetadata.UUID = block.UUID
 			blockMetadata.Size = int64(block.Size)
 			blockMetadata.Status = &status
@@ -336,15 +342,23 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 
 			result = disk.Remove(blockMetadata)
 			if result != nil {
-				return result.Error
+				taskCompleted = false
+				return
 			}
 
-			return nil
-		})
+			// Remove block from database
+			dBErr := db.DB.DatabaseHandle.Delete(&block).Error
+			if dBErr != nil {
+				taskCompleted = false
+				return
+			}
+
+			return
+		}(block)
 	}
-	err := waitGroup.Wait()
-	if err != nil {
-		return constants.OPERATION_FAILED, err
+	waitGroup.Wait()
+	if taskCompleted != true {
+		return constants.OPERATION_FAILED, errors.New("Failed to delete blocks from disk")
 	}
 
 	// Remove disk from database
