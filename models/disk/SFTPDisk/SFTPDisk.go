@@ -97,12 +97,25 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	return nil
 }
 
-func (d *SFTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
-}
-
 func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
+	var _client interface{} = d.GetCredentials().Authenticate(nil)
+	if _client == nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
+	}
+
+	var client *sftp.Client = _client.(*sftp.Client)
+	defer client.Close()
+
+	downloadPath := blockMetadata.UUID.String()
+
+	// Remove remote file
+	err := client.Remove(downloadPath)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot remove remote file:", err.Error())
+	}
+
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	return nil
 }
 
 func (d *SFTPDisk) SetVolume(volume *models.Volume) {
@@ -155,10 +168,6 @@ func (d *SFTPDisk) GetProviderUUID() uuid.UUID {
 
 func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
-}
-
-func (d *SFTPDisk) Delete() (string, error) {
-	return d.abstractDisk.Delete()
 }
 
 func (d *SFTPDisk) GetProviderSpace() (uint64, uint64, string) {

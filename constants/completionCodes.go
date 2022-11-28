@@ -76,4 +76,5 @@ const (
 
 	// Operation errors
 	OPERATION_NOT_SUPPORTED = "OP-000"
+	OPERATION_FAILED        = "OP-001"
 )

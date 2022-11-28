@@ -243,7 +243,7 @@ func DeleteVolume(c *gin.Context) {
 	errCode, err = models.Transport.DeleteVolume(volumeUUID)
 	if err != nil {
 		logger.Logger.Error("api", "Could not delete the volume: ", volumeUUID.String())
-		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion request failed: "+err.Error()))
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Volume deletion request failed: "+err.Error()))
 		return
 	}
 
