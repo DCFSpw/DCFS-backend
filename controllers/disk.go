@@ -443,14 +443,14 @@ func DeleteDisk(c *gin.Context) {
 	}
 
 	// Retrieve volume from transport
-	_v := models.Transport.GetVolume(_d.GetVolume().UUID)
-	if _v == nil {
+	volume := models.Transport.GetVolume(_disk.VolumeUUID)
+	if volume == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
 	// Trigger delete process
-	errCode, err := models.Transport.DeleteDisk(_d, _v, constants.DELETION)
+	errCode, err := models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION)
 
 	if errCode != constants.SUCCESS {
 		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the disk failed: "+err.Error()))
