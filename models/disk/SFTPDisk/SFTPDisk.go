@@ -101,7 +101,7 @@ func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	// Remove remote file
 	err := client.Remove(downloadPath)
 	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot remove remote file:", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot remove remote file:", downloadPath, err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
