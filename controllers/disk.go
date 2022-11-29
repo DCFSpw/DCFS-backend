@@ -423,6 +423,7 @@ func UpdateDisk(c *gin.Context) {
 func DeleteDisk(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
+	var userUUID uuid.UUID
 	var err error
 
 	// Retrieve disk from database
@@ -431,6 +432,15 @@ func DeleteDisk(c *gin.Context) {
 	if err != nil {
 		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not find the disk with the provided UUID"))
+		return
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Verify that the user is owner of the volume
+	if userUUID != _disk.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Disk not found"))
 		return
 	}
 
