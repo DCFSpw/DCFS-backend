@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db"
@@ -10,7 +9,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http/httptest"
 	"sync"
@@ -274,26 +272,55 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	}
 
 	// Trigger delete process in all disks assigned to this volume
-	waitGroup, _ := errgroup.WithContext(context.Background())
+	var diskCount int = len(volume.disks)
+	var waitGroup sync.WaitGroup
+	var errorMutex sync.Mutex
+	var diskErrors []error = make([]error, diskCount)
 
+	waitGroup.Add(len(volume.disks))
+	log.Println(len(volume.disks))
+
+	var index int = 0
 	for _, disk := range volume.disks {
-		waitGroup.Go(func() error {
+		go func(i int, disk Disk) {
+			defer waitGroup.Done()
+
+			log.Println("Deleting disk no", i, "with UUID", disk.GetUUID())
 			errCode, err := transport.DeleteDisk(disk, volume, constants.DELETION)
 			if errCode != constants.SUCCESS {
-				return err
+				errorMutex.Lock()
+				diskErrors[i] = errors.New("Disk " + disk.GetName() + " deletion failed: " + err.Error())
+				errorMutex.Unlock()
 			}
 
-			return nil
-		})
+			return
+		}(index, disk)
+		index++
+	}
+	waitGroup.Wait()
+
+	// Check for disk deletion errors
+	var taskCompleted bool = true
+	var errorMessage string = ""
+	for i := 0; i < diskCount; i++ {
+		if diskErrors[i] != nil {
+			taskCompleted = false
+			errorMessage += diskErrors[i].Error() + " | "
+		}
 	}
 
-	err := waitGroup.Wait()
-	if err != nil {
-		return constants.OPERATION_FAILED, err
+	if taskCompleted == false {
+		return constants.OPERATION_FAILED, errors.New(errorMessage)
 	}
 
 	// Remove volume from transport
 	transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
+
+	// Remove files from volume's filesystem
+	result := db.DB.DatabaseHandle.Where("volume_uuid LIKE ?", volumeUUID).Delete(&dbo.File{})
+	if result.Error != nil {
+		return constants.DATABASE_ERROR, result.Error
+	}
 
 	return constants.SUCCESS, nil
 }
