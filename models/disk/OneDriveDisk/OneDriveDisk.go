@@ -241,17 +241,7 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
 	}
 
-	item, err := oneDriveClient.DriveItems.Get(blockMetadata.Ctx, response.Value[0].Id)
-	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not retrieve file data:", err.Error())
-	}
-
-	removeReq, err := oneDriveClient.NewRequest("DELETE", item.DownloadURL, nil)
-	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file remove request:", err.Error())
-	}
-
-	_, err = client.Do(removeReq.WithContext(blockMetadata.Ctx))
+	err = oneDriveClient.DriveItems.Delete(blockMetadata.Ctx, "", response.Value[0].Id)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not remove file:", err.Error())
 	}
