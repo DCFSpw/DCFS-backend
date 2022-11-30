@@ -528,9 +528,85 @@ func UpdateFile(c *gin.Context) {
 // return type:
 //   - API response with appropriate HTTP code
 func DeleteFile(c *gin.Context) {
-	// TODO: Implement deletion of the file
+	var fileUUID uuid.UUID
+	var userUUID uuid.UUID
+	var file *dbo.File
+	var errCode string
+
+	// Retrieve and validate fileUUID from param
+	fileUUID, err := uuid.Parse(c.Param("FileUUID"))
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
+		return
+	}
+
+	// Retrieve file from database
+	file, errCode = db.FileFromDatabase(fileUUID.String())
+	if file == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "File not found"))
+		return
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Verify that the user is owner of the file
+	if userUUID != file.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "File not found"))
+		return
+	}
+
+	// Retrieve volume from transport
+	volume = models.Transport.GetVolume(volumeUUID)
+	if volume == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
+		return
+	}
+
+	// Trigger delete process
+	errCode, err = models.Transport.DeleteVolume(volumeUUID)
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Volume deletion request failed: "+err.Error()))
+		return
+	}
+
+	// Delete volume from database
+	volumeDBO = volume.GetVolumeDBO()
+
+	result := db.DB.DatabaseHandle.Delete(&volumeDBO)
+	if result.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+		return
+	}
+
+	// Return volume data
 	logger.Logger.Debug("api", "DeleteFile endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
+}
+
+	// Prepare internal request data
+	bm := apicalls.BlockMetadata{
+		Ctx:              c,
+		FileUUID:         fileUUID,
+		UUID:             blockUUID,
+		Size:             0,
+		Status:           nil,
+		Content:          nil,
+		CompleteCallback: nil,
+	}
+
+	// Block the current file in the FileUploadQueue
+	err = models.Transport.FileDownloadQueue.MarkAsUsed(fileUUID)
+	if err != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
+		return
+	}
+
+	// Download block and return it via callback
+	errorWrapper := file.Download(&bm)
+	if errorWrapper != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
+	}
 }
 
 // InitFileDownloadRequest - handler for Init file download request

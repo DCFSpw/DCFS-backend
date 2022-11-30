@@ -332,9 +332,6 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool) (string, error) {
 	var blocks []dbo.Block
 
-	// Disattach disk from volume
-	volume.DeleteDisk(disk.GetUUID())
-
 	// Retrieve list of blocks on disk
 	dBErr := db.DB.DatabaseHandle.Where("disk_uuid = ?", disk.GetUUID()).Find(&blocks).Error
 	if dBErr != nil {
@@ -398,8 +395,8 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 		return constants.DATABASE_ERROR, dbErr
 	}
 
-	// Refresh volume partitioner after disk list change
-	go volume.RefreshPartitioner()
+	// Disattach disk from volume
+	volume.DeleteDisk(disk.GetUUID())
 
 	return constants.SUCCESS, nil
 }
