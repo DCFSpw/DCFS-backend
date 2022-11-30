@@ -422,6 +422,9 @@ func DeleteDisk(c *gin.Context) {
 		return
 	}
 
+	// Refresh volume partitioner after disk list change
+	go volume.RefreshPartitioner()
+
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
