@@ -1,7 +1,7 @@
 package db
 
 import (
-	"fmt"
+	"dcfs/util/logger"
 	"reflect"
 )
 
@@ -16,11 +16,12 @@ func (db *DatabaseConnection) MigrateAll() error {
 	for _, value := range db.Tables {
 		err := db.DatabaseHandle.AutoMigrate(value)
 		if err != nil {
-			fmt.Println("Failed to migrate the table: ", reflect.TypeOf(value).Name())
+			logger.Logger.Error("db", "Failed to migrate the table: ", reflect.TypeOf(value).Name())
 			return err
 		}
 	}
 
+	logger.Logger.Debug("db", "Successfully migrated all the tables to the db.")
 	return nil
 }
 
@@ -34,9 +35,10 @@ func (db *DatabaseConnection) Respawn() error {
 
 	err := db.MigrateAll()
 	if err != nil {
-		fmt.Println("Failed to migrate the tables into the database with error: ", err)
+		logger.Logger.Error("db", "Failed to migrate the tables into the database with error: ", err.Error())
 		return err
 	}
 
+	logger.Logger.Debug("db", "Successfully respawned the db.")
 	return nil
 }

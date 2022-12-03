@@ -8,6 +8,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"dcfs/util/logger"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -16,7 +17,6 @@ import (
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,21 +36,24 @@ func (d *GDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 
 	srv, err := drive.NewService(blockMetadata.Ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Printf("Unable to retrieve Drive client: %v", err)
+		logger.Logger.Error("disk", "Unable to retrieve the Google Drive client, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
 	}
 
 	fileCreate = srv.Files.
 		Create(&(drive.File{Name: blockMetadata.UUID.String()})).
 		Media(bytes.NewReader(*blockMetadata.Content)).
-		ProgressUpdater(func(now, size int64) { log.Printf("[%s] %d, %d\r", blockMetadata.UUID.String(), now, size) })
+		ProgressUpdater(func(now, size int64) {
+			logger.Logger.Debug("disk", "block upload: ", blockMetadata.UUID.String(), " progress: ", strconv.FormatInt(now, 10), "/", strconv.FormatInt(size, 10))
+		})
 	_, err = fileCreate.Do()
 	if err != nil {
-		log.Printf("Failed to upload block: %s, with err: %s", blockMetadata.UUID.String(), err.Error())
+		logger.Logger.Error("disk", "Failed to upload block: ", blockMetadata.UUID.String(), " with err: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Failed to upload block:", blockMetadata.UUID.String(), "with err:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	logger.Logger.Debug("disk", "Successfully uploaded the block: ", blockMetadata.UUID.String())
 	return nil
 }
 
@@ -61,7 +64,7 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 	srv, err := drive.NewService(blockMetadata.Ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Printf("Unable to retrieve Drive client: %v", err)
+		logger.Logger.Error("disk", "Unable to retrieve the Google Drive client, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
 	}
 
@@ -71,18 +74,18 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		Q(fmt.Sprintf("name = '%s'", blockMetadata.UUID.String())).
 		Do()
 	if err != nil {
-		log.Printf("unable to retreve files from gdrive: %s", err.Error())
+		logger.Logger.Error("disk", "Unable to retrieve files from Google Drive, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
 	}
 
 	if len(files.Files) == 0 {
-		log.Printf("file with the given blockUUID: %s not found on gdrive", blockMetadata.UUID.String())
+		logger.Logger.Debug("disk", "file with the given block uuid", blockMetadata.UUID.String(), " not found on the Google Drive.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "can't find the file with the given blockUUID: %s", blockMetadata.UUID.String())
 	}
 
 	rsp, err := srv.Files.Get(files.Files[0].Id).Download()
 	if err != nil {
-		log.Printf("download failed: %s", err.Error())
+		logger.Logger.Error("disk", "Download failed: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
 	}
 	defer func() { _ = rsp.Body.Close() }()
@@ -90,18 +93,20 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 	n, err := io.Copy(buf, rsp.Body)
 	if err != nil {
-		log.Printf("download failed: %s", err.Error())
+		logger.Logger.Error("disk", "Download failed: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
 	}
 
 	if n < blockMetadata.Size {
-		log.Printf("downloaded not enough bytes: %d", n)
+		logger.Logger.Error("disk", "Downloaded not enough bytes: ", strconv.FormatInt(n, 10))
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "downloaded not enough bytes:", fmt.Sprint(n), "out of:", strconv.FormatInt(blockMetadata.Size, 10))
 	}
 
 	block := buf.Bytes()[0:blockMetadata.Size]
 	blockMetadata.Content = &block
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully downloaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
@@ -172,21 +177,25 @@ func (d *GDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
 	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
 	if client == nil {
+		logger.Logger.Warning("disk", "Cannot authenticate to get the provider space.")
 		return 0, 0, constants.REMOTE_CANNOT_AUTHENTICATE
 	}
 
 	// Connect to the remote server
 	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
+		logger.Logger.Warning("disk", "Remote client unavailable")
 		return 0, 0, constants.REMOTE_CLIENT_UNAVAILABLE
 	}
 
 	// Get the disk stats from the remote server
 	about, err := srv.About.Get().Fields("storageQuota").Do()
 	if err != nil {
+		logger.Logger.Warning("disk", "Could not get the remote provider free space.")
 		return 0, 0, constants.REMOTE_CANNOT_GET_STATS
 	}
 
+	logger.Logger.Debug("disk", "Successfully obtained the Google Drive free space.")
 	return uint64(about.StorageQuota.Usage), uint64(about.StorageQuota.Limit), constants.SUCCESS
 }
 
@@ -222,13 +231,15 @@ func (d *GDriveDisk) Delete() (string, error) {
 func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/GDriveDisk/credentials.json")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		logger.Logger.Error("disk", "Unable to read client secret file: ", err.Error())
+		return nil
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, drive.DriveScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		logger.Logger.Error("disk", "Unable to parse client secret file to config: ", err.Error())
+		return nil
 	}
 
 	return config

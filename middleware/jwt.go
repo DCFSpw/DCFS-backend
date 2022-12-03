@@ -3,6 +3,7 @@ package middleware
 import (
 	"dcfs/constants"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -98,6 +99,7 @@ func Authenticate() gin.HandlerFunc {
 		// Get the JWT token from the header
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
+			logger.Logger.Error("middleware", "The request was unauthorized.")
 			c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_MISSING, "Unauthorized"))
 			c.Abort()
 			return
@@ -105,6 +107,7 @@ func Authenticate() gin.HandlerFunc {
 
 		// Check if the token is bearer token and if it is, remove the bearer part
 		if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
+			logger.Logger.Error("middleware", "The request was unauthorized.")
 			c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_NOT_BEARER, "Unauthorized"))
 			c.Abort()
 			return
@@ -114,6 +117,7 @@ func Authenticate() gin.HandlerFunc {
 		// Validate the token
 		claims, errCode := validateToken(tokenString)
 		if errCode != constants.SUCCESS {
+			logger.Logger.Error("middleware", "The request was unauthorized.")
 			c.JSON(401, responses.NewOperationFailureResponse(errCode, "Unauthorized"))
 			c.Abort()
 			return

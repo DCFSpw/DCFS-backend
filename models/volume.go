@@ -4,9 +4,11 @@ import (
 	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"dcfs/util/logger"
 	"github.com/google/uuid"
 	"log"
 	"math"
+	"strconv"
 )
 
 type Volume struct {
@@ -27,9 +29,11 @@ type Volume struct {
 //   - diskUUID uuid.UUID: UUID of the disk to be retrieved
 func (v *Volume) GetDisk(diskUUID uuid.UUID) Disk {
 	if v.disks == nil {
+		logger.Logger.Warning("volume", "Could not find the disk: ", diskUUID.String(), ".")
 		return nil
 	}
 
+	logger.Logger.Debug("volume", "Found a disk with the uuid: ", diskUUID.String(), ".")
 	return v.disks[diskUUID]
 }
 
@@ -44,6 +48,7 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 	}
 
 	v.disks[diskUUID] = _disk
+	logger.Logger.Debug("volume", "Added the disk: ", diskUUID.String(), " to the volume: ", v.UUID.String(), ".")
 }
 
 // DeleteDisk - remove disk from the volume
@@ -52,10 +57,12 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 //   - diskUUID uuid.UUID: UUID of the disk to be deleted from the volume
 func (v *Volume) DeleteDisk(diskUUID uuid.UUID) {
 	if v.disks == nil {
+		logger.Logger.Warning("volume", "There are no disks in the volume: ", v.UUID.String(), ".")
 		return
 	}
 
 	delete(v.disks, diskUUID)
+	logger.Logger.Debug("volume", "Successfully deleted the disk: ", diskUUID.String(), " from the volume: ", v.UUID.String(), ".")
 }
 
 // FileUploadRequest - handle initial request for uploading file to the volume
@@ -94,7 +101,7 @@ func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, user
 		var block *Block = NewBlock(uuid.New(), userUUID, f, v.partitioner.AssignDisk(currentSize), currentSize, "", constants.BLOCK_STATUS_QUEUED, i)
 		_f.Blocks[block.UUID] = block
 
-		log.Println("Block ", i, " assigned to", block.Disk.GetName())
+		logger.Logger.Debug("disk", "Block ", strconv.Itoa(i), " assigned to", block.Disk.GetName())
 	}
 
 	return *_f

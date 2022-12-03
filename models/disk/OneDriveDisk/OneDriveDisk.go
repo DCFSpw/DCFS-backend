@@ -9,6 +9,7 @@ import (
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/goh-chunlin/go-onedrive/onedrive"
@@ -17,7 +18,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"io"
-	"log"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +36,7 @@ type OneDriveDisk struct {
 func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
+		logger.Logger.Debug("disk", "Could not connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -48,19 +49,22 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 	ft, err := filetype.Match(*blockMetadata.Content)
 	if err != nil {
-		log.Printf("[OneDrive upload] file %s is corrupted", blockMetadata.FileUUID.String())
+		logger.Logger.Error("disk", "Block: ", blockMetadata.UUID.String(), " is corrupted and can't be uploaded.")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "file is corrupted")
 	}
 
 	if size <= constants.ONEDRIVE_SIZE_LIMIT {
 		// fast upload
 		req, err := oneDriveClient.NewFileUploadRequest(apiURL+":/content?@microsoft.graph.conflictBehavior=rename", ft.MIME.Value, bytes.NewReader(*blockMetadata.Content))
 		if err != nil {
+			logger.Logger.Error("disk", "Could not create a file upload request: ", err.Error(), ".")
 			return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload request:", err.Error())
 		}
 
 		var response *onedrive.DriveItem
 		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 		if err != nil {
+			logger.Logger.Error("disk", "Could not sent the file: ", err.Error(), ".")
 			return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 		}
 	} else {
@@ -71,12 +75,14 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		req, err := http.NewRequest("POST", url.String(), nil)
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
+			logger.Logger.Error("disk", "Could not create a file upload session: ", err.Error(), ".")
 			return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload session:", err.Error())
 		}
 
 		var response *responses.CreateUploadSessionResponse
 		err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 		if err != nil {
+			logger.Logger.Error("disk", "Could not send file: ", err.Error())
 			return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 		}
 
@@ -95,6 +101,7 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 			request.Header.Set("Content-Length", strconv.Itoa(upperBound-i))
 			request.Header.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", i, upperBound-1, len(*blockMetadata.Content)))
 			if err != nil {
+				logger.Logger.Error("disk", "Could not create a file upload request: ", err.Error(), ".")
 				return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file upload request:", err.Error())
 			}
 
@@ -102,12 +109,14 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 				rsp := responses.UploadSessionResponse{}
 				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
 				if err != nil {
+					logger.Logger.Error("disk", "Could not send file: ", err.Error())
 					return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 				}
 			} else {
 				rsp := responses.UploadSessionFinalResponse{}
 				err = oneDriveClient.Do(blockMetadata.Ctx, request, false, &rsp)
 				if err != nil {
+					logger.Logger.Error("disk", "Could not send file: ", err.Error())
 					return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not send file:", err.Error())
 				}
 			}
@@ -115,6 +124,7 @@ func (d *OneDriveDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	logger.Logger.Debug("disk", "Successfully uploaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
@@ -131,6 +141,7 @@ type oneDriveSearchResponse struct {
 func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the OneDrive server")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -140,36 +151,43 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 
 	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
 	if err != nil {
+		logger.Logger.Error("disk", "Could not create a file search request: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
 	}
 
 	var response oneDriveSearchResponse = oneDriveSearchResponse{}
 	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 	if err != nil {
+		logger.Logger.Error("disk", "Could not find the file: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file:", err.Error())
 	}
 
 	if len(response.Value) > 1 {
+		logger.Logger.Error("disk", "Block hierarchy corrupted.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Block hierarchy corrupted")
 	}
 
 	if len(response.Value) == 0 {
+		logger.Logger.Error("disk", "Could not find the file.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
 	}
 
 	item, err := oneDriveClient.DriveItems.Get(blockMetadata.Ctx, response.Value[0].Id)
 	if err != nil {
+		logger.Logger.Error("disk", "Could not download file: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not download file:", err.Error())
 	}
 
 	downloadReq, err := oneDriveClient.NewRequest("GET", item.DownloadURL, nil)
 	if err != nil {
+		logger.Logger.Error("disk", "Could not create a file download request: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file download request:", err.Error())
 	}
 
 	var downloadRsp *http.Response
 	downloadRsp, err = client.Do(downloadReq.WithContext(blockMetadata.Ctx))
 	if err != nil {
+		logger.Logger.Error("disk", "Could not download file: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not download file:", err.Error())
 	}
 	defer func() { _ = downloadRsp.Body.Close() }()
@@ -177,18 +195,20 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 
 	n, err := io.Copy(buf, downloadRsp.Body)
 	if err != nil {
-		log.Printf("download failed: %s", err.Error())
+		logger.Logger.Error("disk", "Download failed: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "download failed:", err.Error())
 	}
 
 	if n < blockMetadata.Size {
-		log.Printf("downloaded not enough bytes: %d", n)
+		logger.Logger.Error("disk", "downloaded not enough bytes: ", strconv.FormatInt(n, 10), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "downloaded not enough bytes:", fmt.Sprint(n), "out of:", strconv.FormatInt(blockMetadata.Size, 10))
 	}
 
 	block := buf.Bytes()[0:blockMetadata.Size]
 	blockMetadata.Content = &block
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully downloaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
@@ -258,6 +278,7 @@ func (d *OneDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	// Authenticate to the remote server
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not authenticate to get the remote provider free space.")
 		return 0, 0, constants.REMOTE_CANNOT_AUTHENTICATE
 	}
 
@@ -269,9 +290,11 @@ func (d *OneDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	data, err := oneDriveClient.Drives.List(ctx)
 
 	if err != nil || len(data.Drives) == 0 {
+		logger.Logger.Error("disk", "Could not get the stats of a remote provider.")
 		return 0, 0, constants.REMOTE_CANNOT_GET_STATS
 	}
 
+	logger.Logger.Debug("disk", "Successfully obtained the remote provider stats.")
 	return uint64(data.Drives[0].Quota.Used), uint64(data.Drives[0].Quota.Total), constants.SUCCESS
 }
 
@@ -307,15 +330,18 @@ func (d *OneDriveDisk) Delete() (string, error) {
 func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	b, err := os.ReadFile("./models/disk/OneDriveDisk/credentials.json")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		logger.Logger.Error("disk", "Unable to read the client secret file: ", err.Error())
+		return nil
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, "files.readwrite", "wl.offline_access")
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		logger.Logger.Error("disk", "Unable to parse client secret file to config: ", err.Error(), ".")
+		return nil
 	}
 
+	logger.Logger.Debug("disk", "Successfully got config of to the OneDrive provider.")
 	return config
 }
 

@@ -4,9 +4,11 @@ import (
 	"dcfs/constants"
 	"dcfs/db"
 	"dcfs/db/dbo"
+	"dcfs/util/logger"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -30,19 +32,23 @@ func NewConcurrentInstances() *ConcurrentInstances {
 
 func (instances *ConcurrentInstances) updateCounter(key uuid.UUID) {
 	instances.Instances[key].Counter++
+	logger.Logger.Debug("transport", "The counter of the instance", key.String(), " has been updated, it is now at: ", strconv.FormatInt(instances.Instances[key].Counter, 10), ".")
 
 	time.AfterFunc(Transport.WaitTime, func() {
 		instances.InstanceMutex.Lock()
 		defer instances.InstanceMutex.Unlock()
 
 		if instances.Instances == nil || instances.Instances[key] == nil {
+			logger.Logger.Warning("transport", "The instance: ", key.String(), " was not present in the collection.")
 			return
 		}
 
 		instances.Instances[key].Counter--
+		logger.Logger.Debug("transport", "Decreased the counter of the instance: ", key.String(), " to: ", strconv.FormatInt(instances.Instances[key].Counter, 10), ".")
 
 		if instances.Instances[key].Counter <= 0 {
 			delete(instances.Instances, key)
+			logger.Logger.Debug("transport", "Deleted the instance: ", key.String(), " from Transport.")
 		}
 	})
 }
@@ -61,10 +67,12 @@ func (instances *ConcurrentInstances) MarkAsUsed(key uuid.UUID) error {
 
 	var container *InstanceContainer = instances.Instances[key]
 	if container == nil {
+		logger.Logger.Error("transport", "An instance with the UUID: ", key.String(), " is not enqueued.")
 		return errors.New(fmt.Sprintf("instance with UUID: %s is not enqueued", key.String()))
 	}
 
 	container.Counter++
+	logger.Logger.Debug("transport", "The instance: ", key.String(), " has been marked used, the counter is: ", strconv.FormatInt(container.Counter, 10), ".")
 	return nil
 }
 
@@ -82,12 +90,16 @@ func (instances *ConcurrentInstances) MarkAsCompleted(key uuid.UUID) {
 
 		var container *InstanceContainer = instances.Instances[key]
 		if container == nil {
+			logger.Logger.Warning("transport", "The instance: ", key.String(), " has been deleted previously.")
 			return
 		}
 
 		container.Counter--
+		logger.Logger.Debug("transport", "Decreased the counter of the instance: ", key.String(), " it now is at: ", strconv.FormatInt(container.Counter, 10), ".")
+
 		if container.Counter <= 0 {
 			delete(instances.Instances, key)
+			logger.Logger.Debug("transport", "Deleted the instance: ", key.String(), ".")
 		}
 	})
 }
@@ -112,6 +124,8 @@ func (instances *ConcurrentInstances) EnqueueInstance(key uuid.UUID, instance in
 
 	instances.Instances[key] = container
 	instances.updateCounter(key)
+
+	logger.Logger.Debug("transport", "Successfully enqueued the instance: ", key.String(), ".")
 }
 
 // GetEnqueuedInstance - gets the enqueued instance.
@@ -123,10 +137,12 @@ func (instances *ConcurrentInstances) GetEnqueuedInstance(key uuid.UUID) interfa
 	defer instances.InstanceMutex.Unlock()
 
 	if instances.Instances == nil {
+		logger.Logger.Warning("transport", "There is no instance: ", key.String(), " enqueued.")
 		return nil
 	}
 
 	if instances.Instances[key] == nil {
+		logger.Logger.Warning("transport", "There is no instance: ", key.String(), " enqueued.")
 		return nil
 	}
 
@@ -142,10 +158,12 @@ func (instances *ConcurrentInstances) RemoveEnqueuedInstance(key uuid.UUID) {
 	defer instances.InstanceMutex.Unlock()
 
 	if instances.Instances == nil {
+		logger.Logger.Warning("transport", "There is no instance: ", key.String(), " enqueued.")
 		return
 	}
 
 	delete(instances.Instances, key)
+	logger.Logger.Debug("transport", "Successfully deleted the instance: ", key.String(), ".")
 }
 
 type transport struct {
@@ -167,6 +185,7 @@ func (transport *transport) VolumeKeepAlive(volumeUUID uuid.UUID) {
 	defer transport.ActiveVolumes.InstanceMutex.Unlock()
 
 	_ = transport.getVolumeContainer(volumeUUID)
+	logger.Logger.Debug("transport", "Volume: ", volumeUUID.String(), " kept alive.")
 }
 
 // GetVolume - gets the volume handle from the ActiveVolumes instance array.
@@ -179,9 +198,11 @@ func (transport *transport) GetVolume(volumeUUID uuid.UUID) *Volume {
 
 	c := transport.getVolumeContainer(volumeUUID).Instance
 	if c == nil {
+		logger.Logger.Warning("transport", "Could not find a Volume with the uuid: ", volumeUUID.String(), " enqueued.")
 		return nil
 	}
 
+	logger.Logger.Debug("transport", "Found the volume: ", volumeUUID.String(), ".")
 	return c.(*Volume)
 }
 
@@ -201,6 +222,7 @@ func (transport *transport) GetVolumes(userUUID uuid.UUID) []*Volume {
 		rsp = append(rsp, transport.getVolumeContainer(volume.UUID).Instance.(*Volume))
 	}
 
+	logger.Logger.Debug("transport", "Found ", strconv.Itoa(len(rsp)), " volumes for the user: ", userUUID.String(), ".")
 	return rsp
 }
 
@@ -212,6 +234,7 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	for _, instance := range transport.FileUploadQueue.Instances {
 		for _, block := range instance.Instance.(File).GetBlocks() {
 			if block.Disk != nil && block.Disk.GetUUID() == diskUUID {
+				logger.Logger.Debug("transport", "Found the disk: ", block.Disk.GetUUID().String(), " enqueued.")
 				return block.Disk
 			}
 		}
@@ -220,11 +243,13 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 	for _, instance := range transport.FileDownloadQueue.Instances {
 		for _, block := range instance.Instance.(File).GetBlocks() {
 			if block.Disk != nil && block.Disk.GetUUID() == diskUUID {
+				logger.Logger.Debug("transport", "Found the disk: ", block.Disk.GetUUID().String(), " enqueued.")
 				return block.Disk
 			}
 		}
 	}
 
+	logger.Logger.Warning("transport", "Could not find a disk with the UUID: ", diskUUID.String(), " enqueued.")
 	return nil
 }
 
@@ -237,6 +262,7 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 		for _, block := range instance.Instance.(File).GetBlocks() {
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
+				logger.Logger.Debug("transport", "Found a volume: ", volumeUUID.String(), " enqueued.")
 				return volume
 			}
 		}
@@ -246,11 +272,13 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 		for _, block := range instance.Instance.(File).GetBlocks() {
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
+				logger.Logger.Debug("transport", "Found a volume: ", volumeUUID.String(), " enqueued.")
 				return volume
 			}
 		}
 	}
 
+	logger.Logger.Warning("transport", "Did not find any volumes with uuid: ", volumeUUID.String(), " enqueued.")
 	return nil
 }
 
@@ -267,6 +295,7 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	// Retrieve volume from transport
 	volume = Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("transport", "Volume: ", volumeUUID.String(), " not found in the transport layer.")
 		return constants.TRANSPORT_VOLUME_NOT_FOUND, errors.New("Volume not found in transport layer")
 	}
 
@@ -274,6 +303,7 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	for _, disk := range volume.disks {
 		errCode, err = disk.Delete()
 		if err != nil {
+			logger.Logger.Error("transport", "Could not delete the disk: ", disk.GetUUID().String(), ".")
 			return errCode, err
 		}
 	}
@@ -281,6 +311,7 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	// Remove volume from transport
 	transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
 
+	logger.Logger.Debug("transport", "Successfully removed the volume: ", volumeUUID.String(), " from Transport.")
 	return constants.SUCCESS, nil
 }
 
@@ -304,6 +335,7 @@ func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceCo
 		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
 		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
 		if _volume.UUID != volumeUUID {
+			logger.Logger.Warning("transport", "Could not find a volume: ", volumeUUID.String(), " in the db.")
 			return &InstanceContainer{Instance: nil}
 		}
 
@@ -314,6 +346,7 @@ func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceCo
 	transport.ActiveVolumes.Instances[volumeUUID] = container
 	transport.ActiveVolumes.updateCounter(volumeUUID)
 
+	logger.Logger.Debug("transport", "Successfully enqueued the volume: ", volumeUUID.String(), " in Transport.")
 	return container
 }
 
