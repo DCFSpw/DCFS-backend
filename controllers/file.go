@@ -530,7 +530,9 @@ func UpdateFile(c *gin.Context) {
 func DeleteFile(c *gin.Context) {
 	var fileUUID uuid.UUID
 	var userUUID uuid.UUID
-	var file *dbo.File
+	var _file *dbo.File
+	var file models.File
+	var volume *models.Volume
 	var errCode string
 
 	// Retrieve and validate fileUUID from param
@@ -541,8 +543,8 @@ func DeleteFile(c *gin.Context) {
 	}
 
 	// Retrieve file from database
-	file, errCode = db.FileFromDatabase(fileUUID.String())
-	if file == nil {
+	_file, errCode = db.FileFromDatabase(fileUUID.String())
+	if _file == nil {
 		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "File not found"))
 		return
 	}
@@ -551,33 +553,43 @@ func DeleteFile(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Verify that the user is owner of the file
-	if userUUID != file.UserUUID {
+	if userUUID != _file.UserUUID {
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "File not found"))
 		return
 	}
 
-	// Retrieve volume from transport
-	//volume = models.Transport.GetVolume(volumeUUID)
-	//if volume == nil {
-	//	c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
-	//	return
-	//   }
+	// Trigger appropriate action for each type of file
+	if _file.Type == constants.FILE_TYPE_DIRECTORY {
+		// Verify that the directory is empty
+		empty, err := db.IsDirectoryEmpty(_file.UUID)
+		if empty && err == nil {
+			result := db.DB.DatabaseHandle.Delete(&_file)
+			if result.Error != nil {
+				c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+				return
+			}
+		} else {
+			c.JSON(400, responses.NewOperationFailureResponse(constants.FS_DIRECTORY_NOT_EMPTY, "Directory is not empty"))
+			return
+		}
+	} else {
+		// Generate file model
+		file = models.NewFileFromDBO(_file)
 
-	// Trigger delete process
-	//errCode, err = models.Transport.DeleteVolume(volumeUUID)
-	//if err != nil {
-	//	c.JSON(500, responses.NewOperationFailureResponse(errCode, "Volume deletion request failed: "+err.Error()))
-	//	return
-	//}
+		// Retrieve volume from transport
+		volume = models.Transport.GetVolume(_file.VolumeUUID)
+		if volume == nil {
+			c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found."))
+			return
+		}
 
-	// Delete volume from database
-	//volumeDBO = volume.GetVolumeDBO()
-
-	//result := db.DB.DatabaseHandle.Delete(&volumeDBO)
-	//if result.Error != nil {
-	//	c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
-	//	return
-	//}
+		// Trigger delete process
+		errCode, err = models.Transport.DeleteFile(file, volume)
+		if err != nil {
+			c.JSON(500, responses.NewOperationFailureResponse(errCode, "File deletion request failed: "+err.Error()))
+			return
+		}
+	}
 
 	// Return volume data
 	logger.Logger.Debug("api", "DeleteFile endpoint successful exit.")

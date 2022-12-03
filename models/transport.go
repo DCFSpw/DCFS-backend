@@ -401,6 +401,70 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 	return constants.SUCCESS, nil
 }
 
+func (transport *transport) DeleteFile(file File, volume *Volume) (string, error) {
+	// Retrieve blocks of file
+	var blocks = file.GetBlocks()
+
+	// Delete file's blocks from respective disks
+	var waitGroup sync.WaitGroup
+	var taskCompleted bool = true
+
+	waitGroup.Add(len(blocks))
+
+	for _, block := range blocks {
+		go func(block Block) {
+			log.Println("Deleting block", block.UUID)
+			defer waitGroup.Done()
+
+			// Prepare test context
+			writer := httptest.NewRecorder()
+			_ctx, _ := gin.CreateTestContext(writer)
+
+			// Prepare apicall metadata
+			var status int
+			var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
+			blockMetadata.Ctx = _ctx
+			blockMetadata.FileUUID = uuid.Nil
+			blockMetadata.Content = nil
+			blockMetadata.UUID = block.UUID
+			blockMetadata.Size = int64(block.Size)
+			blockMetadata.Status = &status
+			blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
+			}
+
+			// Delete block from current disk
+			var result *apicalls.ErrorWrapper
+
+			result = volume.GetDisk(block.Disk.GetUUID()).Remove(blockMetadata)
+			if result != nil {
+				taskCompleted = false
+				return
+			}
+
+			// Remove block from database
+			dBErr := db.DB.DatabaseHandle.Delete(&dbo.Block{}, block.UUID).Error
+			if dBErr != nil {
+				taskCompleted = false
+				return
+			}
+
+			return
+		}(*block)
+	}
+	waitGroup.Wait()
+	if taskCompleted != true {
+		return constants.OPERATION_FAILED, errors.New("Failed to delete blocks from disk")
+	}
+
+	// Remove file from database
+	dbErr := db.DB.DatabaseHandle.Delete(&dbo.File{}, file.GetUUID()).Error
+	if dbErr != nil {
+		return constants.DATABASE_ERROR, dbErr
+	}
+
+	return constants.SUCCESS, nil
+}
+
 /* private methods */
 
 func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceContainer {
