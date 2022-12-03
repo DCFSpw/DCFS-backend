@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"strconv"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -290,8 +290,12 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 
 // DeleteVolume - deletes the given volume, its disks and removes it from the ActiveVolumes array.
 //
-// fields:
-//   - volumeUUID
+// params:
+//   - volumeUUID uuid.UUID: uuid of the volume to be deleted
+//
+// return type:
+//   - errorCode string: constant.SUCCESS if password match, error code otherwise
+//   - error error: nil if operation was successful, error otherwise
 func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	var volume *Volume
 
@@ -329,6 +333,16 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	return constants.SUCCESS, nil
 }
 
+// DeleteDisk - deletes the given disk, its contents (blocks) and disattaches it from the volume.
+//
+// params:
+//   - disk models.Disk: target disk to be deleted
+//   - volume *models.Volume: volume to which the disk belongs
+//   - deletionType constants.DeletionType: type of operation (deletion of blocks or relocation to another disk)
+//
+// return type:
+//   - errorCode string: constant.SUCCESS if password match, error code otherwise
+//   - error error: nil if operation was successful, error otherwise
 func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool) (string, error) {
 	var blocks []dbo.Block
 
@@ -401,6 +415,15 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 	return constants.SUCCESS, nil
 }
 
+// DeleteFile - deletes the given file and its contents blocks.
+//
+// params:
+//   - file models.File: target file to be deleted
+//   - volume *models.Volume: volume to which the disk belongs
+//
+// return type:
+//   - errorCode string: constant.SUCCESS if password match, error code otherwise
+//   - error error: nil if operation was successful, error otherwise
 func (transport *transport) DeleteFile(file File, volume *Volume) (string, error) {
 	// Retrieve blocks of file
 	var blocks = file.GetBlocks()
