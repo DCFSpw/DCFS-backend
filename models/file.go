@@ -7,6 +7,7 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/requests"
 	"dcfs/util/logger"
+	"dcfs/utils"
 	"fmt"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -387,8 +388,11 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 	block.Status = constants.BLOCK_STATUS_QUEUED
 	rsp := block.Disk.Download(blockMetadata)
 
+	// verify integrity of the downloaded block
+	checksum := utils.CalculateChecksum(*blockMetadata.Content)
+
 	// the file should be deleted from the download queue after 6 minutes, or after the last block gets transferred
-	if rsp != nil {
+	if rsp != nil || checksum != block.Checksum {
 		// release the blocked file if download failed
 		Transport.FileDownloadQueue.MarkAsCompleted(blockMetadata.UUID)
 	}
@@ -546,10 +550,18 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				},
 			}
 
+			var checksum string
 			errWrapper := _b.Disk.Download(bm)
+			if errWrapper == nil {
+				checksum = utils.CalculateChecksum(*bm.Content)
+				log.Println("Downloaded block", _b.UUID, "with checksum", checksum, "and real checksum", _b.Checksum)
+			}
 			if errWrapper != nil {
 				// one retry
 				errWrapper = _b.Disk.Download(bm)
+				if errWrapper == nil {
+					checksum = utils.CalculateChecksum(*bm.Content)
+				}
 				if errWrapper != nil {
 					fail = true
 					return
