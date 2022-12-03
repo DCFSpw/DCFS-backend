@@ -67,7 +67,7 @@ func NewBlockFromDBO(_block *dbo.Block) *Block {
 		File:     nil,
 		Disk:     nil,
 		Size:     _block.Size,
-		Checksum: "",
+		Checksum: _block.Checksum,
 		Status:   0,
 		Order:    _block.Order,
 	}

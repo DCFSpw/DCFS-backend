@@ -9,6 +9,7 @@ import (
 	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/checksum"
 	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -409,6 +410,9 @@ func UploadBlock(c *gin.Context) {
 		return
 	}
 
+	// Calculate block checksum
+	file.Blocks[blockUUID].Checksum = checksum.CalculateChecksum(contents)
+
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
 	if errorWrapper != nil {
@@ -654,6 +658,7 @@ func DownloadBlock(c *gin.Context) {
 		Status:           nil,
 		Content:          nil,
 		CompleteCallback: nil,
+		Checksum:         file.GetBlocks()[blockUUID].Checksum,
 	}
 
 	// Block the current file in the FileUploadQueue
@@ -763,6 +768,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 			DiskUUID:   _block.Disk.GetUUID(),
 			Size:       _block.Size,
 			Order:      _block.Order,
+			Checksum:   _block.Checksum,
 		})
 
 		if result.Error != nil {

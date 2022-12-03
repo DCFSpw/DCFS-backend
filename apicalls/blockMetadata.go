@@ -11,6 +11,7 @@ type BlockMetadata struct {
 	UUID     uuid.UUID
 	Size     int64
 	Status   *int
+	Checksum string
 
 	Content *[]uint8
 

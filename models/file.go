@@ -6,6 +6,7 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"dcfs/util/checksum"
 	"dcfs/util/logger"
 	"fmt"
 	"github.com/google/uuid"
@@ -387,8 +388,11 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 	block.Status = constants.BLOCK_STATUS_QUEUED
 	rsp := block.Disk.Download(blockMetadata)
 
+	// verify integrity of the downloaded block
+	checksum := checksum.CalculateChecksum(*blockMetadata.Content)
+
 	// the file should be deleted from the download queue after 6 minutes, or after the last block gets transferred
-	if rsp != nil {
+	if rsp != nil || checksum != block.Checksum {
 		// release the blocked file if download failed
 		Transport.FileDownloadQueue.MarkAsCompleted(blockMetadata.UUID)
 	}
@@ -546,10 +550,27 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				},
 			}
 
+			var _checksum string
 			errWrapper := _b.Disk.Download(bm)
+			if errWrapper == nil {
+				_checksum = checksum.CalculateChecksum(*bm.Content)
+				if _checksum != _b.Checksum {
+					logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+					fail = true
+					return
+				}
+			}
 			if errWrapper != nil {
 				// one retry
 				errWrapper = _b.Disk.Download(bm)
+				if errWrapper == nil {
+					_checksum = checksum.CalculateChecksum(*bm.Content)
+					if _checksum != _b.Checksum {
+						logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+						fail = true
+						return
+					}
+				}
 				if errWrapper != nil {
 					fail = true
 					return
