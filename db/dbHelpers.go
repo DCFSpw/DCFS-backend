@@ -3,6 +3,7 @@ package db
 import (
 	"dcfs/constants"
 	"dcfs/db/dbo"
+	"dcfs/util/logger"
 	"github.com/google/uuid"
 )
 
@@ -19,9 +20,11 @@ func UserFromDatabase(uuid uuid.UUID) (*dbo.User, string) {
 
 	result := DB.DatabaseHandle.Where("uuid = ?", uuid).First(&user)
 	if result.Error != nil {
+		logger.Logger.Warning("db", "Could not find a user with the provided uuid: ", uuid.String(), " in the db.")
 		return nil, constants.DATABASE_USER_NOT_FOUND
 	}
 
+	logger.Logger.Debug("db", "Found a user with the uuid: ", uuid.String(), " in the db.")
 	return user, constants.SUCCESS
 }
 
@@ -38,9 +41,11 @@ func VolumeFromDatabase(uuid string) (*dbo.Volume, string) {
 
 	result := DB.DatabaseHandle.Where("uuid = ?", uuid).First(&volume)
 	if result.Error != nil {
+		logger.Logger.Warning("db", "Could not find a volume with the provided uuid: ", uuid, " in the db.")
 		return nil, constants.DATABASE_VOLUME_NOT_FOUND
 	}
 
+	logger.Logger.Debug("db", "Found a volume with the uuid: ", uuid, " in the db.")
 	return volume, constants.SUCCESS
 }
 
@@ -57,9 +62,11 @@ func FileFromDatabase(uuid string) (*dbo.File, string) {
 
 	result := DB.DatabaseHandle.Where("uuid = ?", uuid).First(&file)
 	if result.Error != nil {
+		logger.Logger.Warning("db", "Could not find a file with the uuid: ", uuid, " in the db.")
 		return nil, constants.DATABASE_FILE_NOT_FOUND
 	}
 
+	logger.Logger.Debug("db", "Found a file with the provided uuid: ", uuid, " in the db.")
 	return file, constants.SUCCESS
 }
 
@@ -76,9 +83,11 @@ func BlocksFromDatabase(fileUUID string) ([]*dbo.Block, string) {
 
 	err := DB.DatabaseHandle.Where("file_uuid = ?", fileUUID).Find(&blocks).Error
 	if err != nil {
+		logger.Logger.Warning("db", "Could not find a block with the provided uuid: ", fileUUID, " in the db.")
 		return nil, constants.DATABASE_ERROR
 	}
 
+	logger.Logger.Debug("db", "Found a block with the uuid: ", fileUUID, " in the db.")
 	return blocks, constants.SUCCESS
 }
 
@@ -93,6 +102,12 @@ func BlocksFromDatabase(fileUUID string) ([]*dbo.Block, string) {
 func IsVolumeEmpty(uuid uuid.UUID) (bool, error) {
 	var blockCount int64
 	err := DB.DatabaseHandle.Model(&dbo.Block{}).Where("volume_uuid = ?", uuid).Count(&blockCount).Error
+
+	if err != nil {
+		logger.Logger.Warning("db", "Could not find a volume with the provided uuid: ", uuid.String(), " in the db.")
+	}
+
+	logger.Logger.Debug("db", "Found a volume with the uuid: ", uuid.String(), " in the db.")
 	return blockCount == 0, err
 }
 
@@ -115,27 +130,33 @@ func ValidateRootDirectory(rootUUID uuid.UUID, volumeUUID uuid.UUID) string {
 
 	// Check if the root directory refers to volume's root directory
 	if rootUUID == uuid.Nil {
+		logger.Logger.Debug("db", "The provided directory is a root directory.")
 		return constants.SUCCESS
 	}
 
 	// Check if the root directory exists
 	rootDirectory, errCode := FileFromDatabase(rootUUID.String())
 	if errCode != constants.SUCCESS {
+		logger.Logger.Warning("db", "Could not retrieve the root directory from the db with the error: ", errCode)
 		return errCode
 	} else if rootDirectory == nil {
+		logger.Logger.Warning("db", "Could not find the root directory in the db.")
 		return constants.DATABASE_FILE_NOT_FOUND
 	}
 
 	// Check if root directory belongs to the provided volume
 	if rootDirectory.VolumeUUID != volumeUUID {
+		logger.Logger.Warning("db", "The provided directory is not the root directory of this volume.")
 		return constants.FS_VOLUME_MISMATCH
 	}
 
 	// Check if root directory is a directory
 	if rootDirectory.Type != constants.FILE_TYPE_DIRECTORY {
+		logger.Logger.Warning("db", "The root directory is not a directory - possible db failure.")
 		return constants.FS_FILE_TYPE_MISMATCH
 	}
 
+	logger.Logger.Debug("db", "The provided directory is a root directory.")
 	return constants.SUCCESS
 }
 
@@ -154,6 +175,7 @@ func ValidateRootDirectory(rootUUID uuid.UUID, volumeUUID uuid.UUID) string {
 //   - string: completion code
 func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
 	var path []dbo.PathEntry = make([]dbo.PathEntry, 0)
+	var _path string = ""
 
 	// Iterate through file's path to root directory of the volume
 	for rootUUID != uuid.Nil {
@@ -162,6 +184,7 @@ func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
 		// Retrieve parent directory from database
 		result := DB.DatabaseHandle.Where("uuid = ?", rootUUID).First(&parent)
 		if result.Error != nil {
+			logger.Logger.Error("db", "Could not find the root file with the uuid: ", rootUUID.String(), " from the db.")
 			return nil, constants.DATABASE_ERROR
 		}
 
@@ -170,10 +193,12 @@ func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
 			UUID: parent.UUID,
 			Name: parent.Name,
 		})
+		_path = "/" + _path + parent.Name
 
 		// Move to parent directory
 		rootUUID = parent.RootUUID
 	}
 
+	logger.Logger.Debug("db", "Successfully generated a path: ", _path, " for a rootUUID: ", rootUUID.String())
 	return path, constants.SUCCESS
 }

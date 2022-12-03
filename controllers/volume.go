@@ -8,8 +8,10 @@ import (
 	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"strconv"
 )
 
 // CreateVolume - handler for Create volume request
@@ -29,12 +31,14 @@ func CreateVolume(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not find the user in the db.")
 		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -45,6 +49,7 @@ func CreateVolume(c *gin.Context) {
 	// Save volume to database
 	result := db.DB.DatabaseHandle.Create(&volume)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the newly created volume in the db. Got err: ", result.Error.Error())
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
@@ -52,6 +57,7 @@ func CreateVolume(c *gin.Context) {
 	// Initiate volume in transport
 	_ = models.Transport.GetVolume(volume.UUID)
 
+	logger.Logger.Debug("api", "CreateVolume endpoint successful exit.")
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
@@ -79,17 +85,20 @@ func GetVolume(c *gin.Context) {
 	// Retrieve volume from database
 	volume, dbErr := db.VolumeFromDatabase(volumeUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "A volume with the provided uuid: ", volumeUUID, " was not found in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "Volume not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != volume.UserUUID {
+		logger.Logger.Error("api", "The user: ", userUUID.String(), " is not the owner of the volume: ", volumeUUID)
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
 
 	// Return volume data
+	logger.Logger.Debug("api", "GetVolume endpoint successful exit.")
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
 }
 
@@ -114,6 +123,7 @@ func UpdateVolume(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -121,6 +131,7 @@ func UpdateVolume(c *gin.Context) {
 	// Retrieve volumeUUID from path parameters
 	volumeUUID, err = uuid.Parse(c.Param("VolumeUUID"))
 	if err != nil {
+		logger.Logger.Error("api", "Wrong volume uuid.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.VAL_UUID_INVALID, "Volume not found (invalid UUID)"))
 		return
 	}
@@ -131,12 +142,14 @@ func UpdateVolume(c *gin.Context) {
 	// Retrieve volume from transport
 	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "A volume with the provided uuid: ", volumeUUID.String(), " was not found.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != volume.UserUUID {
+		logger.Logger.Error("The user: ", userUUID.String(), " is not the owner of the volume: ", volumeUUID.String())
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
@@ -144,12 +157,15 @@ func UpdateVolume(c *gin.Context) {
 	// Update volume data
 	volume.Name = requestBody.Name
 	volume.VolumeSettings.FilePartition = requestBody.Settings.FilePartition
+	logger.Logger.Debug("api", "Updated name to: ", requestBody.Name, ",  partitioning settings to: ", strconv.Itoa(requestBody.Settings.FilePartition), " of the volume: ", volumeUUID.String(), ".")
 
 	// Update options for empty volume
 	empty, err := db.IsVolumeEmpty(volume.UUID)
 	if empty && err == nil {
 		volume.VolumeSettings.Backup = requestBody.Settings.Backup
 		volume.VolumeSettings.Encryption = requestBody.Settings.Encryption
+
+		logger.Logger.Debug("api", "Updated backup to: ", strconv.Itoa(requestBody.Settings.Backup), ", encryption to: ", strconv.Itoa(requestBody.Settings.Encryption), " of the volume: ", volumeUUID.String(), ".")
 	}
 
 	// Save volume to database
@@ -157,6 +173,7 @@ func UpdateVolume(c *gin.Context) {
 
 	result := db.DB.DatabaseHandle.Save(&volumeDBO)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not update the volume data in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
@@ -165,6 +182,7 @@ func UpdateVolume(c *gin.Context) {
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
 
 	// Return volume data
+	logger.Logger.Debug("api", "UpdateVolume endpoint successful exit.")
 	c.JSON(200, responses.NewVolumeDataSuccessResponse(&volumeDBO))
 }
 
@@ -189,6 +207,7 @@ func DeleteVolume(c *gin.Context) {
 	// Retrieve volumeUUID from path parameters
 	volumeUUID, err = uuid.Parse(c.Param("VolumeUUID"))
 	if err != nil {
+		logger.Logger.Error("api", "Wrong volume uuid.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.VAL_UUID_INVALID, "Volume not found (invalid UUID)"))
 		return
 	}
@@ -199,12 +218,14 @@ func DeleteVolume(c *gin.Context) {
 	// Retrieve volume from transport
 	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "A volume with the provided uuid: ", volumeUUID.String(), " was not found.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != volume.UserUUID {
+		logger.Logger.Error("api", "The user: ", userUUID.String(), " is not the owner of the volume: ", volume.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
@@ -213,6 +234,7 @@ func DeleteVolume(c *gin.Context) {
 	// We do not allow deleting volumes that are in use
 	volumeFromQueue := models.Transport.FindEnqueuedVolume(volumeUUID)
 	if volumeFromQueue != nil {
+		logger.Logger.Error("api", "The volume: ", volumeUUID.String(), " is currently queued for upload / download and cannot be deleted.")
 		c.JSON(409, responses.NewOperationFailureResponse(constants.TRANSPORT_VOLUME_IS_BEING_USED, "Volume is currently enqueued for upload or download"))
 		return
 	}
@@ -220,6 +242,7 @@ func DeleteVolume(c *gin.Context) {
 	// Trigger delete process
 	errCode, err = models.Transport.DeleteVolume(volumeUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Could not delete the volume: ", volumeUUID.String())
 		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion request failed: "+err.Error()))
 		return
 	}
@@ -229,11 +252,13 @@ func DeleteVolume(c *gin.Context) {
 
 	result := db.DB.DatabaseHandle.Delete(&volumeDBO)
 	if result.Error != nil {
+		logger.Logger.Error("Could not delete the volume: ", volumeUUID.String(), " from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
 	// Return volume data
+	logger.Logger.Debug("api", "DeleteVolume endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
@@ -263,6 +288,7 @@ func GetVolumes(c *gin.Context) {
 	// Retrieve list of volumes of current user from the database
 	err = db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID).Find(&volumes).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not retrieve a list of volumes from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
 		return
 	}
@@ -273,10 +299,12 @@ func GetVolumes(c *gin.Context) {
 	}
 	pagination := models.Paginate(volumesPagination, page, constants.PAGINATION_RECORDS_PER_PAGE)
 	if pagination == nil {
+		logger.Logger.Error("api", "Could not paginate the provided list of volumes.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.INT_PAGINATION_ERROR, "Pagination process failed."))
 		return
 	}
 
 	// Return list of volumes
+	logger.Logger.Debug("api", "GetVolumes endpoint successful exit.")
 	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }

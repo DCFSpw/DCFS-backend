@@ -6,6 +6,7 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"dcfs/util/logger"
 	"fmt"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -14,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -67,6 +69,7 @@ func (file *AbstractFile) GetUUID() uuid.UUID {
 }
 
 func (file *AbstractFile) SetUUID(UUID uuid.UUID) {
+	logger.Logger.Debug("file", "Set the UUID of a file object to: ", UUID.String())
 	file.UUID = UUID
 }
 
@@ -75,6 +78,7 @@ func (file *AbstractFile) GetSize() int {
 }
 
 func (file *AbstractFile) SetSize(newSize int) {
+	logger.Logger.Debug("file", "Set the size of a file: ", file.GetUUID().String(), " to: ", strconv.Itoa(newSize), ".")
 	file.Size = newSize
 }
 
@@ -83,6 +87,7 @@ func (file *AbstractFile) GetName() string {
 }
 
 func (file *AbstractFile) SetName(newName string) {
+	logger.Logger.Debug("file", "Set the name of a file: ", file.GetUUID().String(), " to: ", newName, ".")
 	file.Name = newName
 }
 
@@ -91,6 +96,7 @@ func (file *AbstractFile) GetType() int {
 }
 
 func (file *AbstractFile) SetType(newType int) {
+	logger.Logger.Debug("file", "Set the type of a file: ", file.GetUUID().String(), " to: ", strconv.Itoa(newType), ".")
 	file.Type = newType
 }
 
@@ -99,6 +105,7 @@ func (file *AbstractFile) GetRoot() uuid.UUID {
 }
 
 func (file *AbstractFile) SetRoot(rootUUID uuid.UUID) {
+	logger.Logger.Debug("file", "Set the root of a file: ", file.GetUUID().String(), " to: ", rootUUID.String(), ".")
 	file.RootUUID = rootUUID
 }
 
@@ -111,6 +118,7 @@ func (file *AbstractFile) GetVolume() *Volume {
 }
 
 func (file *AbstractFile) SetVolume(v *Volume) {
+	logger.Logger.Debug("file", "Set the volume of a file: ", file.GetUUID().String(), " to: ", v.Name, ".")
 	file.Volume = v
 }
 

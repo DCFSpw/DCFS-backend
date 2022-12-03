@@ -3,6 +3,7 @@ package unit
 import (
 	"dcfs/models"
 	"dcfs/test/unit/mock"
+	_ "dcfs/util/logger"
 	"github.com/google/uuid"
 	. "github.com/smartystreets/goconvey/convey"
 	"regexp"

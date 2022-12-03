@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"dcfs/apicalls"
+	"dcfs/util/logger"
 	"fmt"
 	"net"
 	"os"
@@ -50,12 +51,14 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 	// Connect to SFTP server
 	conn, err := ssh.Dial("tcp", addr, &config)
 	if err != nil {
+		logger.Logger.Error("credentials", "Failed to connect to: ", credentials.Host, " to authenticate an SSH operation.")
 		return nil
 	}
 
 	// Create new SFTP client
 	sftpClient, err := sftp.NewClient(conn)
 	if err != nil {
+		logger.Logger.Error("credentials", "Could not create a new SFTP server instance.")
 		return nil
 	}
 

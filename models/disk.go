@@ -6,10 +6,11 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models/credentials"
+	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"log"
 	"net/http/httptest"
+	"strconv"
 	"time"
 )
 
@@ -80,6 +81,8 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.SetTotalSpace(cdm.Disk.TotalSpace)
 	disk.SetCreationTime(cdm.Disk.CreatedAt)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
+
+	logger.Logger.Debug("disk", "Successfully created a new disk.")
 
 	return disk
 }
@@ -171,7 +174,7 @@ func ComputeFreeSpace(d Disk) uint64 {
 		freeSpace = providerDefinedSpace
 	}
 
-	log.Println("Free space on disk", d.GetName(), "is", freeSpace, "bytes", " (user defined:", userDefinedSpace, "bytes, provider defined:", providerDefinedSpace, "bytes, provider total:", providerTotalSpace, "bytes)")
+	logger.Logger.Debug("disk", "Free space on disk", d.GetName(), "is", strconv.FormatUint(freeSpace, 10), "bytes", " (user defined:", strconv.FormatUint(userDefinedSpace, 10), "bytes, provider defined:", strconv.FormatUint(providerDefinedSpace, 10), "bytes, provider total:", strconv.FormatUint(providerTotalSpace, 10), "bytes)")
 
 	return freeSpace
 }
@@ -234,6 +237,6 @@ func MeasureDiskThroughput(d Disk) int {
 	// Calculate throughput
 	throughput = int((uploadTime.Milliseconds()+downloadTime.Milliseconds())/2 + 1)
 
-	log.Println("Disk ", d.GetName(), " has throughput of ", throughput, "(upload: ", uploadTime.Milliseconds(), " ms, download: ", downloadTime.Milliseconds(), " ms).")
+	logger.Logger.Debug("disk", "Disk ", d.GetName(), " has throughput of ", strconv.Itoa(throughput), "(upload: ", strconv.FormatInt(uploadTime.Milliseconds(), 10), " ms, download: ", strconv.FormatInt(downloadTime.Milliseconds(), 10), " ms).")
 	return throughput
 }

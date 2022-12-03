@@ -5,6 +5,7 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"dcfs/util/logger"
 	"encoding/json"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -32,6 +33,7 @@ func (credentials *OauthCredentials) Authenticate(md *apicalls.CredentialsAuthen
 			ret = config.Client(md.Ctx, credentials.Token)
 		}, md.DiskUUID)
 
+	logger.Logger.Debug("credentials", "Successfully authenticated an OAuth operation.")
 	return ret
 }
 
@@ -45,6 +47,8 @@ func (credentials *OauthCredentials) performOperation(operator func(token *oauth
 		_disk.Credentials = credentials.ToString()
 		db.DB.DatabaseHandle.Save(&_disk)
 	}
+
+	logger.Logger.Debug("credentials", "Successfully performed an operation on an OAuth credentials object and updated the tokens in the db.")
 }
 
 // ToString - convert credentials to JSON string
