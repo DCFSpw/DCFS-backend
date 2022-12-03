@@ -75,7 +75,7 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		Do()
 	if err != nil {
 		logger.Logger.Error("disk", "Unable to retrieve files from Google Drive, got an error: ", err.Error())
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve files from Google Drive:", err.Error())
 	}
 
 	if len(files.Files) == 0 {
@@ -118,7 +118,7 @@ func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 
 	srv, err := drive.NewService(bm.Ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Printf("Unable to retrieve Drive client: %v", err)
+		logger.Logger.Error("disk", "Unable to retrieve the Google Drive client, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
 	}
 
@@ -127,22 +127,25 @@ func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 		Q(fmt.Sprintf("name = '%s'", bm.UUID.String())).
 		Do()
 	if err != nil {
-		log.Printf("unable to retreve files from gdrive: %s", err.Error())
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
+		logger.Logger.Error("disk", "Unable to retrieve files from Google Drive, got an error: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve files from Google Drive:", err.Error())
 	}
 
 	if len(files.Files) == 0 {
-		log.Printf("file with the given blockUUID: %s not found on gdrive", bm.UUID.String())
+		logger.Logger.Debug("disk", "file with the given block uuid", bm.UUID.String(), " not found on the Google Drive.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "can't find the file with the given blockUUID: %s", bm.UUID.String())
 	}
 
 	fileDelete = srv.Files.Delete(files.Files[0].Id)
 	err = fileDelete.Do()
 	if err != nil {
+		logger.Logger.Error("disk", "Failed to remove block: ", bm.UUID.String(), " with err: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Failed to remove block:", bm.UUID.String(), "with err:", err.Error())
 	}
 
 	bm.CompleteCallback(bm.FileUUID, bm.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", bm.UUID.String(), ".")
 	return nil
 }
 

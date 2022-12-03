@@ -100,6 +100,7 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Cannot connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
 	}
 
@@ -111,10 +112,13 @@ func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	// Remove remote file
 	err := client.Remove(downloadPath)
 	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot remove remote file:", downloadPath, err.Error())
+		logger.Logger.Error("disk", "Cannot remove the remote file: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot remove remote file:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 

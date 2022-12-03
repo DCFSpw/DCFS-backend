@@ -23,7 +23,7 @@ type FTPDisk struct {
 /* Mandatory Disk interface methods */
 
 func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	// Create and upload remote file
+	// Authenticate
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
 		logger.Logger.Error("disk", "Could not connect to the remote server.")
@@ -32,6 +32,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
+	// Generate remote path
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
 	if _p == "/" {
@@ -42,6 +43,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 
 	logger.Logger.Debug("disk", "Established an upload path: ", downloadPath, " for the block: ", blockMetadata.UUID.String(), ".")
 
+	// Upload file to server
 	err := client.Stor(downloadPath, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
 		logger.Logger.Error("disk", "Cannot open the remote file with error: ", err.Error())
@@ -100,6 +102,7 @@ func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 	// Authenticate
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -117,10 +120,13 @@ func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 	// Delete file from server
 	err := client.Delete(downloadPath)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot remove the remote file: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot remove remote file:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 

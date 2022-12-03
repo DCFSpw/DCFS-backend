@@ -158,8 +158,8 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 	var response oneDriveSearchResponse = oneDriveSearchResponse{}
 	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 	if err != nil {
-		logger.Logger.Error("disk", "Could not find the file: ", err.Error(), ".")
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file:", err.Error())
+		logger.Logger.Error("disk", "Search request failed: ", err.Error(), ".")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Search request failed:", err.Error())
 	}
 
 	if len(response.Value) > 1 {
@@ -215,6 +215,7 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the OneDrive server")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -227,6 +228,7 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
 	if err != nil {
+		logger.Logger.Error("disk", "Could not create a file search request: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
 	}
 
@@ -234,14 +236,17 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	var response oneDriveSearchResponse = oneDriveSearchResponse{}
 	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 	if err != nil {
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file:", err.Error())
+		logger.Logger.Error("disk", "Search request failed: ", err.Error(), ".")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Search request failed:", err.Error())
 	}
 
 	if len(response.Value) > 1 {
+		logger.Logger.Error("disk", "Block hierarchy corrupted.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Block hierarchy corrupted")
 	}
 
 	if len(response.Value) == 0 {
+		logger.Logger.Error("disk", "Could not find the file.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
 	}
 
@@ -259,6 +264,8 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
