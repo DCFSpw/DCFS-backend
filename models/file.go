@@ -555,6 +555,7 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 			if errWrapper == nil {
 				checksum = utils.CalculateChecksum(*bm.Content)
 				if checksum != _b.Checksum {
+					logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
 					fail = true
 					return
 				}
@@ -565,6 +566,7 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				if errWrapper == nil {
 					checksum = utils.CalculateChecksum(*bm.Content)
 					if checksum != _b.Checksum {
+						logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
 						fail = true
 						return
 					}
