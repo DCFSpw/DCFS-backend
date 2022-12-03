@@ -61,6 +61,7 @@ const (
 	FS_FILE_TYPE_MISMATCH  = "FS-012"
 	FS_BLOCK_UPLOAD_FAILED = "FS-020"
 	FS_BAD_FILE            = "FS-030"
+	FS_DIRECTORY_NOT_EMPTY = "FS-040"
 
 	// Ownership errors
 	OWNER_MISMATCH = "OWN-001"
@@ -76,4 +77,5 @@ const (
 
 	// Operation errors
 	OPERATION_NOT_SUPPORTED = "OP-000"
+	OPERATION_FAILED        = "OP-001"
 )

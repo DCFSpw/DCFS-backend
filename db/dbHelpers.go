@@ -111,6 +111,20 @@ func IsVolumeEmpty(uuid uuid.UUID) (bool, error) {
 	return blockCount == 0, err
 }
 
+// IsDirectoryEmpty - verify whether directory is empty
+//
+// params:
+//   - uuid string: UUID of the directory to check
+//
+// return type:
+//   - bool: true if directory is empty, false otherwise
+//   - error: database operation error
+func IsDirectoryEmpty(uuid uuid.UUID) (bool, error) {
+	var fileCount int64
+	err := DB.DatabaseHandle.Model(&dbo.File{}).Where("root_uuid = ?", uuid).Count(&fileCount).Error
+	return fileCount == 0, err
+}
+
 // ValidateRootDirectory - verify whether provided root is valid
 //
 // This function verifies whether provided root entity is a valid root.

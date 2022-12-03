@@ -75,7 +75,7 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		Do()
 	if err != nil {
 		logger.Logger.Error("disk", "Unable to retrieve files from Google Drive, got an error: ", err.Error())
-		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve Drive client:", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve files from Google Drive:", err.Error())
 	}
 
 	if len(files.Files) == 0 {
@@ -110,12 +110,43 @@ func (d *GDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	return nil
 }
 
-func (d *GDriveDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
-}
-
 func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("unimplemented")
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: bm.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
+	var fileDelete *drive.FilesDeleteCall
+	var err error
+
+	srv, err := drive.NewService(bm.Ctx, option.WithHTTPClient(client))
+	if err != nil {
+		logger.Logger.Error("disk", "Unable to retrieve the Google Drive client, got an error: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	files, err := srv.Files.
+		List().
+		Q(fmt.Sprintf("name = '%s'", bm.UUID.String())).
+		Do()
+	if err != nil {
+		logger.Logger.Error("disk", "Unable to retrieve files from Google Drive, got an error: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Unable to retrieve files from Google Drive:", err.Error())
+	}
+
+	if len(files.Files) == 0 {
+		logger.Logger.Debug("disk", "file with the given block uuid", bm.UUID.String(), " not found on the Google Drive.")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "can't find the file with the given blockUUID: %s", bm.UUID.String())
+	}
+
+	fileDelete = srv.Files.Delete(files.Files[0].Id)
+	err = fileDelete.Do()
+	if err != nil {
+		logger.Logger.Error("disk", "Failed to remove block: ", bm.UUID.String(), " with err: ", err.Error(), ".")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Failed to remove block:", bm.UUID.String(), "with err:", err.Error())
+	}
+
+	bm.CompleteCallback(bm.FileUUID, bm.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", bm.UUID.String(), ".")
+	return nil
 }
 
 func (d *GDriveDisk) SetUUID(uuid uuid.UUID) {
@@ -221,10 +252,6 @@ func (d *GDriveDisk) UpdateUsedSpace(change int64) {
 
 func (d *GDriveDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
-}
-
-func (d *GDriveDisk) Delete() (string, error) {
-	return d.abstractDisk.Delete()
 }
 
 /* Mandatory OAuthDisk interface methods */
