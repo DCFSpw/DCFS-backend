@@ -554,13 +554,20 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 			errWrapper := _b.Disk.Download(bm)
 			if errWrapper == nil {
 				checksum = utils.CalculateChecksum(*bm.Content)
-				log.Println("Downloaded block", _b.UUID, "with checksum", checksum, "and real checksum", _b.Checksum)
+				if checksum != _b.Checksum {
+					fail = true
+					return
+				}
 			}
 			if errWrapper != nil {
 				// one retry
 				errWrapper = _b.Disk.Download(bm)
 				if errWrapper == nil {
 					checksum = utils.CalculateChecksum(*bm.Content)
+					if checksum != _b.Checksum {
+						fail = true
+						return
+					}
 				}
 				if errWrapper != nil {
 					fail = true

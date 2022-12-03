@@ -412,7 +412,6 @@ func UploadBlock(c *gin.Context) {
 
 	// Calculate block checksum
 	file.Blocks[blockUUID].Checksum = utils.CalculateChecksum(contents)
-	log.Println("Checksum of block ", blockUUID, " is ", file.Blocks[blockUUID].Checksum)
 
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
