@@ -410,6 +410,10 @@ func UploadBlock(c *gin.Context) {
 		return
 	}
 
+	// Calculate block checksum
+	file.Blocks[blockUUID].Checksum = utils.CalculateChecksum(contents)
+	log.Println("Checksum of block ", blockUUID, " is ", file.Blocks[blockUUID].Checksum)
+
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
 	if errorWrapper != nil {
@@ -420,10 +424,6 @@ func UploadBlock(c *gin.Context) {
 		models.Transport.FileUploadQueue.MarkAsCompleted(fileUUID)
 		return
 	}
-
-	// Calculate block checksum
-	file.Blocks[blockUUID].Checksum = utils.CalculateChecksum(contents)
-	log.Println("Checksum of block ", blockUUID, " is ", file.Blocks[blockUUID].Checksum)
 
 	// Update target disk usage
 	file.Blocks[blockUUID].Disk.UpdateUsedSpace(int64(file.Blocks[blockUUID].Size))
