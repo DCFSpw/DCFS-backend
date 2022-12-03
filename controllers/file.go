@@ -9,8 +9,8 @@ import (
 	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/checksum"
 	"dcfs/util/logger"
-	"dcfs/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"strconv"
@@ -411,7 +411,7 @@ func UploadBlock(c *gin.Context) {
 	}
 
 	// Calculate block checksum
-	file.Blocks[blockUUID].Checksum = utils.CalculateChecksum(contents)
+	file.Blocks[blockUUID].Checksum = checksum.CalculateChecksum(contents)
 
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
