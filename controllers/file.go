@@ -9,9 +9,10 @@ import (
 	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"log"
+	"strconv"
 )
 
 // CreateDirectory - handler for Create directory request
@@ -34,6 +35,7 @@ func CreateDirectory(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", " Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -41,6 +43,7 @@ func CreateDirectory(c *gin.Context) {
 	// Retrieve volumeUUID from request
 	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong volume UUID.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
 		return
 	}
@@ -49,11 +52,15 @@ func CreateDirectory(c *gin.Context) {
 	if requestBody.RootUUID != "" {
 		rootUUID, err = uuid.Parse(requestBody.RootUUID)
 		if err != nil {
+			logger.Logger.Error("api", "Wrong root uuid.")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
 			return
 		}
+
+		logger.Logger.Debug("api", "The root uuid is: ", requestBody.RootUUID, ".")
 	} else {
 		rootUUID = uuid.Nil
+		logger.Logger.Debug("api", "The root uuid is empty.")
 	}
 
 	// Retrieve userUUID from context
@@ -62,12 +69,14 @@ func CreateDirectory(c *gin.Context) {
 	// Retrieve volume from transport
 	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "The volume with the provided uuid: ", volumeUUID.String(), " is not found.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != volume.UserUUID {
+		logger.Logger.Error("api", "The provided user: ", userUUID.String(), " is not an owner of the provided volume: ", volume.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
@@ -75,20 +84,25 @@ func CreateDirectory(c *gin.Context) {
 	// Verify that the rootUUID exists in the volume, and it's a directory
 	errCode := db.ValidateRootDirectory(rootUUID, volumeUUID)
 	if errCode != constants.SUCCESS {
+		logger.Logger.Error("api", "The root directory could not be found on the provided volume.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
 		return
 	}
 
 	// Create a new directory
 	directory = dbo.NewDirectoryFromRequest(&requestBody, userUUID, rootUUID)
+	logger.Logger.Debug("api", "Created a new directory ", directory.Name, " (", directory.UUID.String(), ")", ".")
 
 	// Save directory to database
 	result := db.DB.DatabaseHandle.Create(&directory)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the newly created directory in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
+	logger.Logger.Debug("api", "The new directory: ", directory.Name, " has been saved in the db.")
 
+	logger.Logger.Debug("api", "CreateDirectory endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
@@ -117,12 +131,14 @@ func GetFile(c *gin.Context) {
 	// Retrieve file from database
 	file, dbErr := db.FileFromDatabase(fileUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "A file with the provided uuid: ", fileUUID, " does not exist.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != file.UserUUID {
+		logger.Logger.Error("api", "The provided user: ", userUUID.String(), " is not the owner of the file with the provided uuid: ", file.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "File not found"))
 		return
 	}
@@ -130,11 +146,13 @@ func GetFile(c *gin.Context) {
 	// Retrieve file full path
 	path, dbErr = db.GenerateFileFullPath(file.RootUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not generate the complete path for the file with the uuid: ", file.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
 		return
 	}
 
 	// Return volume data
+	logger.Logger.Debug("api", "GetFile endpoint successful exit.")
 	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(file, path))
 }
 
@@ -158,11 +176,13 @@ func GetFiles(c *gin.Context) {
 	// Retrieve volumeUUID from query
 	volumeUUIDString := c.Query("volumeUUID")
 	if volumeUUIDString == "" {
+		logger.Logger.Error("api", "Missing the field: VolumeUUID from the request url.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_VALIDATOR_ERROR, "volumeUUID", "Field VolumeUUID is required."))
 		return
 	} else {
 		volumeUUID, err = uuid.Parse(volumeUUIDString)
 		if err != nil {
+			logger.Logger.Error("api", "Wrong volume uuid.")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "volumeUUID", "Provided VolumeUUID is not a valid UUID"))
 			return
 		}
@@ -173,6 +193,7 @@ func GetFiles(c *gin.Context) {
 	if rootUUIDString != "" {
 		rootUUID, err = uuid.Parse(rootUUIDString)
 		if err != nil {
+			logger.Logger.Error("api", "Wrong root uuid.")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
 			return
 		}
@@ -186,11 +207,13 @@ func GetFiles(c *gin.Context) {
 	// Retrieve list of files of current user from the database
 	err = db.DB.DatabaseHandle.Where("user_uuid = ? AND volume_uuid = ? AND root_uuid = ?", userUUID, volumeUUID, rootUUID).Find(&files).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not retrieve the specified files from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
 		return
 	}
 
 	// Return list of volumes
+	logger.Logger.Debug("api", "GetFiles endpoint successful exit.")
 	c.JSON(200, responses.NewGetFilesSuccessResponse(files))
 }
 
@@ -216,6 +239,7 @@ func InitFileUploadRequest(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -226,6 +250,7 @@ func InitFileUploadRequest(c *gin.Context) {
 	// Retrieve volumeUUID from request
 	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong volume uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
 		return
 	}
@@ -234,6 +259,7 @@ func InitFileUploadRequest(c *gin.Context) {
 	if requestBody.RootUUID != "" {
 		rootUUID, err = uuid.Parse(requestBody.RootUUID)
 		if err != nil {
+			logger.Logger.Error("api", "Wrong root uuid.")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
 			return
 		}
@@ -244,12 +270,14 @@ func InitFileUploadRequest(c *gin.Context) {
 	// Retrieve volume from transport
 	volume = models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "Could not find a volume with the provided uuid: ", volumeUUID.String())
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
 		return
 	}
 
 	// Verify that the user is owner of the volume
 	if userUUID != volume.UserUUID {
+		logger.Logger.Error("api", "The provided user: ", userUUID.String(), " is not the owner of the volume: ", volume.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
@@ -257,18 +285,20 @@ func InitFileUploadRequest(c *gin.Context) {
 	// Verify that the rootUUID exists in the volume, and it's a directory
 	errCode := db.ValidateRootDirectory(rootUUID, volumeUUID)
 	if errCode != constants.SUCCESS {
+		logger.Logger.Error("api", "The provided root directory: ", rootUUID.String(), " does not exist on the provided volume: ", volumeUUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
 		return
 	}
 
-	log.Println("[Init file upload] Got a request for a file named: ", requestBody.File.Name, "of size: ", requestBody.File.Size)
+	logger.Logger.Debug("api", "Got a request for a file named: ", requestBody.File.Name, "of size: ", strconv.FormatUint(uint64(requestBody.File.Size), 10), ".")
 
 	// Enqueue file for upload
 	file = volume.FileUploadRequest(&requestBody, userUUID, rootUUID)
 	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), &file)
 
-	log.Println("[Init file upload] Prepared a request with ", len(file.Blocks), " blocks")
+	logger.Logger.Debug("api", "Prepared a request with ", strconv.FormatUint(uint64(len(file.Blocks)), 10), " blocks")
 
+	logger.Logger.Debug("api", "InitFileUploadRequest endpoint successful exit.")
 	c.JSON(200, responses.NewInitFileUploadRequestResponse(userUUID, &file))
 }
 
@@ -297,12 +327,14 @@ func UploadBlock(c *gin.Context) {
 	// Validate data
 	blockUUID, err := uuid.Parse(_blockUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong block uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "BlockUUID", "Provided BlockUUID is not a valid UUID"))
 		return
 	}
 
 	fileUUID, err = uuid.Parse(_fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong file uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided fileUUID is not a valid UUID"))
 		return
 	}
@@ -310,6 +342,7 @@ func UploadBlock(c *gin.Context) {
 	// Retrieve block binary data from request
 	blockHeader, err := c.FormFile("block")
 	if err != nil {
+		logger.Logger.Error("api", "Missing block binary data in the request.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "block", "Missing block"))
 		return
 	}
@@ -317,6 +350,7 @@ func UploadBlock(c *gin.Context) {
 	// Open block data
 	block, blockError := blockHeader.Open()
 	if blockError != nil {
+		logger.Logger.Error("api", "Could not open the block binary data for reading.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_CANNOT_OPEN_BLOCK, "Block opening failed: "+blockError.Error()))
 		return
 	}
@@ -324,6 +358,7 @@ func UploadBlock(c *gin.Context) {
 	// Lock file for upload
 	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Failed to lock the file: ", fileUUID.String())
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
 		return
 	}
@@ -331,16 +366,19 @@ func UploadBlock(c *gin.Context) {
 	// Retrieve file from transport and set block status to uploading
 	file = models.Transport.FileUploadQueue.GetEnqueuedInstance(fileUUID).(*models.RegularFile)
 	if file == nil {
+		logger.Logger.Error("api", "The block: ", blockUUID.String(), " belongs to an unknown file.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_BLOCK_MISMATCH, "Block belongs to an unknown file"))
 		return
 	}
 	file.Blocks[blockUUID].Status = constants.BLOCK_STATUS_IN_PROGRESS
+	logger.Logger.Debug("api", "Changed the status of the block: ", blockUUID.String(), " to BLOCK_STATUS_IN_PROGRESS.")
 
 	// Read block binary data
 	contents := make([]uint8, blockHeader.Size)
 	readSize, err := block.Read(contents)
 
 	if err != nil || readSize != int(blockHeader.Size) {
+		logger.Logger.Error("api", "Could not read the contents of the block: ", blockUUID.String(), ".")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.FS_CANNOT_LOAD_BLOCK, "Block loading failed: "+err.Error()))
 		return
 	}
@@ -366,6 +404,7 @@ func UploadBlock(c *gin.Context) {
 	// Block the current file in the FileUploadQueue
 	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Failed to lock file: ", file.UUID.String())
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
 		return
 	}
@@ -373,6 +412,7 @@ func UploadBlock(c *gin.Context) {
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
 	if errorWrapper != nil {
+		logger.Logger.Error("api", "Failed to upload the block: ", _blockUUID)
 		c.JSON(500, responses.NewOperationFailureResponse(errorWrapper.Code, "Block loading failed: "+errorWrapper.Error.Error()))
 
 		// Unblock the current file in the FileUploadQueue in case of failure
@@ -383,6 +423,7 @@ func UploadBlock(c *gin.Context) {
 	// Update target disk usage
 	file.Blocks[blockUUID].Disk.UpdateUsedSpace(int64(file.Blocks[blockUUID].Size))
 
+	logger.Logger.Debug("api", "UploadBlock endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
@@ -407,12 +448,14 @@ func UpdateFile(c *gin.Context) {
 	fileUUID = c.Param("FileUUID")
 	_, err := uuid.Parse(fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong file uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -421,6 +464,7 @@ func UpdateFile(c *gin.Context) {
 	if requestBody.RootUUID != "" {
 		rootUUID, err = uuid.Parse(requestBody.RootUUID)
 		if err != nil {
+			logger.Logger.Error("api", "Wrong root uuid.")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "RootUUID", "Provided RootUUID is not a valid UUID"))
 			return
 		}
@@ -434,12 +478,14 @@ func UpdateFile(c *gin.Context) {
 	// Retrieve file from database
 	file, dbErr := db.FileFromDatabase(fileUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "A file with the provided uuid: ", fileUUID, " was not found in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
 		return
 	}
 
 	// Verify that the user is owner of the file
 	if userUUID != file.UserUUID {
+		logger.Logger.Error("api", "The user: ", userUUID.String(), " is not the owner of the file: ", file.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Volume not found"))
 		return
 	}
@@ -447,6 +493,7 @@ func UpdateFile(c *gin.Context) {
 	// Verify that the rootUUID exists in the volume, and it's a directory
 	errCode := db.ValidateRootDirectory(rootUUID, file.VolumeUUID)
 	if errCode != constants.SUCCESS {
+		logger.Logger.Error("api", "The provided root directory: ", rootUUID.String(), " was not found on the volume: ", file.VolumeUUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
 		return
 	}
@@ -458,10 +505,12 @@ func UpdateFile(c *gin.Context) {
 	// Save changes to database
 	result := db.DB.DatabaseHandle.Save(&file)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not update the file: ", file.UUID.String(), " in the database.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
+	logger.Logger.Debug("api", "UpdateFile endpoint successful exit.")
 	c.JSON(200, responses.NewFileDataSuccessResponse(file))
 }
 
@@ -476,6 +525,7 @@ func UpdateFile(c *gin.Context) {
 //   - API response with appropriate HTTP code
 func DeleteFile(c *gin.Context) {
 	// TODO: Implement deletion of the file
+	logger.Logger.Debug("api", "DeleteFile endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
@@ -501,6 +551,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 	// Retrieve and validate fileUUID from params
 	fileUUID, err = uuid.Parse(c.Param("FileUUID"))
 	if err != nil {
+		logger.Logger.Error("api", "Wrong file uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
@@ -511,6 +562,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 	if len(files) == 1 {
 		file, code = db.FileFromDatabase(fileUUID.String())
 		if file == nil {
+			logger.Logger.Error("api", "A file with the provided uuid: ", fileUUID.String(), " was not found in the db.")
 			c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
 			return
 		}
@@ -518,6 +570,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 		if file.Size <= constants.FRONT_RAM_CAPACITY {
 			blocks, code = db.BlocksFromDatabase(fileUUID.String())
 			if blocks == nil {
+				logger.Logger.Warning("api", "Could not find file blocks in the db.")
 				c.JSON(405, responses.NewOperationFailureResponse(code, "File corrupted"))
 				return
 			}
@@ -525,6 +578,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 			f := models.NewFileFromDBO(file)
 			f = models.NewFileWrapper(constants.FILE_TYPE_SMALLER_WRAPPER, []models.File{f})
 			models.Transport.FileDownloadQueue.EnqueueInstance(f.GetUUID(), f)
+			logger.Logger.Debug("api", "Successfully enqueued the file: ", file.UUID.String(), " for download")
 
 			response = responses.NewInitFileUploadRequestResponse(file.UserUUID, f)
 		}
@@ -535,6 +589,7 @@ func InitFileDownloadRequest(c *gin.Context) {
 		for _, UUID := range files {
 			_f, code := db.FileFromDatabase(UUID.String())
 			if file == nil {
+				logger.Logger.Error("api", "A File with the uuid: ", UUID.String(), " was not found in the db.")
 				c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
 				return
 			}
@@ -545,10 +600,12 @@ func InitFileDownloadRequest(c *gin.Context) {
 
 		wrapper := models.NewFileWrapper(constants.FILE_TYPE_WRAPPER, _files)
 		models.Transport.FileDownloadQueue.EnqueueInstance(wrapper.GetUUID(), wrapper)
+		logger.Logger.Debug("api", "Successfully enqueued the file: ", wrapper.GetUUID().String(), " for download")
 
 		response = responses.NewInitFileUploadRequestResponse(file.UserUUID, wrapper)
 	}
 
+	logger.Logger.Debug("api", "InitDownloadRequest endpoint successful exit.")
 	c.JSON(200, response)
 }
 
@@ -567,6 +624,7 @@ func DownloadBlock(c *gin.Context) {
 	// Retrieve and validate fileUUID from query
 	fileUUID, err := uuid.Parse(c.Query("fileUUID"))
 	if err != nil {
+		logger.Logger.Error("api", "Wrong file uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
 		return
 	}
@@ -574,6 +632,7 @@ func DownloadBlock(c *gin.Context) {
 	// Retrieve and validate blockUUID from param
 	blockUUID, err := uuid.Parse(c.Param("BlockUUID"))
 	if err != nil {
+		logger.Logger.Error("api", "Wrong block uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "BlockUUID", "Provided BlockUUID is not a valid UUID"))
 		return
 	}
@@ -581,6 +640,7 @@ func DownloadBlock(c *gin.Context) {
 	// Retrieve file from transport queue
 	file := models.Transport.FileDownloadQueue.GetEnqueuedInstance(fileUUID).(models.File)
 	if file == nil {
+		logger.Logger.Error("A file with the uuid: ", fileUUID.String(), " is not enqueued for download.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "A file with the given UUID is not enqueued for download"))
 		return
 	}
@@ -599,6 +659,7 @@ func DownloadBlock(c *gin.Context) {
 	// Block the current file in the FileUploadQueue
 	err = models.Transport.FileDownloadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Failed to lock the file: ", fileUUID.String(), " with an error: ", err.Error(), ".")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
 		return
 	}
@@ -606,8 +667,11 @@ func DownloadBlock(c *gin.Context) {
 	// Download block and return it via callback
 	errorWrapper := file.Download(&bm)
 	if errorWrapper != nil {
+		logger.Logger.Error("api", "Failed to download the block with the code: ", errorWrapper.Code, ".")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
 	}
+
+	logger.Logger.Debug("api", "DownloadBlock endpoint successful exit.")
 }
 
 // CompleteFileUploadRequest - handler for Complete file upload request
@@ -636,6 +700,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 	_fileUUID = c.Param("FileUUID")
 	fileUUID, err := uuid.Parse(_fileUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong file uuid.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided fileUUID is not a valid UUID"))
 		return
 	}
@@ -661,6 +726,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 
 	// If there are failed blocks, return them
 	if len(failedBlocks) > 0 {
+		logger.Logger.Debug("api", "Found: ", strconv.FormatInt(int64(len(failedBlocks)), 10), " failed blocks.")
 		c.JSON(449, responses.NewBlockTransferFailureResponse(failedBlocks))
 		return
 	}
@@ -680,6 +746,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 	})
 
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the file: ", file.GetUUID().String(), " in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
@@ -699,6 +766,7 @@ func CompleteFileUploadRequest(c *gin.Context) {
 		})
 
 		if result.Error != nil {
+			logger.Logger.Error("api", "Could not save the block: ", _block.UUID.String(), " in the db.")
 			c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 			return
 		}
@@ -707,5 +775,6 @@ func CompleteFileUploadRequest(c *gin.Context) {
 	// Remove file from transport
 	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(fileUUID)
 
+	logger.Logger.Debug("api", "CompleteFileUploadRequest endpoint exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }

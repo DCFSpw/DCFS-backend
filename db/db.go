@@ -2,8 +2,8 @@ package db
 
 import (
 	"dcfs/db/dbo"
+	"dcfs/util/logger"
 	"encoding/json"
-	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"io"
@@ -34,7 +34,7 @@ type DatabaseConnection struct {
 func (db *DatabaseConnection) parseConnection(filepath string) error {
 	jsonFile, err := os.Open(filepath)
 	if err != nil {
-		fmt.Println("Failed to open the file: ", filepath, " with err: ", err)
+		logger.Logger.Error("db", "Failed to open the file: ", filepath, " with err: ", err.Error())
 		return err
 	}
 
@@ -43,16 +43,17 @@ func (db *DatabaseConnection) parseConnection(filepath string) error {
 	var byteValue []byte
 	byteValue, err = io.ReadAll(jsonFile)
 	if err != nil {
-		fmt.Println("Failed to read the ", filepath, " file with err: ", err)
+		logger.Logger.Error("db", "Failed to read the ", filepath, " file with err: ", err.Error())
 		return err
 	}
 
 	err = json.Unmarshal(byteValue, &db.connectionInfo)
 	if err != nil {
-		fmt.Println("Could not unmarshal json file: ", filepath, " with err: ", err)
+		logger.Logger.Error("Could not unmarshal json file: ", filepath, " with err: ", err.Error())
 		return err
 	}
 
+	logger.Logger.Debug("db", "Successfully unmarshalled the db connection info: \n{\n", "  user_name: ", db.connectionInfo.Username, "\n  password: ", db.connectionInfo.Password, "\n  connection_type: ", db.connectionInfo.ConnectionType, "\n  address: ", db.connectionInfo.Address, "\n  db_name: ", db.connectionInfo.DbName, "\n}")
 	return nil
 }
 
@@ -68,7 +69,7 @@ func (db *DatabaseConnection) parseConnection(filepath string) error {
 func (db *DatabaseConnection) Connect(filepath string) error {
 	err := db.parseConnection(filepath)
 	if err != nil {
-		fmt.Println("Could not parse file: ", filepath, " with err: ", err)
+		logger.Logger.Error("db", "Could not parse file: ", filepath, " with err: ", err.Error())
 		return err
 	}
 
@@ -86,10 +87,11 @@ func (db *DatabaseConnection) Connect(filepath string) error {
 
 	db.DatabaseHandle, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		fmt.Println("Could not connect to the database with the error: ", err)
+		logger.Logger.Error("db", "Could not connect to the database with the error: ", err.Error())
 		return err
 	}
 
+	logger.Logger.Debug("db", "Successfully connected to the db.")
 	return nil
 }
 

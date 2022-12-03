@@ -3,10 +3,10 @@ package credentials
 import (
 	"dcfs/apicalls"
 	"dcfs/requests"
+	"dcfs/util/logger"
 	"encoding/json"
 	"fmt"
 	"github.com/jlaffaye/ftp"
-	"log"
 	"time"
 )
 
@@ -26,7 +26,7 @@ type FTPCredentials struct {
 // return type:
 //   - *FTPCredentials: FTP client object
 func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenticateMetadata) interface{} {
-	log.Printf("Connecting to %s ...\n", credentials.Host)
+	logger.Logger.Debug("credentials", "Connecting to ", credentials.Host, "...")
 
 	// Prepare FTP server address
 	addr := fmt.Sprintf("%s:%s", credentials.Host, credentials.Port)
@@ -34,18 +34,18 @@ func (credentials *FTPCredentials) Authenticate(md *apicalls.CredentialsAuthenti
 	// Connect to FTP server
 	conn, err := ftp.Dial(addr, ftp.DialWithTimeout(5*time.Second))
 	if err != nil {
-		log.Printf("Failed to connect to FTP server [%s]: %v", addr, err)
+		logger.Logger.Error("credentials", "Failed to connect to the FTP server: ", addr, ". Got an error: ", err.Error(), ". ")
 		return nil
 	}
 
 	// Login to FTP server
 	err = conn.Login(credentials.Login, credentials.Password)
 	if err != nil {
-		log.Printf("Unable to login to FTP: %v", err)
+		logger.Logger.Error("credentials", "Unable to login into the FTP disk, got an error: ", err.Error())
 		return nil
 	}
 
-	log.Printf("Connected to %s ...\n", credentials.Host)
+	logger.Logger.Debug("credentials", "Connected to: ", credentials.Host)
 	return conn
 }
 

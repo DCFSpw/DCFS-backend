@@ -7,6 +7,7 @@ import (
 	"dcfs/middleware"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"dcfs/validators"
 	"github.com/gin-gonic/gin"
 )
@@ -26,6 +27,7 @@ func RegisterUser(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong response body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -33,6 +35,7 @@ func RegisterUser(c *gin.Context) {
 	// Check if e-mail exists
 	result := db.DB.DatabaseHandle.Where("email = ?", requestBody.Email).First(&dbo.User{})
 	if result.RowsAffected > 0 {
+		logger.Logger.Error("The specified email: ", requestBody.Email, " is already present in the db.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_EMAIL_ALREADY_EXISTS, "email", "Specified e-mail already exists."))
 		return
 	}
@@ -43,10 +46,12 @@ func RegisterUser(c *gin.Context) {
 	// Save user to database
 	result = db.DB.DatabaseHandle.Create(&user)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the user the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
+	logger.Logger.Debug("api", "RegisterUser endpoint successful exit.")
 	c.JSON(200, responses.NewUserDataSuccessResponse(user))
 }
 
@@ -66,6 +71,7 @@ func LoginUser(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -73,6 +79,7 @@ func LoginUser(c *gin.Context) {
 	// Check if user exists
 	result := db.DB.DatabaseHandle.Where("email = ?", requestBody.Email).First(&user)
 	if result.Error != nil {
+		logger.Logger.Error("api", "A user with the provided email: ", requestBody.Email, " does not exist in the db.")
 		c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_INVALID_EMAIL, "Unauthorized"))
 		return
 	}
@@ -80,6 +87,7 @@ func LoginUser(c *gin.Context) {
 	// Check if password is correct
 	errCode := validators.ValidateUserPassword(user.Password, requestBody.Password)
 	if errCode != constants.SUCCESS {
+		logger.Logger.Error("api", "Invalid credentials were provided for the user: ", requestBody.Email)
 		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
@@ -87,10 +95,12 @@ func LoginUser(c *gin.Context) {
 	// Generate JWT token
 	signedToken, err := middleware.GenerateToken(user.UUID, user.Email)
 	if err != nil {
+		logger.Logger.Error("api", "Could not generate a JWT for the user: ", requestBody.Email, ". Got an error", err.Error(), ".")
 		c.JSON(401, responses.NewOperationFailureResponse(constants.AUTH_JWT_FAILURE, "Unauthorized"))
 		return
 	}
 
+	logger.Logger.Debug("api", "LoginUser endpoint successful exit.")
 	c.JSON(200, responses.NewLoginSuccessResponse(&user, signedToken))
 }
 
@@ -110,11 +120,13 @@ func GetUserProfile(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not find a user with the specified uuid.")
 		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
 
 	// Return user profile
+	logger.Logger.Debug("api", "GetUserProfile endpoint successful exit.")
 	c.JSON(200, responses.NewUserDataSuccessResponse(user))
 }
 
@@ -134,6 +146,7 @@ func UpdateUserProfile(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -141,6 +154,7 @@ func UpdateUserProfile(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not find a user with the provided uuid.")
 		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
@@ -151,11 +165,13 @@ func UpdateUserProfile(c *gin.Context) {
 
 	result := db.DB.DatabaseHandle.Save(&user)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the updated user data to the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
 	// Return updated user profile
+	logger.Logger.Debug("api", "UpdateUserProfile endpoint successful exit.")
 	c.JSON(200, responses.NewUserDataSuccessResponse(user))
 }
 
@@ -175,6 +191,7 @@ func ChangeUserPassword(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -182,6 +199,7 @@ func ChangeUserPassword(c *gin.Context) {
 	// Retrieve user account
 	user, dbErr := db.UserFromDatabase(c.MustGet("UserData").(middleware.UserData).UserUUID)
 	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not find a user with the provided user uuid.")
 		c.JSON(401, responses.NewInvalidCredentialsResponse())
 		return
 	}
@@ -189,6 +207,7 @@ func ChangeUserPassword(c *gin.Context) {
 	// Check if password is correct
 	errCode := validators.ValidateUserPassword(user.Password, requestBody.OldPassword)
 	if errCode != constants.SUCCESS {
+		logger.Logger.Error("api", "The old password is incorrect.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.AUTH_INVALID_OLD_PASSWORD, "OldPassword", "Old password is incorrect"))
 		return
 	}
@@ -198,9 +217,11 @@ func ChangeUserPassword(c *gin.Context) {
 
 	result := db.DB.DatabaseHandle.Save(&user)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the updated password in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
 
+	logger.Logger.Debug("api", "ChangeUserPassword endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }

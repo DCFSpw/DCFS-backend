@@ -25,6 +25,7 @@ func ServeBackend() {
 	// Logger middleware for printing logs
 	// TODO: rethink logger here
 	r.Use(gin.Logger())
+	r.Use(middleware.LogApi())
 
 	// Recovery middleware recovers from any panics and writes a 500 if there was one.
 	r.Use(gin.Recovery())

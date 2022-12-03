@@ -10,9 +10,11 @@ import (
 	"dcfs/models/disk/OAuthDisk"
 	"dcfs/requests"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
+	"strconv"
 )
 
 // CreateDisk - handler for Create disk request
@@ -36,6 +38,7 @@ func CreateDisk(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -43,6 +46,7 @@ func CreateDisk(c *gin.Context) {
 	// Get provider info
 	dbErr := db.DB.DatabaseHandle.Where("uuid = ?", requestBody.ProviderUUID).First(&provider).Error
 	if dbErr != nil {
+		logger.Logger.Error("api", "Received a request with a wrong provider UUID.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "ProviderUUID", "A provider with provided UUID does not exists"))
 		return
 	}
@@ -50,6 +54,7 @@ func CreateDisk(c *gin.Context) {
 	// Parse volumeUUID from request
 	volumeUUID, err := uuid.Parse(requestBody.VolumeUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Received a request with a wrong provider UUID.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "Provided VolumeUUID is not a valid UUID"))
 		return
 	}
@@ -57,6 +62,7 @@ func CreateDisk(c *gin.Context) {
 	// Retrieve volume from transport
 	volume := models.Transport.GetVolume(volumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "Received a request with a wrong volume UUID")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "VolumeUUID", "A volume of provided UUID does not exist"))
 		return
 	}
@@ -80,6 +86,7 @@ func CreateDisk(c *gin.Context) {
 		Volume: volume,
 	})
 	if disk == nil {
+		logger.Logger.Error("api", "Could not create the desired disk.")
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
@@ -89,12 +96,14 @@ func CreateDisk(c *gin.Context) {
 	if ok {
 		config := disk.(OAuthDisk.OAuthDisk).GetConfig()
 		authCode = config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+		logger.Logger.Debug("api", "Got the oauth link code for the selected provider.")
 	} else {
 		// Retrieve disk quota from provider
 		// OAuth disks will retrieve quota after authorization
 		_, totalSpace, errCode := disk.GetProviderSpace()
 		if errCode == constants.SUCCESS && totalSpace < _disk.TotalSpace {
 			_disk.TotalSpace = totalSpace
+			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(totalSpace, 10))
 		}
 
 		// Refresh partitioner for credential based disks
@@ -105,9 +114,11 @@ func CreateDisk(c *gin.Context) {
 	// Save disk to database
 	result := db.DB.DatabaseHandle.Create(&_disk)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the newly created disk with the uuid: ", _disk.UUID.String(), " in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
+	logger.Logger.Debug("api", "Saved the newly created disk with the uuid: ", _disk.UUID.String(), " in the db.")
 
 	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", disk.GetUUID().String()).Preload("Provider").Preload("Volume").Find(&_disk).Error
@@ -116,6 +127,7 @@ func CreateDisk(c *gin.Context) {
 		return
 	}
 
+	logger.Logger.Debug("api", "CreateDisk endpoint successful exit.")
 	c.JSON(200, responses.NewCreateDiskSuccessResponse(_disk, authCode))
 }
 
@@ -139,6 +151,7 @@ func DiskOAuth(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err = c.ShouldBindJSON(&requestBody); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -153,6 +166,7 @@ func DiskOAuth(c *gin.Context) {
 	// Retrieve disk from database
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not find a disk with the given uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
 		return
 	}
@@ -160,12 +174,14 @@ func DiskOAuth(c *gin.Context) {
 	// Retrieve volume from transport
 	volume := models.Transport.GetVolume(_disk.VolumeUUID)
 	if volume == nil {
+		logger.Logger.Error("api", "Could not find a volume with the given uuid: ", _disk.VolumeUUID.String(), " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
 		return
 	}
 
 	disk := (volume.GetDisk(diskUUID)).(OAuthDisk.OAuthDisk)
 	if disk == nil {
+		logger.Logger.Error("api", "The requested disk:", _diskUUID, " is not associated with the requested volume: ", volume.UUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "The provided disk is not associated with the provided volume"))
 		return
 	}
@@ -175,9 +191,11 @@ func DiskOAuth(c *gin.Context) {
 	config.Endpoint.AuthStyle = oauth2.AuthStyleInParams
 	tok, err := config.Exchange(c, requestBody.Code, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	if err != nil {
+		logger.Logger.Error("api", "Could not retrieve the oauth token, got error: ", err.Error())
 		c.JSON(500, responses.NewOperationFailureResponse(constants.OAUTH_BAD_CODE, "Could not retrieve the oauth token"))
 		return
 	}
+	logger.Logger.Debug("api", "Got the oauth token pair for the disk: ", _diskUUID, ".")
 
 	// Save refresh token to disk credentials
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
@@ -187,23 +205,28 @@ func DiskOAuth(c *gin.Context) {
 	if errCode == constants.SUCCESS && totalSpace < disk.GetTotalSpace() {
 		disk.SetTotalSpace(totalSpace)
 	}
+	logger.Logger.Debug("api", "The disk space has been set to: ", strconv.FormatUint(disk.GetTotalSpace(), 10), ".")
 
 	// Save disk credentials to database
 	result := db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not save the disk: ", _diskUUID, " in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
+	logger.Logger.Debug("api", "Saved the disk: ", _diskUUID, " in the db.")
 
 	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not validate that the disk: ", _diskUUID, " has been saved in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
 
 	go volume.RefreshPartitioner()
 
+	logger.Logger.Debug("api", "DiskOAuth endpoint successful exit.")
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
@@ -230,6 +253,7 @@ func GetDisk(c *gin.Context) {
 	// Retrieve disk from database
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
 		return
 	}
@@ -237,19 +261,23 @@ func GetDisk(c *gin.Context) {
 	// Compute free and total disk space
 	volumeModel = models.Transport.GetVolume(_disk.VolumeUUID)
 	if volumeModel == nil {
+		logger.Logger.Error("api", "Could not find a volume with the provided uuid: ", _disk.VolumeUUID.String(), " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find a volume with the provided UUID"))
 		return
 	}
 
 	diskModel = volumeModel.GetDisk(_disk.UUID)
 	if diskModel == nil {
+		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _disk.UUID.String(), " in the provided volume.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
 		return
 	}
 
 	_disk.FreeSpace = models.ComputeFreeSpace(diskModel)
 	_disk.TotalSpace = diskModel.GetTotalSpace()
+	logger.Logger.Debug("api", "The disk capacity is: ", strconv.FormatUint(_disk.FreeSpace, 10), "/", strconv.FormatUint(_disk.TotalSpace, 10), ".")
 
+	logger.Logger.Debug("api", "GetDisk endpoint successful exit.")
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
@@ -275,6 +303,7 @@ func UpdateDisk(c *gin.Context) {
 
 	// Retrieve and validate data from request
 	if err = c.ShouldBindJSON(&body); err != nil {
+		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
 		return
 	}
@@ -286,6 +315,7 @@ func UpdateDisk(c *gin.Context) {
 	_diskUUID = c.Param("DiskUUID")
 	diskUUID, err = uuid.Parse(_diskUUID)
 	if err != nil {
+		logger.Logger.Error("api", "Wrong disk UUID: ", _diskUUID)
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "DiskUUID", "Provided DiskUUID is not a valid UUID"))
 		return
 	}
@@ -293,6 +323,7 @@ func UpdateDisk(c *gin.Context) {
 	// Retrieve volumes from transport
 	volumes = models.Transport.GetVolumes(userUUID)
 	if volumes == nil {
+		logger.Logger.Error("api", "Could not find any volume for the user with the provided uuid: ", userUUID.String())
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Cannot find volume with provided UUID"))
 		return
 	}
@@ -307,14 +338,17 @@ func UpdateDisk(c *gin.Context) {
 	}
 
 	if disk == nil {
+		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID)
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Cannot find volume with provided UUID"))
 		return
 	}
+	logger.Logger.Debug("api", "Found the disk with the provided uuid: ", _diskUUID, ", it belongs to the volume: ", volume.UUID.String())
 
 	// Check whether disk is enqueued for IO operation
 	// Changes cannot be performed on busy disk.
 	_disk := models.Transport.FindEnqueuedDisk(diskUUID)
 	if _disk != nil {
+		logger.Logger.Error("api", "The disk with the uuid: ", _diskUUID, " is being enqueued for upload / download and cannot be updated at the moment.")
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't update it now"))
 		return
 	}
@@ -324,26 +358,32 @@ func UpdateDisk(c *gin.Context) {
 	if cred != "" {
 		_, ok := disk.(OAuthDisk.OAuthDisk)
 		if ok {
+			logger.Logger.Error("api", "attempted to change the credentials of an oauth disk, which is not allowed.")
 			c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "It is not allowed to change the credentials of an OAuth disk"))
 			return
 		}
 
 		disk.CreateCredentials(cred)
+		logger.Logger.Debug("api", "Updated the credentials of the disk with the uuid: ", _diskUUID)
 	}
 
 	// Change name of the disk
 	disk.SetName(body.Name)
+	logger.Logger.Debug("api", "Updated the name of the disk with the uuid: ", _diskUUID, " to: ", body.Name, ".")
 
 	// Verify that the disk space quota is valid
 	_, totalSpace, errCode := disk.GetProviderSpace()
 	if errCode == constants.SUCCESS {
 		if totalSpace < body.TotalSpace {
+			logger.Logger.Error("api", "The provided total space: ", strconv.FormatUint(body.TotalSpace, 10), " exeeds the disk space quota: ", strconv.FormatUint(body.TotalSpace, 10), ".")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space exceeds the disk space quota"))
 			return
 		} else if disk.GetUsedSpace() > body.TotalSpace {
+			logger.Logger.Error("api", "The provided total space: ", strconv.FormatUint(body.TotalSpace, 10), " is lower than the currently used space: ", strconv.FormatUint(disk.GetUsedSpace(), 10), ".")
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space is lower than currently used space"))
 			return
 		} else {
+			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(body.TotalSpace, 10), ".")
 			disk.SetTotalSpace(body.TotalSpace)
 		}
 	}
@@ -352,6 +392,7 @@ func UpdateDisk(c *gin.Context) {
 	diskDBO := disk.GetDiskDBO(userUUID, disk.GetProviderUUID(), volume.UUID)
 	result := db.DB.DatabaseHandle.Save(&diskDBO)
 	if result.Error != nil {
+		logger.Logger.Error("api", "Could not update the disk metadata in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
@@ -359,12 +400,14 @@ func UpdateDisk(c *gin.Context) {
 	// Load full database object with a provider and a volume to return
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&diskDBO).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not validate the previous db operation.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
 
 	go volume.RefreshPartitioner()
 
+	logger.Logger.Debug("api", "UpdateDisk endpoint successful exit.")
 	c.JSON(200, responses.NewSuccessResponse(diskDBO))
 }
 
@@ -388,6 +431,7 @@ func DeleteDisk(c *gin.Context) {
 	_diskUUID = c.Param("DiskUUID")
 	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not find the disk with the provided UUID"))
 		return
 	}
@@ -395,6 +439,7 @@ func DeleteDisk(c *gin.Context) {
 	// Check whether disk is not enqueued for IO operation
 	_d := models.Transport.FindEnqueuedDisk(_disk.UUID)
 	if _d != nil {
+		logger.Logger.Error("api", "The disk with the uuid: ", _diskUUID, " is being enqueued for upload / download and cannot be deleted at the moment.")
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't delete it now"))
 		return
 	}
@@ -402,11 +447,13 @@ func DeleteDisk(c *gin.Context) {
 	// Check whether disk is empty
 	err = db.DB.DatabaseHandle.Where("disk_uuid = ?", _diskUUID).Find(&_blocks).Error
 	if err != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not update database"))
+		logger.Logger.Error("api", "Could not check for blocks on the disk with the uuid: ", _diskUUID, " in the db.")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not query the database"))
 		return
 	}
 
 	if len(_blocks) > 0 {
+		logger.Logger.Error("api", "The provided disk with the uuid: ", _diskUUID, " is not empty and thus cannot be deleted.")
 		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "The provided disk is not empty and thus cannot be deleted"))
 		return
 	}
@@ -418,6 +465,7 @@ func DeleteDisk(c *gin.Context) {
 
 	go volume.RefreshPartitioner()
 
+	logger.Logger.Debug("api", "DeleteDisk endpoint successful exit.")
 	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
@@ -456,5 +504,6 @@ func GetDisks(c *gin.Context) {
 	// Prepare pagination
 	pagination := models.Paginate(disks, page, constants.PAGINATION_RECORDS_PER_PAGE)
 
+	logger.Logger.Debug("api", "GetDisks endpoint successful exit.")
 	c.JSON(200, responses.NewPaginationResponse(responses.PaginationData{Pagination: pagination.Pagination, Data: pagination.Data}))
 }

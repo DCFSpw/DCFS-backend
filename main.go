@@ -6,11 +6,13 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/db/seeder"
 	"dcfs/models"
+	"dcfs/util/logger"
 	"flag"
 	"github.com/google/uuid"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "dcfs/models/disk/FTPDisk"
 	_ "dcfs/models/disk/GDriveDisk"
@@ -32,7 +34,12 @@ func main() {
 	// Parse settings and options
 	path := flag.String("db-connection", "./connection.json", "file containing db connection info")
 	rspw := flag.Bool("respawn", false, "set to true to drop and create the database anew")
+	debugLevel := flag.Int("debug", 1, "debug level: 2 - debug, warnings and errors, 1 - warnings and errors, 0 - errors, -1 - none, default: 1")
+	logScope := flag.String("log", "", "a comma separated list of modules to collect logs from, available are: middleware, api, db, disks, credentials, file, partitioner, transport, volume. The option: all enables logs from all modules")
 	flag.Parse()
+
+	logger.Logger.SetLogLevel(*debugLevel)
+	logger.Logger.SetScopes(strings.Split(*logScope, ","))
 
 	absolutePath, err := filepath.Abs(*path)
 	if err != nil {

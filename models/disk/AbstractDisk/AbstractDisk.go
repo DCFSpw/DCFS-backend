@@ -7,8 +7,9 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
+	"dcfs/util/logger"
 	"github.com/google/uuid"
-	"log"
+	"strconv"
 	"time"
 )
 
@@ -45,6 +46,7 @@ func (d *AbstractDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 }
 
 func (d *AbstractDisk) SetUUID(UUID uuid.UUID) {
+	logger.Logger.Debug("disk", "Set uuid for a disk to: ", UUID.String())
 	d.UUID = UUID
 }
 
@@ -53,6 +55,7 @@ func (d *AbstractDisk) GetUUID() uuid.UUID {
 }
 
 func (d *AbstractDisk) SetVolume(volume *models.Volume) {
+	logger.Logger.Debug("disk", "Set the volume of a disk object to: ", volume.UUID.String(), ".")
 	d.Volume = volume
 }
 
@@ -61,6 +64,7 @@ func (d *AbstractDisk) GetVolume() *models.Volume {
 }
 
 func (d *AbstractDisk) SetName(name string) {
+	logger.Logger.Debug("disk", "Changed the name of a disk object from: ", d.GetName(), " to: ", name, ".")
 	d.Name = name
 }
 
@@ -73,6 +77,7 @@ func (d *AbstractDisk) GetCredentials() credentials.Credentials {
 }
 
 func (d *AbstractDisk) SetCredentials(c credentials.Credentials) {
+	logger.Logger.Debug("disk", "Changed the credentials of a disk object named: ", d.GetName())
 	d.Credentials = c
 }
 
@@ -89,6 +94,7 @@ func (d *AbstractDisk) GetProviderSpace() (uint64, uint64, string) {
 }
 
 func (d *AbstractDisk) SetCreationTime(creationTime time.Time) {
+	logger.Logger.Debug("disk", "Set the creation time of a disk object named: ", d.GetName(), " to: ", creationTime.String(), ".")
 	d.CreationTime = creationTime
 }
 
@@ -97,6 +103,7 @@ func (d *AbstractDisk) GetCreationTime() time.Time {
 }
 
 func (d *AbstractDisk) SetTotalSpace(quota uint64) {
+	logger.Logger.Debug("disk", "Set total space of a disk object named: ", d.GetName(), " to: ", strconv.FormatUint(quota, 10), ".")
 	d.Size = quota
 }
 
@@ -105,6 +112,7 @@ func (d *AbstractDisk) GetTotalSpace() uint64 {
 }
 
 func (d *AbstractDisk) SetUsedSpace(usage uint64) {
+	logger.Logger.Debug("disk", "Set used space of a disk object named: ", d.GetName(), " to: ", strconv.FormatUint(usage, 10), ".")
 	d.UsedSpace = usage
 }
 
@@ -123,6 +131,7 @@ func (d *AbstractDisk) UpdateUsedSpace(change int64) {
 	// Update disk usage in database
 	diskDBO := d.GetDiskDBO(uuid.Nil, uuid.Nil, uuid.Nil)
 	db.DB.DatabaseHandle.Model(&diskDBO).Update("used_space", d.UsedSpace)
+	logger.Logger.Debug("disk", "Updated used space of a disk object named: ", d.GetName(), " to: ", strconv.FormatUint(d.UsedSpace, 10), ".")
 }
 
 func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
@@ -158,6 +167,6 @@ func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {
 
 func (d *AbstractDisk) Delete() (string, error) {
 	// TO DO: deletion process worker
-	log.Println("Deleting disk" + d.UUID.String())
+	logger.Logger.Debug("disk", "Deleting disk: "+d.UUID.String())
 	return constants.SUCCESS, nil
 }

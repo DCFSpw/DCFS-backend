@@ -8,6 +8,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"dcfs/util/logger"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -24,6 +25,7 @@ type SFTPDisk struct {
 func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Cannot connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
 	}
 
@@ -36,6 +38,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	remoteFile, err := client.Open(downloadPath)
 	if err == nil {
 		remoteFile.Close()
+		logger.Logger.Error("disk", "Cannot open the remote file, file already exists.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", "File already exists")
 	}
 	err = nil
@@ -43,6 +46,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	// Create remote file
 	dstFile, err := client.OpenFile(downloadPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot open the remote file: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	defer dstFile.Close()
@@ -50,16 +54,19 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	// Upload file content
 	_, err = io.Copy(dstFile, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot upload a local file: ", err.Error(), ".")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot upload a local file:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+	logger.Logger.Debug("disk", "Successfully uploaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
 func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Cannot connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "Cannot connect to the remote server")
 	}
 
@@ -71,6 +78,7 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	// Open remote file
 	remoteFile, err := client.OpenFile(downloadPath, os.O_RDONLY)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot open the remote time: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	defer remoteFile.Close()
@@ -78,12 +86,14 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	// Download remote file
 	buff, err := io.ReadAll(remoteFile)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot download the remote file: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot download remote file:", err.Error())
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 
+	logger.Logger.Debug("disk", "Successfully downloaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
@@ -158,6 +168,7 @@ func (d *SFTPDisk) GetProviderSpace() (uint64, uint64, string) {
 	// Authenticate to the remote server
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not authenticate to get the remote provider space.")
 		return 0, 0, constants.REMOTE_CANNOT_AUTHENTICATE
 	}
 
@@ -174,6 +185,7 @@ func (d *SFTPDisk) GetProviderSpace() (uint64, uint64, string) {
 	stats, err = client.StatVFS(path)
 
 	if err != nil {
+		logger.Logger.Error("disk", "Could not get the remote provider stats.")
 		return 0, 0, constants.OPERATION_NOT_SUPPORTED
 	}
 

@@ -8,6 +8,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
+	"dcfs/util/logger"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
@@ -25,6 +26,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 	// Create and upload remote file
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -38,12 +40,17 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 		downloadPath = blockMetadata.UUID.String()
 	}
 
+	logger.Logger.Debug("disk", "Established an upload path: ", downloadPath, " for the block: ", blockMetadata.UUID.String(), ".")
+
 	err := client.Stor(downloadPath, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot open the remote file with error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully uploaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 
@@ -51,6 +58,7 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 	// Download remote file
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
@@ -64,20 +72,25 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 		downloadPath = blockMetadata.UUID.String()
 	}
 
+	logger.Logger.Debug("disk", "Established a download path: ", downloadPath, " for the block: ", blockMetadata.UUID.String(), ".")
+
 	reader, err := client.Retr(downloadPath)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot open the remote file, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 	//defer reader.Close()
 
 	buff, err := io.ReadAll(reader)
 	if err != nil {
+		logger.Logger.Error("disk", "Cannot open the remote file, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
 	blockMetadata.Content = &buff
 	blockMetadata.Size = int64(len(buff))
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 
+	logger.Logger.Debug("disk", "Successfully downloaded the block: ", blockMetadata.UUID.String(), ".")
 	return nil
 }
 

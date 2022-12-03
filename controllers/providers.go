@@ -5,6 +5,7 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/responses"
+	"dcfs/util/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,10 +25,12 @@ func GetProviders(c *gin.Context) {
 	// Retrieve list of providers from the database
 	err := db.DB.DatabaseHandle.Find(&providers).Error
 	if err != nil {
+		logger.Logger.Error("api", "Could not retrieve a list of providers from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
 		return
 	}
 
 	// Return list of providers
+	logger.Logger.Debug("api", "GetProviders endpoint successful exit.")
 	c.JSON(200, responses.NewGetProvidersSuccessResponse(providers))
 }
