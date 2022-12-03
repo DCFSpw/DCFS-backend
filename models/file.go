@@ -6,6 +6,7 @@ import (
 	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
+	"dcfs/util"
 	"dcfs/util/checksum"
 	"dcfs/util/logger"
 	"fmt"
@@ -374,6 +375,7 @@ func (f *SmallerFileWrapper) GetBlocks() map[uuid.UUID]*Block {
 
 func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	block := f.GetBlocks()[blockMetadata.UUID]
+	blockCompleteness := "complete"
 
 	blockMetadata.Size = int64(block.Size)
 	blockMetadata.Status = &block.Status
@@ -390,13 +392,18 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 
 	// verify integrity of the downloaded block
 	checksum := checksum.CalculateChecksum(*blockMetadata.Content)
+	if checksum != block.Checksum {
+		blockCompleteness = "not complete"
+	}
 
 	// the file should be deleted from the download queue after 6 minutes, or after the last block gets transferred
-	if rsp != nil || checksum != block.Checksum {
+	if rsp != nil {
 		// release the blocked file if download failed
 		Transport.FileDownloadQueue.MarkAsCompleted(blockMetadata.UUID)
 	}
 
+	blockMetadata.Ctx.Header("Access-Control-Expose-Headers", "File-Completeness")
+	blockMetadata.Ctx.Header("File-Completeness", blockCompleteness)
 	blockMetadata.Ctx.Data(http.StatusOK, "application/octet-stream", *blockMetadata.Content)
 	return rsp
 }
@@ -512,7 +519,8 @@ func (f *FileWrapper) GetBlocks() map[uuid.UUID]*Block {
 
 func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	downloadpath := path.Join(_path, file.GetName())
-	fail := false
+	brokenBlocks := make([]uuid.UUID, 0)
+	brokenBlocksMtx := sync.Mutex{}
 	blockSize := file.GetVolume().BlockSize
 
 	_file, err := os.Create(downloadpath)
@@ -552,48 +560,70 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 
 			var _checksum string
 			errWrapper := _b.Disk.Download(bm)
-			if errWrapper == nil {
-				_checksum = checksum.CalculateChecksum(*bm.Content)
-				if _checksum != _b.Checksum {
-					logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
-					fail = true
-					return
-				}
-			}
 			if errWrapper != nil {
 				// one retry
 				errWrapper = _b.Disk.Download(bm)
-				if errWrapper == nil {
-					_checksum = checksum.CalculateChecksum(*bm.Content)
-					if _checksum != _b.Checksum {
-						logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
-						fail = true
-						return
-					}
-				}
 				if errWrapper != nil {
-					fail = true
+					logger.Logger.Error("file", "Failed to download the block: ", bm.UUID.String(), " which is the ", strconv.Itoa(_b.Order), " block of the file: ", bm.FileUUID.String(), ".")
+
+					brokenBlocksMtx.Lock()
+					if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+						brokenBlocks = append(brokenBlocks, bm.UUID)
+					}
+					brokenBlocksMtx.Unlock()
+
+					// at this point, the writing procedure can be skipped
 					return
 				}
 			}
 
+			_checksum = checksum.CalculateChecksum(*bm.Content)
+			if _checksum != _b.Checksum {
+				logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+			}
+
 			dest, err := os.OpenFile(downloadpath, os.O_RDWR, 777)
 			if err != nil {
-				fail = true
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+
+				// at this point, the writing procedure can be skipped
 				return
 			}
 
 			defer func() {
 				err := dest.Close()
 				if err != nil {
-					fail = true
+					brokenBlocksMtx.Lock()
+					if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+						brokenBlocks = append(brokenBlocks, bm.UUID)
+					}
+					brokenBlocksMtx.Unlock()
+
+					// at this point, the writing procedure can be skipped
+					return
 				}
 			}()
 
 			// we may assume, every block is equal size, only the last one may be bigger / smaller
 			_, err = dest.Seek(int64(_b.Order*blockSize), 0)
 			if err != nil {
-				fail = true
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+
+				// at this point, the writing procedure can be skipped
 				return
 			}
 
@@ -601,12 +631,24 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 			n, err = dest.Write(*bm.Content)
 
 			if err != nil {
-				fail = true
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+
+				// at this point, the writing procedure can be skipped
 				return
 			}
 
 			if n != _b.Size {
-				fail = true
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+
+				// at this point, the writing procedure can be skipped
 				return
 			}
 		}(_file, block)
@@ -614,10 +656,18 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 
 	wg.Wait()
 
-	if fail {
+	if len(brokenBlocks) >= len(file.GetBlocks()) {
+		logger.Logger.Error("file", "All blocks of the file: ", blockMetadata.FileUUID.String(), " failed to download.")
+
 		return &apicalls.ErrorWrapper{
 			Error: fmt.Errorf("Block downloading failed"),
 			Code:  constants.REMOTE_FAILED_JOB,
+		}
+	} else if len(brokenBlocks) > 0 {
+		logger.Logger.Warning("blocks", strconv.Itoa(len(brokenBlocks)), " out of ", strconv.Itoa(len(file.GetBlocks())), " failed to download. Sending a corrupted file.")
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("blocks %s out of %s failed to download. Sending a corrupted file", strconv.Itoa(len(brokenBlocks)), strconv.Itoa(len(file.GetBlocks()))),
+			Code:  constants.REMOTE_CORRUPTED_BLOCKS,
 		}
 	}
 
@@ -627,6 +677,8 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	downloadPath := path.Join(_path, dir.GetName())
 	err := os.MkdirAll(downloadPath, 0777)
+	corruptedFiles := 0
+
 	if err != nil {
 		return &apicalls.ErrorWrapper{
 			Error: err,
@@ -637,7 +689,27 @@ func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetad
 	for _, file := range dir.Files {
 		errWrapper := f.downloadFile(downloadPath, file, blockMetadata)
 		if errWrapper != nil {
-			return errWrapper
+			if errWrapper.Code == constants.REMOTE_CORRUPTED_BLOCKS {
+				logger.Logger.Warning("file", "File: ", file.GetUUID().String(), " is corrupted but downloaded.")
+			} else {
+				logger.Logger.Warning("file", "File: ", file.GetUUID().String(), " is corrupted and not downloaded.")
+			}
+
+			corruptedFiles++
+		}
+	}
+
+	if corruptedFiles > 0 || corruptedFiles < len(dir.Files) {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("some files were corrupted and may not have been downloaded"),
+			Code:  constants.REMOTE_CORRUPTED_FILES,
+		}
+	}
+
+	if corruptedFiles >= len(dir.Files) {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("all selected files failed to download"),
+			Code:  constants.REMOTE_BAD_FILE,
 		}
 	}
 
@@ -647,6 +719,8 @@ func (f *FileWrapper) downloadDirectory(_path string, dir *Directory, blockMetad
 func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	downloadPath := path.Join("./Download", f.GetName())
 	err := os.MkdirAll(downloadPath, 0777)
+	fileCompleteness := "complete"
+
 	if err != nil {
 		return &apicalls.ErrorWrapper{
 			Error: err,
@@ -658,12 +732,20 @@ func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.
 		if file.GetType() == constants.FILE_TYPE_DIRECTORY {
 			errWrapper := f.downloadDirectory(downloadPath, file.(*Directory), blockMetadata)
 			if errWrapper != nil {
-				return errWrapper
+				if errWrapper.Code == constants.REMOTE_CORRUPTED_FILES {
+					fileCompleteness = "not complete"
+				} else {
+					return errWrapper
+				}
 			}
 		} else if file.GetType() == constants.FILE_TYPE_REGULAR {
 			errWrapper := f.downloadFile(downloadPath, file, blockMetadata)
 			if errWrapper != nil {
-				return errWrapper
+				if errWrapper.Code == constants.REMOTE_CORRUPTED_BLOCKS {
+					fileCompleteness = "not complete"
+				} else {
+					return errWrapper
+				}
 			}
 		} else {
 			return &apicalls.ErrorWrapper{
@@ -679,6 +761,8 @@ func (f *FileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.
 		filename = "files.zip"
 	}
 
+	blockMetadata.Ctx.Header("Access-Control-Expose-Headers", "File-Completeness")
+	blockMetadata.Ctx.Header("File-Completeness", fileCompleteness)
 	blockMetadata.Ctx.File(path.Join(downloadPath, filename))
 
 	// the files should reside on the server for 1hr x 1GiB
