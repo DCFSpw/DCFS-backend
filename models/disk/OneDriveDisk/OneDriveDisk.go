@@ -218,8 +218,11 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
 	}
 
+	// Prepare the OneDrive client
 	var client *http.Client = _client.(*http.Client)
 	oneDriveClient := onedrive.NewClient(client)
+
+	// Prepare the search request
 	var searchReqUrl string = "me/drive/root/search(q='" + url.PathEscape(blockMetadata.UUID.String()) + "')?select=id"
 
 	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
@@ -227,6 +230,7 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
 	}
 
+	// Locate the file on OneDrive
 	var response oneDriveSearchResponse = oneDriveSearchResponse{}
 	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
 	if err != nil {
@@ -241,7 +245,15 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not find file")
 	}
 
-	err = oneDriveClient.DriveItems.Delete(blockMetadata.Ctx, "", response.Value[0].Id)
+	// Prepare the delete request
+	apiURL := "me/drive/items/" + url.PathEscape(response.Value[0].Id)
+	deleteReq, err := oneDriveClient.NewRequest("DELETE", apiURL, nil)
+	if err != nil {
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not create delete request:", err.Error())
+	}
+
+	// Execute the delete request
+	err = oneDriveClient.Do(blockMetadata.Ctx, deleteReq, false, &response)
 	if err != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Could not remove file:", err.Error())
 	}
