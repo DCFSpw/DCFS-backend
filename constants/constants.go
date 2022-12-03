@@ -59,3 +59,9 @@ const (
 	DEFAULT_VOLUME_BLOCK_SIZE int = 8 * 1024 * 1024
 	FRONT_RAM_CAPACITY        int = 8 * 1024 * 1024
 )
+
+// Deletion constants
+const (
+	DELETION   bool = false
+	RELOCATION bool = true
+)

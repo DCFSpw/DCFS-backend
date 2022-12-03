@@ -23,7 +23,7 @@ type FTPDisk struct {
 /* Mandatory Disk interface methods */
 
 func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	// Create and upload remote file
+	// Authenticate
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
 		logger.Logger.Error("disk", "Could not connect to the remote server.")
@@ -32,6 +32,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
+	// Generate remote path
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
 	if _p == "/" {
@@ -42,6 +43,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 
 	logger.Logger.Debug("disk", "Established an upload path: ", downloadPath, " for the block: ", blockMetadata.UUID.String(), ".")
 
+	// Upload file to server
 	err := client.Stor(downloadPath, bytes.NewReader(*blockMetadata.Content))
 	if err != nil {
 		logger.Logger.Error("disk", "Cannot open the remote file with error: ", err.Error())
@@ -55,7 +57,7 @@ func (d *FTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 }
 
 func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	// Download remote file
+	// Authenticate
 	var _client interface{} = d.GetCredentials().Authenticate(nil)
 	if _client == nil {
 		logger.Logger.Error("disk", "Could not connect to the remote server.")
@@ -64,6 +66,7 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 
 	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
 
+	// Generate remote path
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
 	if _p == "/" {
@@ -74,13 +77,14 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 
 	logger.Logger.Debug("disk", "Established a download path: ", downloadPath, " for the block: ", blockMetadata.UUID.String(), ".")
 
+	// Download file from server
 	reader, err := client.Retr(downloadPath)
 	if err != nil {
 		logger.Logger.Error("disk", "Cannot open the remote file, got an error: ", err.Error())
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "cannot open remote file:", err.Error())
 	}
-	//defer reader.Close()
 
+	// Load file content
 	buff, err := io.ReadAll(reader)
 	if err != nil {
 		logger.Logger.Error("disk", "Cannot open the remote file, got an error: ", err.Error())
@@ -94,12 +98,36 @@ func (d *FTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Erro
 	return nil
 }
 
-func (d *FTPDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
-}
-
 func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
+	// Authenticate
+	var _client interface{} = d.GetCredentials().Authenticate(nil)
+	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
+	}
+
+	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
+
+	// Generate remote path
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
+
+	// Delete file from server
+	err := client.Delete(downloadPath)
+	if err != nil {
+		logger.Logger.Error("disk", "Cannot remove the remote file: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot remove remote file:", err.Error())
+	}
+
+	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
+
+	logger.Logger.Debug("disk", "Successfully removed the block: ", blockMetadata.UUID.String(), ".")
+	return nil
 }
 
 func (d *FTPDisk) SetUUID(uuid uuid.UUID) {
@@ -148,10 +176,6 @@ func (d *FTPDisk) GetCreationTime() time.Time {
 
 func (d *FTPDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_FTP)
-}
-
-func (d *FTPDisk) Delete() (string, error) {
-	return d.abstractDisk.Delete()
 }
 
 func (d *FTPDisk) GetProviderSpace() (uint64, uint64, string) {

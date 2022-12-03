@@ -18,6 +18,7 @@ require (
 	github.com/smartystreets/goconvey v1.7.2
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
+	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	google.golang.org/api v0.94.0
 	gorm.io/driver/mysql v1.3.6
 	gorm.io/gorm v1.23.8

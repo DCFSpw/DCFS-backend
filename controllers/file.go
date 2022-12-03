@@ -528,7 +528,70 @@ func UpdateFile(c *gin.Context) {
 // return type:
 //   - API response with appropriate HTTP code
 func DeleteFile(c *gin.Context) {
-	// TODO: Implement deletion of the file
+	var fileUUID uuid.UUID
+	var userUUID uuid.UUID
+	var _file *dbo.File
+	var file models.File
+	var volume *models.Volume
+	var errCode string
+
+	// Retrieve and validate fileUUID from param
+	fileUUID, err := uuid.Parse(c.Param("FileUUID"))
+	if err != nil {
+		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_UUID_INVALID, "FileUUID", "Provided FileUUID is not a valid UUID"))
+		return
+	}
+
+	// Retrieve file from database
+	_file, errCode = db.FileFromDatabase(fileUUID.String())
+	if _file == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "File not found"))
+		return
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Verify that the user is owner of the file
+	if userUUID != _file.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "File not found"))
+		return
+	}
+
+	// Trigger appropriate action for each type of file
+	if _file.Type == constants.FILE_TYPE_DIRECTORY {
+		// Verify that the directory is empty
+		empty, err := db.IsDirectoryEmpty(_file.UUID)
+		if empty && err == nil {
+			result := db.DB.DatabaseHandle.Delete(&_file)
+			if result.Error != nil {
+				c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
+				return
+			}
+		} else {
+			c.JSON(400, responses.NewOperationFailureResponse(constants.FS_DIRECTORY_NOT_EMPTY, "Directory is not empty"))
+			return
+		}
+	} else {
+		// Generate file model
+		file = models.NewFileFromDBO(_file)
+
+		// Retrieve volume from transport
+		volume = models.Transport.GetVolume(_file.VolumeUUID)
+		if volume == nil {
+			c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found."))
+			return
+		}
+
+		// Trigger delete process
+		errCode, err = models.Transport.DeleteFile(file, volume)
+		if err != nil {
+			c.JSON(500, responses.NewOperationFailureResponse(errCode, "File deletion request failed: "+err.Error()))
+			return
+		}
+	}
+
+	// Return volume data
 	logger.Logger.Debug("api", "DeleteFile endpoint successful exit.")
 	c.JSON(200, responses.NewEmptySuccessResponse())
 }
