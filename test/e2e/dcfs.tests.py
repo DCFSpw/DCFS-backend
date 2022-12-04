@@ -7,6 +7,7 @@ from utils import Logger
 
 from volume_tests import VolumeTests
 from user_test import UserTests
+from disk_test import DiskTests
 
 Config.set_up()
 
