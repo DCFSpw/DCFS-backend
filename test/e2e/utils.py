@@ -30,7 +30,7 @@ class Logger:
 
     @classmethod
     def __print__(cls, color, level, msg):
-        print(f"{color}[{datetime.datetime.now()}][{level}] {msg}{Bcolors.ENDC}")
+        print(f"[{datetime.datetime.now()}][{level}]{color}{msg}{Bcolors.ENDC}")
 
     @classmethod
     def debug(cls, msg):
