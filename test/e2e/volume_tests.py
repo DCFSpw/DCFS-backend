@@ -34,12 +34,38 @@ class VolumeTests(unittest.TestCase):
         )
         self.cursor = self.db.cursor()
 
-        UserTests.loginAsRoot(self.driver)
+        UserTests.login_as_root(self.driver)
 
     def tearDown(self):
         self.cursor.close()
         self.db.close()
         self.driver.close()
+
+    @staticmethod
+    def add_volume_to_db(cursor, db, name):
+        cursor.execute(f'SELECT * FROM volumes WHERE name = \'{name}\'')
+        disks = cursor.fetchall()
+
+        # do nothing if the volume already exists
+        if len(disks) > 0:
+            return
+
+        cursor.execute(
+            f'INSERT INTO volumes (uuid, name, user_uuid, backup, encryption, file_partition, created_at, deleted_at)'
+            f' VALUES (\'3cd81cf1-740a-11ed-a5fa-00ff94a31ba4\', \'{name}\', \'{UserTests.get_root_uuid(cursor)[0]}\', 1, 1, 1, \'2022-12-04 20:30:56.921\', NULL)')
+        db.commit()
+
+    @staticmethod
+    def delete_volume_from_db(cursor, db, name):
+        cursor.execute(f'SELECT * FROM disks JOIN volumes ON disks.volume_uuid = volumes.uuid WHERE volumes.name = \'{name}\'')
+        disks = cursor.fetchall()
+
+        # do not delete a volume with assigned disks
+        if len(disks) != 0:
+            return
+
+        cursor.execute(f'DELETE FROM volumes WHERE name = \'{name}\'')
+        db.commit()
 
     def test00_Volume(self):
         """

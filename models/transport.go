@@ -266,6 +266,10 @@ func (transport *transport) FindEnqueuedDisk(diskUUID uuid.UUID) Disk {
 func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 	for _, instance := range transport.FileUploadQueue.Instances {
 		for _, block := range instance.Instance.(File).GetBlocks() {
+			if block.Disk == nil {
+				continue
+			}
+
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				logger.Logger.Debug("transport", "Found a volume: ", volumeUUID.String(), " enqueued.")
@@ -276,6 +280,10 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 
 	for _, instance := range transport.FileDownloadQueue.Instances {
 		for _, block := range instance.Instance.(File).GetBlocks() {
+			if block.Disk == nil {
+				continue
+			}
+			
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				logger.Logger.Debug("transport", "Found a volume: ", volumeUUID.String(), " enqueued.")

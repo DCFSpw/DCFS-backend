@@ -41,7 +41,10 @@ class UserTests(unittest.TestCase):
         self.driver.close()
 
     @staticmethod
-    def loginAsRoot(driver):
+    def login_as_root(driver):
+        """
+        login as the root user via the ui
+        """
         utils.wait_til_loaded(5, driver, '.q-field__native.q-placeholder')  # wait for the browser to load
 
         # login as root
@@ -51,12 +54,21 @@ class UserTests(unittest.TestCase):
 
         utils.wait_til_loaded(3, driver, '.flex.flex-center.items-center.q-pa-sm')  # wait for the changes in the browser to take place
 
+    @staticmethod
+    def get_root_uuid(cursor):
+        """
+        return the root uuid from the db
+        """
+        cursor.execute("SELECT uuid FROM users WHERE first_name = 'Root' AND last_name = 'Root'")
+        result = cursor.fetchone()
+        return result
+
     def test00_User(self):
         """
         log in as root and log out
         """
 
-        UserTests.loginAsRoot(self.driver)
+        UserTests.login_as_root(self.driver)
         self.assertTrue('Distributed Cloud File System' in self.driver.page_source)
 
         utils.Logger.debug('[test00_User] successfully logged in')
