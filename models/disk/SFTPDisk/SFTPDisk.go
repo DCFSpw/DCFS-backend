@@ -9,6 +9,7 @@ import (
 	"dcfs/models/credentials"
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/util/logger"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -32,7 +33,13 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
 
-	downloadPath := blockMetadata.UUID.String()
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
 
 	// Check if the file already exists
 	remoteFile, err := client.Open(downloadPath)
@@ -73,7 +80,13 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
 
-	downloadPath := blockMetadata.UUID.String()
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
 
 	// Open remote file
 	remoteFile, err := client.OpenFile(downloadPath, os.O_RDONLY)
@@ -107,7 +120,13 @@ func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
 
-	downloadPath := blockMetadata.UUID.String()
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
 
 	// Remove remote file
 	err := client.Remove(downloadPath)
