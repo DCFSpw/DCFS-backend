@@ -39,6 +39,9 @@ type Disk interface {
 	SetCreationTime(creationTime time.Time)
 	GetCreationTime() time.Time
 
+	SetVirtualDiskUUID(uuid uuid.UUID)
+	GetVirtualDiskUUID() uuid.UUID
+
 	GetProviderSpace() (uint64, uint64, string)
 	SetTotalSpace(quota uint64)
 	GetTotalSpace() uint64
@@ -47,6 +50,8 @@ type Disk interface {
 	UpdateUsedSpace(change int64)
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
+
+	AssignDisk(disk Disk)
 }
 
 type CreateDiskMetadata struct {
@@ -65,7 +70,7 @@ type CreateDiskMetadata struct {
 // return type:
 //   - models.Disk: created disk model, nil if provider is invalid
 func CreateDisk(cdm CreateDiskMetadata) Disk {
-	if DiskTypesRegistry[cdm.Disk.Provider.Type] == nil {
+	if DiskTypesRegistry[cdm.Disk.Provider.Type] == nil || cdm.Disk.Provider.Type < 0 {
 		return nil
 	}
 	var disk Disk = DiskTypesRegistry[cdm.Disk.Provider.Type]()
@@ -77,6 +82,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.SetUsedSpace(cdm.Disk.UsedSpace)
 	disk.SetTotalSpace(cdm.Disk.TotalSpace)
 	disk.SetCreationTime(cdm.Disk.CreatedAt)
+	disk.SetVirtualDiskUUID(cdm.Disk.VirtualDiskUUID)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 
 	logger.Logger.Debug("disk", "Successfully created a new disk.")

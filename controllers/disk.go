@@ -111,6 +111,16 @@ func CreateDisk(c *gin.Context) {
 		go volume.RefreshPartitioner()
 	}
 
+	// Find virtual disk uuid for new disk
+	virtualDiskUUID, err := db.GenerateVirtualDiskUUID(volume.UUID, volume.VolumeSettings.Backup)
+	if err != nil {
+		logger.Logger.Error("api", "Could not generate virtual disk UUID.")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not generate virtual disk UUID (for volumes with backup): "+err.Error()))
+		return
+	} else if virtualDiskUUID != uuid.Nil {
+		_disk.VirtualDiskUUID = virtualDiskUUID
+	}
+
 	// Save disk to database
 	result := db.DB.DatabaseHandle.Create(&_disk)
 	if result.Error != nil {

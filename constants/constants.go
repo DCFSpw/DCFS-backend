@@ -6,6 +6,7 @@ const (
 	PROVIDER_TYPE_GDRIVE   int = 2
 	PROVIDER_TYPE_ONEDRIVE int = 3
 	PROVIDER_TYPE_FTP      int = 4
+	PROVIDER_TYPE_RAID1    int = -1 // Virtual disk provider
 )
 
 // File types

@@ -174,6 +174,14 @@ func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volume
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
+func (d *SFTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	d.abstractDisk.SetVirtualDiskUUID(uuid)
+}
+
+func (d *SFTPDisk) GetVirtualDiskUUID() uuid.UUID {
+	return d.abstractDisk.GetVirtualDiskUUID()
+}
+
 func (d *SFTPDisk) GetProviderSpace() (uint64, uint64, string) {
 	var stats *sftp.StatVFS
 	var err error
@@ -223,6 +231,10 @@ func (d *SFTPDisk) GetUsedSpace() uint64 {
 
 func (d *SFTPDisk) UpdateUsedSpace(change int64) {
 	d.abstractDisk.UpdateUsedSpace(change)
+}
+
+func (d *SFTPDisk) AssignDisk(disk models.Disk) {
+	d.abstractDisk.AssignDisk(disk)
 }
 
 /* Factory methods */

@@ -23,6 +23,15 @@ func Seed() {
 	provider3 := dbo.Provider{}
 	provider4 := dbo.Provider{}
 	user := dbo.User{}
+	virtualDisk := dbo.VirtualDisk{}
+
+	// Add a virtual disk representing awaiting assignment to actual virtual disk
+	db.DB.DatabaseHandle.Where("uuid = ?", uuid.Nil).First(&virtualDisk)
+	if user.UUID != models.RootUUID {
+		virtualDisk.UUID = uuid.Nil
+		virtualDisk.VolumeUUID = uuid.Nil
+		db.DB.DatabaseHandle.Create(&virtualDisk)
+	}
 
 	// Add a root user
 	db.DB.DatabaseHandle.Where("uuid = ?", models.RootUUID).First(&user)

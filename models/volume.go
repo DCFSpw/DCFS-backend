@@ -130,6 +130,66 @@ func (v *Volume) RefreshPartitioner() {
 	v.partitioner.FetchDisks()
 }
 
+// InitializeBackup - initialize virtual disks if backup is enabled
+//
+// This function creates virtual disks for the target backup solution
+// enabled for the volume. It also assigns real disk according to their
+// assigned virtual disk UUID and then refreshes partitioner data.
+//
+// params:
+//   - _virtualDisks []dbo.VirtualDisk: list of virtual disks to be created
+func (v *Volume) InitializeBackup(_virtualDisks []dbo.VirtualDisk) {
+	var virtualDisks []Disk
+
+	// Create virtual disks based on the target backup type
+	switch v.VolumeSettings.Backup {
+	// No backup is used
+	case constants.BACKUP_TYPE_NO_BACKUP:
+		return
+
+	// RAID1+0 backup
+	case constants.BACKUP_TYPE_RAID_1:
+		// Initialize RAID1 virtual disks
+		for _, _virtualDisk := range _virtualDisks {
+			var firstDisk Disk = nil
+			var secondDisk Disk = nil
+
+			// Locate real disks assigned to the virtual disk
+			for _, disk := range v.disks {
+				if disk.GetVirtualDiskUUID() == _virtualDisk.UUID {
+					if firstDisk == nil {
+						firstDisk = disk
+					} else if secondDisk == nil {
+						secondDisk = disk
+					} else {
+						logger.Logger.Error("volume", "RAID1+0 error. More than 2 disks were assigned to single RAID1 drive.")
+					}
+				}
+			}
+
+			// Create RAID1 virtual disk
+			if firstDisk != nil && secondDisk != nil {
+				var virtualDisk Disk = DiskTypesRegistry[constants.BACKUP_TYPE_RAID_1]()
+				virtualDisk.SetUUID(_virtualDisk.UUID)
+				virtualDisk.AssignDisk(firstDisk)
+				virtualDisk.AssignDisk(secondDisk)
+				virtualDisk.SetVolume(v)
+				virtualDisks = append(virtualDisks, virtualDisk)
+			} else {
+				logger.Logger.Error("volume", "RAID1+0 error. Cannot load disks assigned to virtual RAID1 drive.")
+			}
+		}
+	default:
+		logger.Logger.Warning("volume", "Cannot initialize backup drives. Unknown backup type.")
+	}
+
+	for _, disk := range virtualDisks {
+		logger.Logger.Debug("volume", "Created virtual disk: ", disk.GetUUID().String(), ".")
+	}
+
+	v.RefreshPartitioner()
+}
+
 // NewVolume - create new volume model based on volume and disks DBO
 //
 // This function creates volume model used internally by backend based on
@@ -143,7 +203,7 @@ func (v *Volume) RefreshPartitioner() {
 //
 // return type:
 //   - *Volume: created volume model
-func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
+func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.VirtualDisk) *Volume {
 	var v *Volume = new(Volume)
 	v.UUID = _volume.UUID
 	v.BlockSize = constants.DEFAULT_VOLUME_BLOCK_SIZE
@@ -165,7 +225,11 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk) *Volume {
 		}
 	}
 
-	v.RefreshPartitioner()
+	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
+		v.RefreshPartitioner()
+	} else {
+		//v.InitializeBackup(_virtualDisks)
+	}
 
 	log.Println("Created a new Volume: ", v)
 	return v

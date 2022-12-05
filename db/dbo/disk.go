@@ -19,9 +19,18 @@ type Disk struct {
 
 	CreatedAt time.Time `gorm:"<-:create" json:"-"`
 
-	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
-	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
-	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID" json:"provider"`
+	VirtualDiskUUID uuid.UUID `json:"-"`
+
+	User        User        `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
+	Volume      Volume      `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
+	Provider    Provider    `gorm:"foreignKey:ProviderUUID;references:UUID" json:"provider"`
+	VirtualDisk VirtualDisk `gorm:"foreignKey:VirtualDiskUUID;references:UUID" json:"-"`
+}
+
+type VirtualDisk struct {
+	AbstractDatabaseObject
+
+	VolumeUUID uuid.UUID `json:"-"`
 }
 
 // NewDisk - create new disk object

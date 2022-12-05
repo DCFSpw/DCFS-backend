@@ -504,8 +504,10 @@ func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceCo
 	} else {
 		var _volume dbo.Volume = dbo.Volume{}
 		var _disks []dbo.Disk
+		var _virtual_disks []dbo.VirtualDisk
 
 		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Preload("Volume").Preload("Provider").Find(&_disks)
+		db.DB.DatabaseHandle.Where("volume_uuid = ?", volumeUUID).Find(&_virtual_disks)
 		db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&_volume)
 		if _volume.UUID != volumeUUID {
 			logger.Logger.Warning("transport", "Could not find a volume: ", volumeUUID.String(), " in the db.")
@@ -513,7 +515,7 @@ func (transport *transport) getVolumeContainer(volumeUUID uuid.UUID) *InstanceCo
 		}
 
 		container = new(InstanceContainer)
-		container.Instance = NewVolume(&_volume, _disks)
+		container.Instance = NewVolume(&_volume, _disks, _virtual_disks)
 	}
 
 	transport.ActiveVolumes.Instances[volumeUUID] = container

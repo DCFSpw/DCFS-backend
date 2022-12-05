@@ -178,6 +178,14 @@ func (d *FTPDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_FTP)
 }
 
+func (d *FTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	d.abstractDisk.SetVirtualDiskUUID(uuid)
+}
+
+func (d *FTPDisk) GetVirtualDiskUUID() uuid.UUID {
+	return d.abstractDisk.GetVirtualDiskUUID()
+}
+
 func (d *FTPDisk) GetProviderSpace() (uint64, uint64, string) {
 	return 0, 0, constants.OPERATION_NOT_SUPPORTED
 }
@@ -204,6 +212,10 @@ func (d *FTPDisk) UpdateUsedSpace(change int64) {
 
 func (d *FTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
+}
+
+func (d *FTPDisk) AssignDisk(disk models.Disk) {
+	d.abstractDisk.AssignDisk(disk)
 }
 
 /* Factory methods */

@@ -238,7 +238,7 @@ func (d *BackupDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 
 	// Call the original callback
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
-	
+
 	return nil
 }
 
@@ -287,6 +287,14 @@ func (d *BackupDisk) GetCreationTime() time.Time {
 }
 
 func (d *BackupDisk) GetProviderUUID() uuid.UUID {
+	panic("Not supported for backup disk")
+}
+
+func (d *BackupDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	panic("Not supported for backup disk")
+}
+
+func (d *BackupDisk) GetVirtualDiskUUID() uuid.UUID {
 	panic("Not supported for backup disk")
 }
 
@@ -358,15 +366,28 @@ func (d *BackupDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volu
 	panic("Not supported for backup disk")
 }
 
+func (d *BackupDisk) AssignDisk(disk models.Disk) {
+	if d.firstDisk == nil {
+		d.firstDisk = disk
+	} else if d.secondDisk == nil {
+		d.secondDisk = disk
+	} else {
+		// If both disks are already assigned, ignore the new disk
+		logger.Logger.Error("disk", "Cannot assign disk to backup disk, both disks are already assigned.")
+		return
+	}
+}
+
 /* Factory methods */
 
-func NewBackupDisk(_disk1 models.Disk, _disk2 models.Disk) *BackupDisk {
+func NewBackupDisk() *BackupDisk {
 	var d *BackupDisk = new(BackupDisk)
 	d.abstractDisk.Disk = d
 	d.abstractDisk.UUID = uuid.New()
 
-	d.firstDisk = _disk1
-	d.secondDisk = _disk2
-
 	return d
+}
+
+func init() {
+	models.DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1] = func() models.Disk { return NewBackupDisk() }
 }

@@ -22,6 +22,8 @@ type AbstractDisk struct {
 
 	CreationTime time.Time
 
+	VirtualDiskUUID uuid.UUID
+
 	Size      uint64
 	UsedSpace uint64
 }
@@ -101,6 +103,14 @@ func (d *AbstractDisk) GetCreationTime() time.Time {
 	return d.CreationTime
 }
 
+func (d *AbstractDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	d.VirtualDiskUUID = uuid
+}
+
+func (d *AbstractDisk) GetVirtualDiskUUID() uuid.UUID {
+	return d.VirtualDiskUUID
+}
+
 func (d *AbstractDisk) SetTotalSpace(quota uint64) {
 	logger.Logger.Debug("disk", "Set total space of a disk object named: ", d.GetName(), " to: ", strconv.FormatUint(quota, 10), ".")
 	d.Size = quota
@@ -148,7 +158,12 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		Name:                   d.Name,
 		TotalSpace:             d.Size,
 		UsedSpace:              d.UsedSpace,
+		VirtualDiskUUID:        d.VirtualDiskUUID,
 	}
+}
+
+func (d *AbstractDisk) AssignDisk(disk models.Disk) {
+	panic("Not supported for real disk")
 }
 
 /* Additional abstract functions */

@@ -197,6 +197,14 @@ func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
 }
 
+func (d *GDriveDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	d.abstractDisk.SetVirtualDiskUUID(uuid)
+}
+
+func (d *GDriveDisk) GetVirtualDiskUUID() uuid.UUID {
+	return d.abstractDisk.GetVirtualDiskUUID()
+}
+
 func (d *GDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	var err error
 
@@ -270,6 +278,10 @@ func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	}
 
 	return config
+}
+
+func (d *GDriveDisk) AssignDisk(disk models.Disk) {
+	d.abstractDisk.AssignDisk(disk)
 }
 
 /* Factory methods */

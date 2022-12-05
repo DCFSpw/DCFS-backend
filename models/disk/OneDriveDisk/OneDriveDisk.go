@@ -317,6 +317,14 @@ func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
 }
 
+func (d *OneDriveDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	d.abstractDisk.SetVirtualDiskUUID(uuid)
+}
+
+func (d *OneDriveDisk) GetVirtualDiskUUID() uuid.UUID {
+	return d.abstractDisk.GetVirtualDiskUUID()
+}
+
 func (d *OneDriveDisk) GetProviderSpace() (uint64, uint64, string) {
 	var err error
 
@@ -388,6 +396,10 @@ func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 
 	logger.Logger.Debug("disk", "Successfully got config of to the OneDrive provider.")
 	return config
+}
+
+func (d *OneDriveDisk) AssignDisk(disk models.Disk) {
+	d.abstractDisk.AssignDisk(disk)
 }
 
 /* Factory methods */
