@@ -54,3 +54,14 @@ def wait_til_loaded(delay, browser, css_selector):
     except TimeoutException:
         time.sleep(1)
         Logger.debug("[wait_til_loaded] Timeout Exception fired")
+
+
+def wait_til_disappeared(delay, driver, css_selector):
+    while delay > 0:
+        content = driver.find_elements(by=By.CSS_SELECTOR, value=css_selector)
+
+        if len(content) == 0:
+            return
+
+        delay = delay - 1
+        time.sleep(1)

@@ -24,6 +24,7 @@ class VolumeTests(unittest.TestCase):
 
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         self.driver.get(Config.frontUrl)
+        self.driver.maximize_window()
 
         # initiate a connection with the DB
         self.db = mysql.connector.connect(
