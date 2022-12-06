@@ -30,8 +30,8 @@ func (d *BackupDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	contents := &blockMetadata.Content
 
 	// Create a copy of the api call
-	blockMetadata1 := blockMetadata
-	blockMetadata2 := blockMetadata
+	blockMetadata1 := *blockMetadata
+	blockMetadata2 := *blockMetadata
 
 	blockMetadata2.Content = *contents
 
@@ -55,28 +55,28 @@ func (d *BackupDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	// Upload to the first disk
 	go func() {
 		defer waitGroup.Done()
-		err1 = d.firstDisk.Upload(blockMetadata1)
+		err1 = d.firstDisk.Upload(&blockMetadata1)
 	}()
 
 	// Upload to the second disk
 	go func() {
 		defer waitGroup.Done()
-		err2 = d.secondDisk.Upload(blockMetadata2)
+		err2 = d.secondDisk.Upload(&blockMetadata2)
 	}()
 
 	// Wait for the upload to finish
 	waitGroup.Wait()
 
 	// Check for errors
-	if err1.Error != nil {
+	if err1 != nil {
 		logger.Logger.Error("disk", "Cannot upload to the first disk, got an error: ", err1.Error.Error())
 	}
 
-	if err2.Error != nil {
+	if err2 != nil {
 		logger.Logger.Error("disk", "Cannot upload to the second disk, got an error: ", err2.Error.Error())
 	}
 
-	if err1.Error != nil || err2.Error != nil {
+	if err1 != nil || err2 != nil {
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot upload to at least one of the backup disks.")
 	}
 
@@ -89,8 +89,8 @@ func (d *BackupDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 
 func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	// Create a copy of the api call
-	blockMetadata1 := blockMetadata
-	blockMetadata2 := blockMetadata
+	blockMetadata1 := *blockMetadata
+	blockMetadata2 := *blockMetadata
 
 	var contents1 = make([]byte, len(*blockMetadata.Content))
 	var contents2 = make([]byte, len(*blockMetadata.Content))
@@ -119,7 +119,7 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	// Download from the first disk
 	go func() {
 		defer waitGroup.Done()
-		err1 = d.firstDisk.Download(blockMetadata1)
+		err1 = d.firstDisk.Download(&blockMetadata1)
 		if err1.Error == nil {
 			checksum1 = checksum.CalculateChecksum(*blockMetadata1.Content)
 		}
@@ -128,7 +128,7 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	// Download from the second disk
 	go func() {
 		defer waitGroup.Done()
-		err2 = d.secondDisk.Download(blockMetadata2)
+		err2 = d.secondDisk.Download(&blockMetadata2)
 		if err2.Error == nil {
 			checksum2 = checksum.CalculateChecksum(*blockMetadata2.Content)
 		}
@@ -188,8 +188,8 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 
 func (d *BackupDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	// Create a copy of the api call
-	blockMetadata1 := blockMetadata
-	blockMetadata2 := blockMetadata
+	blockMetadata1 := *blockMetadata
+	blockMetadata2 := *blockMetadata
 
 	var emptyCallback = func(uuid.UUID, *int) {
 	}
@@ -211,13 +211,13 @@ func (d *BackupDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	// Remove from the first disk
 	go func() {
 		defer waitGroup.Done()
-		err1 = d.firstDisk.Remove(blockMetadata1)
+		err1 = d.firstDisk.Remove(&blockMetadata1)
 	}()
 
 	// Remove from the second disk
 	go func() {
 		defer waitGroup.Done()
-		err2 = d.secondDisk.Remove(blockMetadata2)
+		err2 = d.secondDisk.Remove(&blockMetadata2)
 	}()
 
 	// Wait for the removal to finish
@@ -263,7 +263,7 @@ func (d *BackupDisk) SetName(name string) {
 }
 
 func (d *BackupDisk) GetName() string {
-	panic("Not supported for backup disk")
+	return "Virtual RAID1 backup disk"
 }
 
 func (d *BackupDisk) GetCredentials() credentials.Credentials {
