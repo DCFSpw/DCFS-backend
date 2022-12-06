@@ -9,7 +9,7 @@ import (
 
 type Partitioner interface {
 	AssignDisk(int) Disk
-	FetchDisks()
+	FetchDisks(disks []Disk)
 }
 
 // CreatePartitioner - create a partitioner based on the partitioner type
@@ -80,10 +80,10 @@ func (p *BalancedPartitioner) AssignDisk(size int) Disk {
 }
 
 // FetchDisks - fetch disks from volume and reset last picked disk index
-func (p *BalancedPartitioner) FetchDisks() {
+func (p *BalancedPartitioner) FetchDisks(disks []Disk) {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
-	for _, disk := range p.AbstractPartitioner.Volume.disks {
+	for _, disk := range disks {
 		if ComputeFreeSpace(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
 			p.Disks = append(p.Disks, disk)
 		}
@@ -156,10 +156,10 @@ func (p *PriorityPartitioner) AssignDisk(size int) Disk {
 }
 
 // FetchDisks - fetch disks from volume and retrieve free space
-func (p *PriorityPartitioner) FetchDisks() {
+func (p *PriorityPartitioner) FetchDisks(disks []Disk) {
 	// Load disk list again in case something has changed in volume
 	var _disks []Disk = make([]Disk, 0)
-	for _, disk := range p.AbstractPartitioner.Volume.disks {
+	for _, disk := range disks {
 		_disks = append(_disks, disk)
 	}
 
@@ -244,10 +244,10 @@ func (p *ThroughputPartitioner) AssignDisk(size int) Disk {
 }
 
 // FetchDisks - fetch disks from volume and compute weights based on throughput
-func (p *ThroughputPartitioner) FetchDisks() {
+func (p *ThroughputPartitioner) FetchDisks(disks []Disk) {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
-	for _, disk := range p.AbstractPartitioner.Volume.disks {
+	for _, disk := range disks {
 		if ComputeFreeSpace(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
 			p.Disks = append(p.Disks, disk)
 		}

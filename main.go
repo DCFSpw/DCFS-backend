@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	_ "dcfs/models/disk/BackupDisk"
 	_ "dcfs/models/disk/FTPDisk"
 	_ "dcfs/models/disk/GDriveDisk"
 	_ "dcfs/models/disk/OneDriveDisk"

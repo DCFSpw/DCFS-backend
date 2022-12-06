@@ -19,8 +19,9 @@ type Volume struct {
 	UserUUID       uuid.UUID
 	VolumeSettings dbo.VolumeSettings
 
-	disks       map[uuid.UUID]Disk
-	partitioner Partitioner
+	disks        map[uuid.UUID]Disk
+	virtualDisks []Disk
+	partitioner  Partitioner
 }
 
 // GetDisk - retrieve disk model from the volume
@@ -127,7 +128,17 @@ func (v *Volume) GetVolumeDBO() dbo.Volume {
 // adding or removing disks) or to refresh data used to assign disks (for
 // example disk usage or throughput).
 func (v *Volume) RefreshPartitioner() {
-	v.partitioner.FetchDisks()
+	var disks []Disk
+
+	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
+		for _, disk := range v.disks {
+			disks = append(disks, disk)
+		}
+	} else {
+		disks = v.virtualDisks
+	}
+
+	v.partitioner.FetchDisks(disks)
 }
 
 // InitializeBackup - initialize virtual disks if backup is enabled
@@ -169,7 +180,7 @@ func (v *Volume) InitializeBackup(_virtualDisks []dbo.VirtualDisk) {
 
 			// Create RAID1 virtual disk
 			if firstDisk != nil && secondDisk != nil {
-				var virtualDisk Disk = DiskTypesRegistry[constants.BACKUP_TYPE_RAID_1]()
+				var virtualDisk Disk = DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1]()
 				virtualDisk.SetUUID(_virtualDisk.UUID)
 				virtualDisk.AssignDisk(firstDisk)
 				virtualDisk.AssignDisk(secondDisk)
@@ -187,7 +198,7 @@ func (v *Volume) InitializeBackup(_virtualDisks []dbo.VirtualDisk) {
 		logger.Logger.Debug("volume", "Created virtual disk: ", disk.GetUUID().String(), ".")
 	}
 
-	v.RefreshPartitioner()
+	v.virtualDisks = virtualDisks
 }
 
 // NewVolume - create new volume model based on volume and disks DBO
@@ -225,11 +236,11 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Virtu
 		}
 	}
 
-	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
-		v.RefreshPartitioner()
-	} else {
-		//v.InitializeBackup(_virtualDisks)
+	if v.VolumeSettings.Backup != constants.BACKUP_TYPE_NO_BACKUP {
+		v.InitializeBackup(_virtualDisks)
 	}
+
+	v.RefreshPartitioner()
 
 	log.Println("Created a new Volume: ", v)
 	return v
