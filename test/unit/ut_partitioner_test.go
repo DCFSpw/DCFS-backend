@@ -276,10 +276,8 @@ func TestThroughputPartitioner_AssignBlocks(t *testing.T) {
 
 		if partitioner.(*models.ThroughputPartitioner).Weights[0] < partitioner.(*models.ThroughputPartitioner).Weights[1] {
 			So(firstDisk, ShouldBeGreaterThanOrEqualTo, secondDisk)
-			So(partitioner.(*models.ThroughputPartitioner).Weights[0]*partitioner.(*models.ThroughputPartitioner).Allocations[0], ShouldBeLessThanOrEqualTo, partitioner.(*models.ThroughputPartitioner).Weights[1]*partitioner.(*models.ThroughputPartitioner).Allocations[1])
 		} else {
 			So(firstDisk, ShouldBeLessThanOrEqualTo, secondDisk)
-			So(partitioner.(*models.ThroughputPartitioner).Weights[0]*partitioner.(*models.ThroughputPartitioner).Allocations[0], ShouldBeGreaterThanOrEqualTo, partitioner.(*models.ThroughputPartitioner).Weights[1]*partitioner.(*models.ThroughputPartitioner).Allocations[1])
 		}
 	})
 }
@@ -421,10 +419,8 @@ func TestThroughputPartitioner_Integration(t *testing.T) {
 		partitioner := volume.GetPartitioner()
 		if partitioner.(*models.ThroughputPartitioner).Weights[0] < partitioner.(*models.ThroughputPartitioner).Weights[1] {
 			So(firstDisk, ShouldBeGreaterThanOrEqualTo, secondDisk)
-			So(partitioner.(*models.ThroughputPartitioner).Weights[0]*partitioner.(*models.ThroughputPartitioner).Allocations[0], ShouldBeLessThanOrEqualTo, partitioner.(*models.ThroughputPartitioner).Weights[1]*partitioner.(*models.ThroughputPartitioner).Allocations[1])
 		} else {
 			So(firstDisk, ShouldBeLessThanOrEqualTo, secondDisk)
-			So(partitioner.(*models.ThroughputPartitioner).Weights[0]*partitioner.(*models.ThroughputPartitioner).Allocations[0], ShouldBeGreaterThanOrEqualTo, partitioner.(*models.ThroughputPartitioner).Weights[1]*partitioner.(*models.ThroughputPartitioner).Allocations[1])
 		}
 	})
 
