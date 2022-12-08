@@ -197,7 +197,10 @@ func TestFindEnqueuedDisk(t *testing.T) {
 	Convey("Return the object from upload queue", t, func() {
 		So(models.Transport.FindEnqueuedDisk(disk.UUID), ShouldEqual, disk)
 	})
+
 	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.UUID)
+	models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(file.UUID)
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
 }
 
 func TestFindEnqueuedVolume(t *testing.T) {
