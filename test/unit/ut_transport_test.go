@@ -171,7 +171,7 @@ func TestGetVolumes(t *testing.T) {
 }
 
 func TestFindEnqueuedDisk(t *testing.T) {
-	disk := mock.GetDummyDisks(1)[0]
+	disk := mock.GetMockDisks(1)[0]
 	file := models.RegularFile{
 		AbstractFile: models.AbstractFile{UUID: uuid.New()},
 	}
@@ -205,7 +205,7 @@ func TestFindEnqueuedDisk(t *testing.T) {
 
 func TestFindEnqueuedVolume(t *testing.T) {
 	volume := MockNewVolume(*mock.VolumeDBO, nil)
-	disk := mock.GetDummyDisks(1)[0]
+	disk := mock.GetMockDisks(1)[0]
 	disk.Volume = volume
 	file := models.RegularFile{
 		AbstractFile: models.AbstractFile{UUID: uuid.New(), Volume: volume},
