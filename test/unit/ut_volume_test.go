@@ -37,7 +37,7 @@ func TestGetDisk(t *testing.T) {
 }
 
 func TestAddDisk(t *testing.T) {
-	disks := mock.GetDummyDisks(1)
+	disks := mock.GetMockDisks(1)
 	volume := MockNewVolume(*mock.VolumeDBO, nil)
 
 	volume.AddDisk(disks[0].UUID, disks[0])

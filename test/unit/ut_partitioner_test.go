@@ -2,6 +2,7 @@ package unit
 
 import (
 	"dcfs/constants"
+	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/test/unit/mock"
@@ -11,8 +12,24 @@ import (
 	"testing"
 )
 
+const (
+	PROVIDER_TYPE_MOCK int = 0
+)
+
+var mockProvider *dbo.Provider
+
+func GetDiskDBOsWithMockProvider(diskCount int) []dbo.Disk {
+	disks := mock.GetDiskDBOs(diskCount)
+
+	for i := 0; i < diskCount; i++ {
+		disks[i].Provider = *mockProvider
+	}
+
+	return disks
+}
+
 func TestBalancedPartitioner_EmptyVolume(t *testing.T) {
-	disks := mock.GetDiskDBOs(0)
+	disks := GetDiskDBOsWithMockProvider(0)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -26,7 +43,7 @@ func TestBalancedPartitioner_EmptyVolume(t *testing.T) {
 }
 
 func TestBalancedPartitioner_FullDisks(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 	size := uint64(1024 * constants.DEFAULT_VOLUME_BLOCK_SIZE)
 	for i, _ := range disks {
 		disks[i].TotalSpace = size
@@ -46,7 +63,7 @@ func TestBalancedPartitioner_FullDisks(t *testing.T) {
 }
 
 func TestBalancedPartitioner_AssignEvenBlocks(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -75,7 +92,7 @@ func TestBalancedPartitioner_AssignEvenBlocks(t *testing.T) {
 }
 
 func TestBalancedPartitioner_AssignOddBlocks(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -98,12 +115,16 @@ func TestBalancedPartitioner_AssignOddBlocks(t *testing.T) {
 			}
 		}
 
-		So(firstDisk, ShouldEqual, secondDisk+1)
+		diff := firstDisk - secondDisk
+		if diff < 0 {
+			diff = -diff
+		}
+		So(diff, ShouldEqual, 1)
 	})
 }
 
 func TestPriorityPartitioner_EmptyVolume(t *testing.T) {
-	disks := mock.GetDiskDBOs(0)
+	disks := GetDiskDBOsWithMockProvider(0)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_PRIORITY
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -136,7 +157,7 @@ func TestPriorityPartitioner_FullDisks(t *testing.T) {
 }
 
 func TestPriorityPartitioner_NotEnoughSpaceOnAllDisks(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 	size := uint64(1024 * constants.DEFAULT_VOLUME_BLOCK_SIZE)
 	for i, _ := range disks {
 		disks[i].TotalSpace = size
@@ -155,7 +176,7 @@ func TestPriorityPartitioner_NotEnoughSpaceOnAllDisks(t *testing.T) {
 }
 
 func TestPriorityPartitioner_AssignAllBlocksToFirstDisk(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_PRIORITY
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -184,7 +205,7 @@ func TestPriorityPartitioner_AssignAllBlocksToFirstDisk(t *testing.T) {
 }
 
 func TestPriorityPartitioner_AssignBlocksToNextAvailableDisk(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	size := uint64(1024 * constants.DEFAULT_VOLUME_BLOCK_SIZE)
 	disks[0].TotalSpace = size
@@ -217,7 +238,7 @@ func TestPriorityPartitioner_AssignBlocksToNextAvailableDisk(t *testing.T) {
 }
 
 func TestThroughputPartitioner_EmptyVolume(t *testing.T) {
-	disks := mock.GetDiskDBOs(0)
+	disks := GetDiskDBOsWithMockProvider(0)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_THROUGHPUT
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -231,7 +252,7 @@ func TestThroughputPartitioner_EmptyVolume(t *testing.T) {
 }
 
 func TestThroughputPartitioner_FullDisks(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 	size := uint64(1024 * constants.DEFAULT_VOLUME_BLOCK_SIZE)
 	for i, _ := range disks {
 		disks[i].TotalSpace = size
@@ -287,7 +308,7 @@ func TestPartitionerFactory(t *testing.T) {
 	var priorityPartitioner models.PriorityPartitioner
 	var throughputPartitioner models.ThroughputPartitioner
 
-	disks := mock.GetDiskDBOs(0)
+	disks := GetDiskDBOsWithMockProvider(0)
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
 
 	Convey("Test if partitioner factory creates appropriate partitioner object", t, func() {
@@ -313,7 +334,7 @@ func TestAbstractPartitioner(t *testing.T) {
 }
 
 func TestBalancedPartitioner_Integration(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -350,7 +371,7 @@ func TestBalancedPartitioner_Integration(t *testing.T) {
 }
 
 func TestPriorityPartitioner_Integration(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_PRIORITY
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -388,7 +409,7 @@ func TestPriorityPartitioner_Integration(t *testing.T) {
 }
 
 func TestThroughputPartitioner_Integration(t *testing.T) {
-	disks := mock.GetDiskDBOs(2)
+	disks := GetDiskDBOsWithMockProvider(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_THROUGHPUT
 	volume := MockNewVolume(*mock.VolumeDBO, disks)
@@ -429,4 +450,14 @@ func TestThroughputPartitioner_Integration(t *testing.T) {
 	})
 
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
+}
+
+func init() {
+	models.DiskTypesRegistry[PROVIDER_TYPE_MOCK] = mock.NewMockDisk
+
+	mockProvider = dbo.NewProvider()
+	mockProvider.AbstractDatabaseObject.UUID = uuid.New()
+	mockProvider.Name = "Mock provider"
+	mockProvider.Type = PROVIDER_TYPE_MOCK
+	mockProvider.Logo = "Mock logo"
 }
