@@ -11,6 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.10.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goh-chunlin/go-onedrive v1.1.1
+	github.com/google/go-cmp v0.5.8
 	github.com/google/uuid v1.3.0
 	github.com/h2non/filetype v1.1.1
 	github.com/jlaffaye/ftp v0.1.0

@@ -2,6 +2,7 @@ package unit
 
 import (
 	"dcfs/constants"
+	"dcfs/models"
 	"dcfs/requests"
 	"dcfs/test/unit/mock"
 	_ "dcfs/util/logger"
@@ -43,4 +44,6 @@ func TestBalancedPartitioner(t *testing.T) {
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
+
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
 }

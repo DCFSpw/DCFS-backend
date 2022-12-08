@@ -15,6 +15,12 @@ var DiskColumns []string = []string{"uuid", "user_uuid", "volume_uuid", "provide
 
 var VolumeColumns []string = []string{"uuid", "name", "user_uuid", "backup", "encryption", "file_partition", "created_at", "deleted_at"}
 
+var BlockColumns []string = []string{"uuid", "user_uuid", "volume_uuid", "disk_uuid", "file_uuid", "size", "order", "checksum"}
+
+var ProviderColumns []string = []string{"uuid", "type", "name", "logo"}
+
+var UserColumns []string = []string{"uuid", "first_name", "last_name", "email", "password"}
+
 func DiskRow(_dbos ...*dbo.Disk) *sqlmock.Rows {
 	ret := sqlmock.NewRows(DiskColumns)
 
@@ -55,6 +61,65 @@ func VolumeRow(_dbos ...*dbo.Volume) *sqlmock.Rows {
 			_dbo.VolumeSettings.FilePartition,
 			_dbo.CreatedAt,
 			_dbo.DeletedAt)
+	}
+
+	return ret
+}
+
+func BlockRow(_dbos ...*dbo.Block) *sqlmock.Rows {
+	ret := sqlmock.NewRows(BlockColumns)
+
+	for _, _dbo := range _dbos {
+		if _dbo == nil {
+			continue
+		}
+
+		ret.AddRow(
+			_dbo.UUID,
+			_dbo.UserUUID,
+			_dbo.VolumeUUID,
+			_dbo.DiskUUID,
+			_dbo.FileUUID,
+			_dbo.Size,
+			_dbo.Order,
+			_dbo.Checksum)
+	}
+
+	return ret
+}
+
+func ProviderRow(_dbos ...*dbo.Provider) *sqlmock.Rows {
+	ret := sqlmock.NewRows(ProviderColumns)
+
+	for _, _dbo := range _dbos {
+		if _dbo == nil {
+			continue
+		}
+
+		ret.AddRow(
+			_dbo.UUID,
+			_dbo.Type,
+			_dbo.Name,
+			_dbo.Logo)
+	}
+
+	return ret
+}
+
+func UserRow(_dbos ...*dbo.User) *sqlmock.Rows {
+	ret := sqlmock.NewRows(UserColumns)
+
+	for _, _dbo := range _dbos {
+		if _dbo == nil {
+			continue
+		}
+
+		ret.AddRow(
+			_dbo.UUID,
+			_dbo.FirstName,
+			_dbo.LastName,
+			_dbo.Email,
+			_dbo.Password)
 	}
 
 	return ret
