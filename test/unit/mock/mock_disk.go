@@ -162,6 +162,34 @@ func GetDummyDisks(number int) []*dummyDisk {
 	return ret
 }
 
+func GetSpecifiedDisksDBO(number int, provider int) []dbo.Disk {
+	var ret []dbo.Disk = make([]dbo.Disk, 0)
+
+	for i := 0; i < number; i++ {
+		providerDbo, creds := GetProviderDBO(provider)
+
+		ret = append(ret, dbo.Disk{
+			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+				UUID: uuid.New(),
+			},
+			UserUUID:     UserUUID,
+			VolumeUUID:   VolumeUUID,
+			ProviderUUID: providerDbo.UUID,
+			Credentials:  creds,
+			Name:         fmt.Sprintf("mock disk no. #%d", i),
+			UsedSpace:    0,
+			TotalSpace:   15 * 1024 * 1024 * 1024,
+			FreeSpace:    15 * 1024 * 1024 * 1024,
+			CreatedAt:    time.Time{},
+			User:         *UserDBO,
+			Volume:       *VolumeDBO,
+			Provider:     *providerDbo,
+		})
+	}
+
+	return ret
+}
+
 func init() {
 	// change path so that there are no problems with the credential files
 	_ = os.Chdir("../../")
