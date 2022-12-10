@@ -146,6 +146,12 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		logger.Logger.Error("disk", "Cannot download from the second disk, got an error: ", err2.Error.Error())
 	}
 
+	// If both disks worked and one of the blocks is corrupted, make attempt to recover
+	if err1 == nil && err2 == nil {
+		d.fixBlock(blockMetadata, *blockMetadata1.Content, *blockMetadata2.Content, checksum1, checksum2)
+	}
+
+	// Return block
 	if checksum1 == blockMetadata.Checksum || checksum2 == blockMetadata.Checksum {
 		// Return block with the correct checksum if possible
 		if err1 == nil && checksum1 == blockMetadata.Checksum {
@@ -384,6 +390,63 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 		logger.Logger.Error("disk", "Cannot assign disk to backup disk, both disks are already assigned.")
 		return
 	}
+}
+
+func (d *BackupDisk) fixBlock(blockMetadata *apicalls.BlockMetadata, firstContents []uint8, secondContents []uint8, firstChecksum string, secondChecksum string) {
+	var err *apicalls.ErrorWrapper
+	var targetDisk models.Disk
+
+	// Verify if the action should be performed
+	if firstChecksum == blockMetadata.Checksum && secondChecksum == blockMetadata.Checksum {
+		// Both disks have the correct block
+		return
+	}
+	if firstChecksum != blockMetadata.Checksum && secondChecksum != blockMetadata.Checksum {
+		// Unrecoverable, both disks have the wrong block
+		logger.Logger.Error("disk", "RAID10 recovery failed: both disks have corrupted block ", blockMetadata.UUID.String(), ".")
+		return
+	}
+
+	// Create copy of the api call
+	_blockMetadata := *blockMetadata
+	_blockMetadata.Content = nil
+
+	_blockMetadata.CompleteCallback = func(uuid.UUID, *int) {
+	}
+
+	var status int
+	_blockMetadata.Status = &status
+
+	var contents []uint8
+
+	// Set the target disk to disk with the wrong version of the block
+	if firstChecksum == blockMetadata.Checksum {
+		targetDisk = d.secondDisk
+		contents = make([]uint8, len(firstContents))
+		copy(contents, firstContents)
+	} else {
+		targetDisk = d.firstDisk
+		contents = make([]uint8, len(secondContents))
+		copy(contents, secondContents)
+	}
+
+	// Remove the invalid block from the target disk
+	err = targetDisk.Remove(&_blockMetadata)
+	if err != nil {
+		logger.Logger.Error("disk", "RAID10 recovery failed: cannot remove invalid block ", blockMetadata.UUID.String(), "from disk ", targetDisk.GetUUID().String(), ".")
+		return
+	}
+
+	// Upload the correct block to the target disk
+	_blockMetadata.Content = &contents
+	err = targetDisk.Upload(&_blockMetadata)
+	if err != nil {
+		logger.Logger.Error("disk", "RAID10 recovery failed: cannot upload valid block ", blockMetadata.UUID.String(), "to disk ", targetDisk.GetUUID().String(), ".")
+		return
+	}
+
+	logger.Logger.Warning("disk", "RAID10 recovery completed: disk ", targetDisk.GetUUID().String(), " now has the correct block ", blockMetadata.UUID.String(), ".")
+	return
 }
 
 /* Factory methods */

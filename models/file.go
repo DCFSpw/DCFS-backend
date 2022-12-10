@@ -553,6 +553,7 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				Size:     int64(_b.Size),
 				Status:   &_b.Status,
 				Content:  new([]uint8),
+				Checksum: _b.Checksum,
 				CompleteCallback: func(UUID uuid.UUID, status *int) {
 					*status = constants.BLOCK_STATUS_TRANSFERRED
 				},

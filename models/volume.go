@@ -72,7 +72,7 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 // AddVirtualDisk - add virtual disk to the volume
 //
 // params:
-//   - diskUUID uuid.UUID: UUID of the disk to be added to the volume
+//   - diskUUID uuid.UUID: UUID of the virtual disk to be added to the volume
 //   - _disk Disk: data of the disk
 func (v *Volume) AddVirtualDisk(diskUUID uuid.UUID, _disk Disk) {
 	if v.virtualDisks == nil {
