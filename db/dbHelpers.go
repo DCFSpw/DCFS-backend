@@ -236,7 +236,7 @@ func GenerateVirtualDiskUUID(volumeUUID uuid.UUID, backupType int) (uuid.UUID, e
 		var disk dbo.Disk
 
 		// Find unassigned disk to pair with
-		result := DB.DatabaseHandle.Where("volume_uuid = ? AND virtual_disk_uuid = ?", volumeUUID, uuid.Nil).First(&disk)
+		result := DB.DatabaseHandle.Where("volume_uuid = ? AND is_virtual = ? AND virtual_disk_uuid = ?", volumeUUID, false, uuid.Nil).First(&disk)
 		if result.Error != nil {
 			logger.Logger.Debug("disk", "Could not find an unassigned disk to pair with.")
 			if result.Error == gorm.ErrRecordNotFound {
@@ -246,10 +246,20 @@ func GenerateVirtualDiskUUID(volumeUUID uuid.UUID, backupType int) (uuid.UUID, e
 			}
 		}
 
+		// Retrieve RAID1 virtual provider from database
+		var provider dbo.Provider
+		result = DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_RAID1).First(&provider)
+		if result.Error != nil {
+			logger.Logger.Error("disk", "Could not find the provider with the type: ", string(constants.PROVIDER_TYPE_RAID1), " from the db.")
+			return uuid.Nil, result.Error
+		}
+
 		// Generate virtual disk
-		var virtualDisk dbo.VirtualDisk
+		var virtualDisk *dbo.Disk = dbo.NewVirtualDisk()
 		virtualDisk.UUID = uuid.New()
+		virtualDisk.UserUUID = disk.UserUUID
 		virtualDisk.VolumeUUID = volumeUUID
+		virtualDisk.ProviderUUID = provider.UUID
 
 		result = DB.DatabaseHandle.Create(&virtualDisk)
 		if result.Error != nil {

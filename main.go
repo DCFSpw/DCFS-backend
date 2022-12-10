@@ -57,7 +57,6 @@ func main() {
 	db.DB.RegisterTable(dbo.Volume{})
 	db.DB.RegisterTable(dbo.Provider{})
 	db.DB.RegisterTable(dbo.File{})
-	db.DB.RegisterTable(dbo.VirtualDisk{})
 	db.DB.RegisterTable(dbo.Disk{})
 	db.DB.RegisterTable(dbo.Block{})
 	db.DB.RegisterTable(dbo.User{})

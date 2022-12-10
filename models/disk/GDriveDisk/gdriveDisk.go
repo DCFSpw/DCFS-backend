@@ -197,6 +197,10 @@ func (d *GDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_GDRIVE)
 }
 
+func (d *GDriveDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.abstractDisk.SetIsVirtualFlag(isVirtual)
+}
+
 func (d *GDriveDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

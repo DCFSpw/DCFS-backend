@@ -39,6 +39,7 @@ type Disk interface {
 	SetCreationTime(creationTime time.Time)
 	GetCreationTime() time.Time
 
+	SetIsVirtualFlag(isVirtual bool)
 	SetVirtualDiskUUID(uuid uuid.UUID)
 	GetVirtualDiskUUID() uuid.UUID
 
@@ -82,6 +83,7 @@ func CreateDisk(cdm CreateDiskMetadata) Disk {
 	disk.SetUsedSpace(cdm.Disk.UsedSpace)
 	disk.SetTotalSpace(cdm.Disk.TotalSpace)
 	disk.SetCreationTime(cdm.Disk.CreatedAt)
+	disk.SetIsVirtualFlag(cdm.Disk.IsVirtual)
 	disk.SetVirtualDiskUUID(cdm.Disk.VirtualDiskUUID)
 	cdm.Volume.AddDisk(disk.GetUUID(), disk)
 

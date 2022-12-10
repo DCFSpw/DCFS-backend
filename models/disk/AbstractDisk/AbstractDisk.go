@@ -22,6 +22,7 @@ type AbstractDisk struct {
 
 	CreationTime time.Time
 
+	IsVirtual       bool
 	VirtualDiskUUID uuid.UUID
 
 	Size      uint64
@@ -101,6 +102,10 @@ func (d *AbstractDisk) SetCreationTime(creationTime time.Time) {
 
 func (d *AbstractDisk) GetCreationTime() time.Time {
 	return d.CreationTime
+}
+
+func (d *AbstractDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.IsVirtual = isVirtual
 }
 
 func (d *AbstractDisk) SetVirtualDiskUUID(uuid uuid.UUID) {

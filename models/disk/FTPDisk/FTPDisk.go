@@ -178,6 +178,10 @@ func (d *FTPDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_FTP)
 }
 
+func (d *FTPDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.abstractDisk.SetIsVirtualFlag(isVirtual)
+}
+
 func (d *FTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

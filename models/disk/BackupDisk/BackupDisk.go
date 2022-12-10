@@ -290,12 +290,16 @@ func (d *BackupDisk) GetProviderUUID() uuid.UUID {
 	panic("Not supported for backup disk")
 }
 
+func (d *BackupDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.abstractDisk.SetIsVirtualFlag(isVirtual)
+}
+
 func (d *BackupDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
-	panic("Not supported for backup disk")
+	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }
 
 func (d *BackupDisk) GetVirtualDiskUUID() uuid.UUID {
-	panic("Not supported for backup disk")
+	return d.abstractDisk.GetVirtualDiskUUID()
 }
 
 func (d *BackupDisk) GetProviderSpace() (uint64, uint64, string) {

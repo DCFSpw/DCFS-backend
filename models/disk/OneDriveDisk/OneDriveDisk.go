@@ -317,6 +317,10 @@ func (d *OneDriveDisk) GetProviderUUID() uuid.UUID {
 	return d.abstractDisk.GetProvider(constants.PROVIDER_TYPE_ONEDRIVE)
 }
 
+func (d *OneDriveDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.abstractDisk.SetIsVirtualFlag(isVirtual)
+}
+
 func (d *OneDriveDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

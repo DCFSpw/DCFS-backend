@@ -72,14 +72,16 @@ func CreateDisk(c *gin.Context) {
 		AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 			UUID: uuid.New(),
 		},
-		UserUUID:     userUUID,
-		VolumeUUID:   volumeUUID,
-		ProviderUUID: provider.UUID,
-		Credentials:  requestBody.Credentials.ToString(),
-		Provider:     *provider,
-		Name:         requestBody.Name,
-		UsedSpace:    0,
-		TotalSpace:   requestBody.TotalSpace,
+		UserUUID:        userUUID,
+		VolumeUUID:      volumeUUID,
+		ProviderUUID:    provider.UUID,
+		Credentials:     requestBody.Credentials.ToString(),
+		Provider:        *provider,
+		Name:            requestBody.Name,
+		UsedSpace:       0,
+		TotalSpace:      requestBody.TotalSpace,
+		IsVirtual:       false,
+		VirtualDiskUUID: uuid.Nil,
 	}
 	disk := models.CreateDisk(models.CreateDiskMetadata{
 		Disk:   &_disk,
@@ -174,7 +176,7 @@ func DiskOAuth(c *gin.Context) {
 	diskUUID, err = uuid.Parse(_diskUUID)
 
 	// Retrieve disk from database
-	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	err = db.DB.DatabaseHandle.Where("uuid = ? AND is_virtual = ?", _diskUUID, false).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not find a disk with the given uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
@@ -261,7 +263,7 @@ func GetDisk(c *gin.Context) {
 	_diskUUID = c.Param("DiskUUID")
 
 	// Retrieve disk from database
-	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	err = db.DB.DatabaseHandle.Where("uuid = ? AND is_virtual = ?", _diskUUID, false).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Cannot find a disk with the provided UUID"))
@@ -408,7 +410,7 @@ func UpdateDisk(c *gin.Context) {
 	}
 
 	// Load full database object with a provider and a volume to return
-	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&diskDBO).Error
+	err = db.DB.DatabaseHandle.Where("uuid = ? AND is_virtual = ?", _diskUUID, false).Preload("Provider").Preload("Volume").Find(&diskDBO).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not validate the previous db operation.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
@@ -438,7 +440,7 @@ func DeleteDisk(c *gin.Context) {
 
 	// Retrieve disk from database
 	_diskUUID = c.Param("DiskUUID")
-	err = db.DB.DatabaseHandle.Where("uuid = ?", _diskUUID).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	err = db.DB.DatabaseHandle.Where("uuid = ? AND is_virtual = ?", _diskUUID, false).Preload("Provider").Preload("Volume").Find(&_disk).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
 		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not find the disk with the provided UUID"))
@@ -506,7 +508,7 @@ func GetDisks(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Load list of disks from database
-	db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID.String()).Preload("Provider").Preload("Volume").Find(&_disks)
+	db.DB.DatabaseHandle.Where("user_uuid = ? AND is_virtual = ?", userUUID.String(), false).Preload("Provider").Preload("Volume").Find(&_disks)
 	for _, disk := range _disks {
 		// Update disk spaced based on local data (for performance reasons)
 		disk.FreeSpace = disk.TotalSpace - disk.UsedSpace

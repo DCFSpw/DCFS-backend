@@ -149,7 +149,7 @@ func (v *Volume) RefreshPartitioner() {
 //
 // params:
 //   - _virtualDisks []dbo.VirtualDisk: list of virtual disks to be created
-func (v *Volume) InitializeBackup(_virtualDisks []dbo.VirtualDisk) {
+func (v *Volume) InitializeBackup(_virtualDisks []dbo.Disk) {
 	var virtualDisks []Disk
 
 	// Create virtual disks based on the target backup type
@@ -214,7 +214,7 @@ func (v *Volume) InitializeBackup(_virtualDisks []dbo.VirtualDisk) {
 //
 // return type:
 //   - *Volume: created volume model
-func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.VirtualDisk) *Volume {
+func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Disk) *Volume {
 	var v *Volume = new(Volume)
 	v.UUID = _volume.UUID
 	v.BlockSize = constants.DEFAULT_VOLUME_BLOCK_SIZE

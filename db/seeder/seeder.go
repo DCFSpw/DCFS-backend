@@ -22,16 +22,8 @@ func Seed() {
 	provider2 := dbo.Provider{}
 	provider3 := dbo.Provider{}
 	provider4 := dbo.Provider{}
+	providerRAID1 := dbo.Provider{}
 	user := dbo.User{}
-	virtualDisk := dbo.VirtualDisk{}
-
-	// Add a virtual disk representing awaiting assignment to actual virtual disk
-	db.DB.DatabaseHandle.Where("uuid = ?", uuid.Nil).First(&virtualDisk)
-	if user.UUID != models.RootUUID {
-		virtualDisk.UUID = uuid.Nil
-		virtualDisk.VolumeUUID = uuid.Nil
-		db.DB.DatabaseHandle.Create(&virtualDisk)
-	}
 
 	// Add a root user
 	db.DB.DatabaseHandle.Where("uuid = ?", models.RootUUID).First(&user)
@@ -94,5 +86,16 @@ func Seed() {
 		provider4.Logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Antu_gFTP.svg/640px-Antu_gFTP.svg.png"
 
 		db.DB.DatabaseHandle.Create(&provider4)
+	}
+
+	// Add a virtual disk provider for representing virtual disks
+	db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_RAID1).First(&providerRAID1)
+	if providerRAID1.Type != constants.PROVIDER_TYPE_RAID1 {
+		providerRAID1.UUID = uuid.New()
+		providerRAID1.Type = constants.PROVIDER_TYPE_RAID1
+		providerRAID1.Name = "RAID1 virtual drive"
+		providerRAID1.Logo = ""
+
+		db.DB.DatabaseHandle.Create(&providerRAID1)
 	}
 }

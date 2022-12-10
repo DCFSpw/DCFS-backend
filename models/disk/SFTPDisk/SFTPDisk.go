@@ -174,6 +174,10 @@ func (d *SFTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volume
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
+func (d *SFTPDisk) SetIsVirtualFlag(isVirtual bool) {
+	d.abstractDisk.SetIsVirtualFlag(isVirtual)
+}
+
 func (d *SFTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }
