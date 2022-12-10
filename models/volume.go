@@ -1,13 +1,18 @@
 package models
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/requests"
 	"dcfs/util/logger"
 	"github.com/google/uuid"
+	"io"
 	"log"
 	"math"
+	"os"
 	"strconv"
 )
 
@@ -136,6 +141,84 @@ func (v *Volume) GetPartitioner() Partitioner {
 // example disk usage or throughput).
 func (v *Volume) RefreshPartitioner() {
 	v.partitioner.FetchDisks()
+}
+
+// Encrypt - encrypt a []byte using a predefined 256 byte key
+//
+// params: block - []byte to be encrypted
+//
+// return: error
+func (v *Volume) Encrypt(block *[]uint8) error {
+	if v.VolumeSettings.Encryption == constants.ENCRYPTION_TYPE_NO_ENCRYPTION {
+		return nil
+	}
+
+	key, err := os.ReadFile("./encryption.key")
+	if err != nil {
+		logger.Logger.Error("volume", "Could not read the encryption key, files will not be encrypted: ", err.Error())
+		return err
+	}
+
+	cb, err := aes.NewCipher(key)
+	if err != nil {
+		logger.Logger.Error("volume", "Could not generate a block cipher object: ", err.Error())
+		return err
+	}
+
+	gcm, err := cipher.NewGCM(cb)
+	if err != nil {
+		logger.Logger.Error("volume", "Could not generate a gcm object: ", err.Error())
+		return err
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+		logger.Logger.Error("volume", "Could not populate the cipher nonce with a random seed: ", err.Error())
+		return err
+	}
+
+	*block = gcm.Seal(nonce, nonce, *block, nil)
+
+	return nil
+}
+
+// Decrypt - decrypt a []byte using a predefined 256 byte key
+//
+// params: block - []byte to be decrypted
+//
+// return: error
+func (v *Volume) Decrypt(block *[]uint8) error {
+	if v.VolumeSettings.Encryption == constants.ENCRYPTION_TYPE_NO_ENCRYPTION {
+		return nil
+	}
+
+	key, err := os.ReadFile("./encryption.key")
+	if err != nil {
+		logger.Logger.Error("volume", "Could not read the encryption key, files will not be encrypted: ", err.Error(), ".")
+		return err
+	}
+
+	cb, err := aes.NewCipher(key)
+	if err != nil {
+		logger.Logger.Error("volume", "Could not generate a block cipher object: ", err.Error(), ".")
+		return err
+	}
+
+	gcm, err := cipher.NewGCM(cb)
+	if err != nil {
+		logger.Logger.Error("volume", "Could not generate a gcm object: ", err.Error(), ".")
+		return err
+	}
+
+	nonce := (*block)[:gcm.NonceSize()]
+	ciphertext := (*block)[gcm.NonceSize():]
+	*block, err = gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		logger.Logger.Error("volume", "Could not decode the file: ", err.Error(), ".")
+		return err
+	}
+
+	return nil
 }
 
 // NewVolume - create new volume model based on volume and disks DBO
