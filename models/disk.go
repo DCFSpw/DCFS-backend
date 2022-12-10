@@ -47,6 +47,8 @@ type Disk interface {
 	UpdateUsedSpace(change int64)
 
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
+
+	IsReady() bool
 }
 
 type CreateDiskMetadata struct {

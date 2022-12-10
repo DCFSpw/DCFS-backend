@@ -244,6 +244,10 @@ func (d *SFTPDisk) UpdateUsedSpace(change int64) {
 	d.abstractDisk.UpdateUsedSpace(change)
 }
 
+func (d *SFTPDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)

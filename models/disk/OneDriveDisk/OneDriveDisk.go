@@ -390,6 +390,10 @@ func (d *OneDriveDisk) GetConfig() *oauth2.Config {
 	return config
 }
 
+func (d *OneDriveDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewOneDriveDisk() *OneDriveDisk {

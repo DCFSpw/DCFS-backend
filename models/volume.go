@@ -143,6 +143,7 @@ func (v *Volume) RefreshPartitioner() {
 	v.partitioner.FetchDisks()
 }
 
+<<<<<<< HEAD
 // Encrypt - encrypt a []byte using a predefined 256 byte key
 //
 // params: block - []byte to be encrypted
@@ -220,6 +221,19 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 	}
 
 	return nil
+}
+
+// IsReady - check if the volume is ready to begin operations on files
+//
+// return type: bool
+func (v *Volume) IsReady() bool {
+	for _, d := range v.disks {
+		if !d.IsReady() {
+			return false
+		}
+	}
+
+	return true
 }
 
 // NewVolume - create new volume model based on volume and disks DBO

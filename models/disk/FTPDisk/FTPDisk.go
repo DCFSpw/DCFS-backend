@@ -206,6 +206,10 @@ func (d *FTPDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeU
 	return d.abstractDisk.GetDiskDBO(userUUID, providerUUID, volumeUUID)
 }
 
+func (d *FTPDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewFTPDisk() *FTPDisk {
