@@ -11,11 +11,11 @@ import (
 )
 
 type FTPCredentials struct {
-	Login    string
-	Password string
-	Host     string
-	Port     string
-	Path     string
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Path     string `json:"path"`
 }
 
 // Authenticate - authenticate to remote server using saved credentials

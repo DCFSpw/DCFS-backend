@@ -395,9 +395,12 @@ func UpdateDisk(c *gin.Context) {
 			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_QUOTA_EXCEEDED, "TotalSpace", "Provided total space is lower than currently used space"))
 			return
 		} else {
-			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(body.TotalSpace, 10), ".")
+			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(body.TotalSpace, 10), " (including space retrieved from provider).")
 			disk.SetTotalSpace(body.TotalSpace)
 		}
+	} else if errCode == constants.OPERATION_NOT_SUPPORTED {
+		logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(body.TotalSpace, 10), " (based on user input, provider doesn't support space information retrieval).")
+		disk.SetTotalSpace(body.TotalSpace)
 	}
 
 	// Save disk details to database
