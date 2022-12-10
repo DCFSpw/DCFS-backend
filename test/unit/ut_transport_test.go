@@ -171,7 +171,7 @@ func TestGetVolumes(t *testing.T) {
 }
 
 func TestFindEnqueuedDisk(t *testing.T) {
-	disk := mock.GetDummyDisks(1)[0]
+	disk := mock.GetMockDisks(1)[0]
 	file := models.RegularFile{
 		AbstractFile: models.AbstractFile{UUID: uuid.New()},
 	}
@@ -197,12 +197,15 @@ func TestFindEnqueuedDisk(t *testing.T) {
 	Convey("Return the object from upload queue", t, func() {
 		So(models.Transport.FindEnqueuedDisk(disk.UUID), ShouldEqual, disk)
 	})
+
 	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.UUID)
+	models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(file.UUID)
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
 }
 
 func TestFindEnqueuedVolume(t *testing.T) {
 	volume := MockNewVolume(*mock.VolumeDBO, nil)
-	disk := mock.GetDummyDisks(1)[0]
+	disk := mock.GetMockDisks(1)[0]
 	disk.Volume = volume
 	file := models.RegularFile{
 		AbstractFile: models.AbstractFile{UUID: uuid.New(), Volume: volume},

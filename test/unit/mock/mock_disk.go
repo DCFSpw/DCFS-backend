@@ -12,111 +12,118 @@ import (
 	"time"
 )
 
-type dummyDisk struct {
-	UUID   uuid.UUID
-	Volume *models.Volume
-	Name   string
+type MockDisk struct {
+	UUID        uuid.UUID
+	Volume      *models.Volume
+	Name        string
+	SpeedFactor int
+
+	UsedSpace  uint64
+	TotalSpace uint64
+
+	CreationTime time.Time
 }
 
 /* Mandatory Disk interface implementations */
 
-func (d *dummyDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
+func (d *MockDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
+
+	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
+	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
+
+	return nil
 }
 
-func (d *dummyDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
+func (d *MockDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
+
+	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
+	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
+
+	return nil
 }
 
-func (d *dummyDisk) Rename(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
+func (d *MockDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
+	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
+
+	return nil
 }
 
-func (d *dummyDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented")
-}
-
-func (d *dummyDisk) SetVolume(volume *models.Volume) {
+func (d *MockDisk) SetVolume(volume *models.Volume) {
 	d.Volume = volume
 }
 
-func (d *dummyDisk) GetVolume() *models.Volume {
+func (d *MockDisk) GetVolume() *models.Volume {
 	return d.Volume
 }
 
-func (d *dummyDisk) SetUUID(uuid uuid.UUID) {
+func (d *MockDisk) SetUUID(uuid uuid.UUID) {
 	d.UUID = uuid
 }
 
-func (d *dummyDisk) GetUUID() uuid.UUID {
+func (d *MockDisk) GetUUID() uuid.UUID {
 	return d.UUID
 }
 
-func (d *dummyDisk) SetName(name string) {
+func (d *MockDisk) SetName(name string) {
 	d.Name = name
 }
 
-func (d *dummyDisk) GetName() string {
+func (d *MockDisk) GetName() string {
 	return d.Name
 }
 
-func (d *dummyDisk) GetThroughput() int {
+func (d *MockDisk) GetCredentials() credentials.Credentials {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) GetCredentials() credentials.Credentials {
+func (d *MockDisk) SetCredentials(credentials credentials.Credentials) {
+	return
+}
+
+func (d *MockDisk) CreateCredentials(c string) {
+	return
+}
+
+func (d *MockDisk) GetProviderUUID() uuid.UUID {
 	panic("Unimplemented")
 }
 
-func (d *dummyDisk) SetCredentials(credentials credentials.Credentials) {
-	panic("Unimplemented")
+func (d *MockDisk) UpdateUsedSpace(change int64) {
+	d.UsedSpace = uint64(int64(d.UsedSpace) + change)
 }
 
-func (d *dummyDisk) CreateCredentials(c string) {
-	panic("Unimplemented")
+func (d *MockDisk) SetUsedSpace(usage uint64) {
+	d.UsedSpace = usage
 }
 
-func (d *dummyDisk) GetProviderUUID() uuid.UUID {
-	panic("Unimplemented")
+func (d *MockDisk) GetUsedSpace() uint64 {
+	return d.UsedSpace
 }
 
-func (d *dummyDisk) SetUsedSpace(usage uint64) {
-	panic("Unimplemented")
-}
-
-func (d *dummyDisk) GetUsedSpace() uint64 {
-	return 0
-}
-
-func (d *dummyDisk) GetProviderSpace() (uint64, uint64, string) {
+func (d *MockDisk) GetProviderSpace() (uint64, uint64, string) {
 	return 0, 0, constants.OPERATION_NOT_SUPPORTED
 }
 
-func (d *dummyDisk) SetTotalSpace(quota uint64) {
-	panic("Unimplemented")
+func (d *MockDisk) SetTotalSpace(quota uint64) {
+	d.TotalSpace = quota
 }
 
-func (d *dummyDisk) GetTotalSpace() uint64 {
-	return 1024 * 1024 * 1024
+func (d *MockDisk) GetTotalSpace() uint64 {
+	return d.TotalSpace
 }
 
-func (d *dummyDisk) UpdateUsedSpace(change int64) {
-	panic("Unimplemented")
+func (d *MockDisk) SetCreationTime(creationTime time.Time) {
+	return
 }
 
-func (d *dummyDisk) SetCreationTime(creationTime time.Time) {
-	panic("Unimplemented")
+func (d *MockDisk) GetCreationTime() time.Time {
+	return d.CreationTime
 }
 
-func (d *dummyDisk) GetCreationTime() time.Time {
-	panic("Unimplemented")
-}
-
-func (d *dummyDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
-	panic("Unimplemented")
-}
-
-func (d *dummyDisk) Delete() (string, error) {
+func (d *MockDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk {
 	panic("Unimplemented")
 }
 
@@ -148,14 +155,50 @@ func GetDiskDBOs(number int) []dbo.Disk {
 	return ret
 }
 
-func GetDummyDisks(number int) []*dummyDisk {
-	var ret []*dummyDisk = make([]*dummyDisk, 0)
+func NewMockDisk() models.Disk {
+	var d *MockDisk = new(MockDisk)
+
+	d.CreationTime = time.Now()
+
+	return d
+}
+
+func GetMockDisks(number int) []*MockDisk {
+	var ret []*MockDisk = make([]*MockDisk, 0)
 
 	for i := 0; i < number; i++ {
-		ret = append(ret, &dummyDisk{
+		ret = append(ret, &MockDisk{
 			UUID:   uuid.New(),
 			Volume: nil,
 			Name:   fmt.Sprintf("mock dummy disk no. #%d", i),
+		})
+	}
+
+	return ret
+}
+
+func GetSpecifiedDisksDBO(number int, provider int) []dbo.Disk {
+	var ret []dbo.Disk = make([]dbo.Disk, 0)
+
+	for i := 0; i < number; i++ {
+		providerDbo, creds := GetProviderDBO(provider)
+
+		ret = append(ret, dbo.Disk{
+			AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+				UUID: uuid.New(),
+			},
+			UserUUID:     UserUUID,
+			VolumeUUID:   VolumeUUID,
+			ProviderUUID: providerDbo.UUID,
+			Credentials:  creds,
+			Name:         fmt.Sprintf("mock disk no. #%d", i),
+			UsedSpace:    0,
+			TotalSpace:   15 * 1024 * 1024 * 1024,
+			FreeSpace:    15 * 1024 * 1024 * 1024,
+			CreatedAt:    time.Time{},
+			User:         *UserDBO,
+			Volume:       *VolumeDBO,
+			Provider:     *providerDbo,
 		})
 	}
 

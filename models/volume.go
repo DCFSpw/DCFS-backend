@@ -178,6 +178,14 @@ func (v *Volume) GetVolumeDBO() dbo.Volume {
 	}
 }
 
+// GetPartitioner - refresh partitioner of the volume
+//
+// return type:
+//   - Partitioner: partitioner of the volume
+func (v *Volume) GetPartitioner() Partitioner {
+	return v.partitioner
+}
+
 // RefreshPartitioner - refresh partitioner data of the volume
 //
 // This function refreshes partitioner data of the volume. It is used
