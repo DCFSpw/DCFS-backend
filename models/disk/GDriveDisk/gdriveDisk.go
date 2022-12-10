@@ -272,6 +272,10 @@ func (d *GDriveDisk) GetConfig() *oauth2.Config {
 	return config
 }
 
+func (d *GDriveDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewGDriveDisk() *GDriveDisk {

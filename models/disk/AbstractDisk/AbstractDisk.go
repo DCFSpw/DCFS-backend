@@ -151,6 +151,12 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 	}
 }
 
+func (d *AbstractDisk) IsReady() bool {
+	// TODO @lavar3l add functionality for checking whether the protected disks have backup
+
+	return true
+}
+
 /* Additional abstract functions */
 
 func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {
