@@ -269,6 +269,53 @@ func (d *OneDriveDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	return nil
 }
 
+func (d *OneDriveDisk) Exists(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	var _client interface{} = d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: blockMetadata.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()})
+	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the OneDrive server")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
+	}
+
+	// Prepare the OneDrive client
+	var client *http.Client = _client.(*http.Client)
+	oneDriveClient := onedrive.NewClient(client)
+
+	// Prepare the search request
+	var searchReqUrl string = "me/drive/root/search(q='" + url.PathEscape(blockMetadata.UUID.String()) + "')?select=id"
+
+	req, err := oneDriveClient.NewRequest("GET", searchReqUrl, nil)
+	if err != nil {
+		logger.Logger.Error("disk", "Could not create a file search request: ", err.Error(), ".")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_REQUEST, "Could not create a file search request:", err.Error())
+	}
+
+	// Locate the file on OneDrive
+	var response oneDriveSearchResponse = oneDriveSearchResponse{}
+	err = oneDriveClient.Do(blockMetadata.Ctx, req, false, &response)
+	if err != nil {
+		logger.Logger.Error("disk", "Search request failed: ", err.Error(), ".")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Search request failed:", err.Error())
+	}
+
+	if len(response.Value) > 1 {
+		logger.Logger.Error("disk", "Block hierarchy corrupted.")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Block hierarchy corrupted")
+	}
+
+	if len(response.Value) == 0 {
+		logger.Logger.Error("disk", "File does not exist remotely.")
+		return &apicalls.ErrorWrapper{
+			Error: nil,
+			Code:  constants.REMOTE_FILE_DOES_NOT_EXIST,
+		}
+	}
+
+	return &apicalls.ErrorWrapper{
+		Error: nil,
+		Code:  constants.REMOTE_FILE_DOES_EXIST,
+	}
+}
+
 func (d *OneDriveDisk) SetUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetUUID(uuid)
 }

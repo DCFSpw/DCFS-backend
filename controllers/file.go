@@ -152,9 +152,14 @@ func GetFile(c *gin.Context) {
 		return
 	}
 
+	f := responses.FileResponse{
+		File:      *file,
+		FileReady: models.NewFileFromDBO(file).IsCompleted(c),
+	}
+
 	// Return volume data
 	logger.Logger.Debug("api", "GetFile endpoint successful exit.")
-	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(file, path))
+	c.JSON(200, responses.NewFileDataWithPathSuccessResponse(&f, path))
 }
 
 // GetFiles - handler for Get list of files request
@@ -168,7 +173,8 @@ func GetFile(c *gin.Context) {
 // return type:
 //   - API response with appropriate HTTP code
 func GetFiles(c *gin.Context) {
-	var files []dbo.File
+	var _files []dbo.File
+	var files []responses.FileResponse = make([]responses.FileResponse, 0)
 	var userUUID uuid.UUID
 	var volumeUUID uuid.UUID
 	var rootUUID uuid.UUID
@@ -206,11 +212,20 @@ func GetFiles(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve list of files of current user from the database
-	err = db.DB.DatabaseHandle.Where("user_uuid = ? AND volume_uuid = ? AND root_uuid = ?", userUUID, volumeUUID, rootUUID).Find(&files).Error
+	err = db.DB.DatabaseHandle.Where("user_uuid = ? AND volume_uuid = ? AND root_uuid = ?", userUUID, volumeUUID, rootUUID).Find(&_files).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not retrieve the specified files from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
 		return
+	}
+
+	for _, _file := range _files {
+		file := models.NewFileFromDBO(&_file)
+
+		files = append(files, responses.FileResponse{
+			File:      _file,
+			FileReady: file.IsCompleted(c),
+		})
 	}
 
 	// Return list of volumes

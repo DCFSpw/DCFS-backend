@@ -44,6 +44,10 @@ func (d *AbstractDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 	panic("Unimplemented abstract method")
 }
 
+func (d *AbstractDisk) Exists(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	panic("Unimplemented abstract method")
+}
+
 func (d *AbstractDisk) SetUUID(UUID uuid.UUID) {
 	logger.Logger.Debug("disk", "Set uuid for a disk to: ", UUID.String())
 	d.UUID = UUID

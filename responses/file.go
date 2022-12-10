@@ -22,6 +22,11 @@ type FileRequestResponse struct {
 	Blocks []FileRequestBlockResponse `json:"blocks"`
 }
 
+type FileResponse struct {
+	dbo.File
+	FileReady bool `json:"fileReady"`
+}
+
 // NewFileDataSuccessResponse - create file data success response
 //
 // params:
@@ -46,11 +51,11 @@ func NewFileDataSuccessResponse(fileData *dbo.File) *SuccessResponse {
 //
 // return type:
 //   - *SuccessResponse: response with file and path data
-func NewFileDataWithPathSuccessResponse(fileData *dbo.File, filePath []dbo.PathEntry) *SuccessResponse {
+func NewFileDataWithPathSuccessResponse(fileData *FileResponse, filePath []dbo.PathEntry) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 	var data = new(FileDetailsWithPathResponse)
 
-	data.File = *fileData
+	data.File = fileData.File
 	data.Path = filePath
 
 	r.Success = true
@@ -66,7 +71,7 @@ func NewFileDataWithPathSuccessResponse(fileData *dbo.File, filePath []dbo.PathE
 //
 // return type:
 //   - *SuccessResponse: response with files data
-func NewGetFilesSuccessResponse(filesData []dbo.File) *SuccessResponse {
+func NewGetFilesSuccessResponse(filesData []FileResponse) *SuccessResponse {
 	var r *SuccessResponse = new(SuccessResponse)
 
 	r.Success = true

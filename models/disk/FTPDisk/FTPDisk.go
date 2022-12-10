@@ -130,6 +130,48 @@ func (d *FTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorW
 	return nil
 }
 
+func (d *FTPDisk) Exists(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	// Authenticate
+	var _client interface{} = d.GetCredentials().Authenticate(nil)
+	if _client == nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CANNOT_AUTHENTICATE, "could not connect to the remote server")
+	}
+
+	var client *ftp.ServerConn = _client.(*ftp.ServerConn)
+
+	// Generate remote path
+	_p := d.abstractDisk.Credentials.GetPath()
+	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
+	if _p == "/" {
+		downloadPath = fmt.Sprintf("%s%s", _p, blockMetadata.UUID.String())
+	} else if _p == "" {
+		downloadPath = blockMetadata.UUID.String()
+	}
+
+	entry, err := client.GetEntry(downloadPath)
+	if err != nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REMOTE_CANNOT_GET_STATS,
+		}
+	}
+
+	if entry == nil {
+		logger.Logger.Error("disk", "File does not exist remotely.")
+		return &apicalls.ErrorWrapper{
+			Error: nil,
+			Code:  constants.REMOTE_FILE_DOES_NOT_EXIST,
+		}
+	}
+
+	return &apicalls.ErrorWrapper{
+		Error: nil,
+		Code:  constants.REMOTE_FILE_DOES_EXIST,
+	}
+}
+
 func (d *FTPDisk) SetUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetUUID(uuid)
 }

@@ -21,6 +21,7 @@ type Disk interface {
 	Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 	Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 	Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+	Exists(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 
 	SetUUID(uuid.UUID)
 	GetUUID() uuid.UUID

@@ -51,6 +51,10 @@ func (d *MockDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 	return nil
 }
 
+func (d *MockDisk) Exists(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	return nil
+}
+
 func (d *MockDisk) SetVolume(volume *models.Volume) {
 	d.Volume = volume
 }

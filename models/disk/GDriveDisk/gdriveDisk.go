@@ -149,6 +149,44 @@ func (d *GDriveDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	return nil
 }
 
+func (d *GDriveDisk) Exists(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	var cred *credentials.OauthCredentials = d.GetCredentials().(*credentials.OauthCredentials)
+	var client *http.Client = cred.Authenticate(&apicalls.CredentialsAuthenticateMetadata{Ctx: bm.Ctx, Config: d.GetConfig(), DiskUUID: d.GetUUID()}).(*http.Client)
+	var err error
+
+	srv, err := drive.NewService(bm.Ctx, option.WithHTTPClient(client))
+	if err != nil {
+		logger.Logger.Error("disk", "Unable to retrieve the Google Drive client, got an error: ", err.Error())
+		return apicalls.CreateErrorWrapper(constants.REMOTE_CLIENT_UNAVAILABLE, "Unable to retrieve Drive client:", err.Error())
+	}
+
+	files, err := srv.Files.
+		List().
+		Q(fmt.Sprintf("name = '%s'", bm.UUID.String())).
+		Do()
+
+	if err != nil {
+		logger.Logger.Error("disk", "Could not connect to the remote server.")
+		return &apicalls.ErrorWrapper{
+			Error: err,
+			Code:  constants.REMOTE_CANNOT_GET_STATS,
+		}
+	}
+
+	if len(files.Files) == 0 {
+		logger.Logger.Error("disk", "File does not exist remotely.")
+		return &apicalls.ErrorWrapper{
+			Error: nil,
+			Code:  constants.REMOTE_FILE_DOES_NOT_EXIST,
+		}
+	}
+
+	return &apicalls.ErrorWrapper{
+		Error: nil,
+		Code:  constants.REMOTE_FILE_DOES_EXIST,
+	}
+}
+
 func (d *GDriveDisk) SetUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetUUID(uuid)
 }

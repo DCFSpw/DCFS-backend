@@ -10,6 +10,7 @@ import (
 	"dcfs/util/checksum"
 	"dcfs/util/logger"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"log"
@@ -41,7 +42,7 @@ type File interface {
 	GetVolume() *Volume
 	SetVolume(v *Volume)
 
-	IsCompleted() bool
+	IsCompleted(ctx *gin.Context) bool
 	GetBlocks() map[uuid.UUID]*Block
 
 	GetFileDBO(userUUID uuid.UUID) dbo.File
@@ -111,7 +112,7 @@ func (file *AbstractFile) SetRoot(rootUUID uuid.UUID) {
 	file.RootUUID = rootUUID
 }
 
-func (file *AbstractFile) IsCompleted() bool {
+func (file *AbstractFile) IsCompleted(ctx *gin.Context) bool {
 	panic("Unimplemented abstract method")
 }
 
@@ -201,14 +202,39 @@ func (file *RegularFile) GetFileDBO(userUUID uuid.UUID) dbo.File {
 	return file.AbstractFile.GetFileDBO(userUUID)
 }
 
-func (file *RegularFile) IsCompleted() bool {
+func (file *RegularFile) IsCompleted(ctx *gin.Context) bool {
+	var wg sync.WaitGroup
+	mtx := sync.Mutex{}
+	completed := true
+
 	for _, _block := range file.Blocks {
-		if _block.Status != constants.BLOCK_STATUS_TRANSFERRED {
-			return false
-		}
+		wg.Add(1)
+
+		go func(_block *Block) {
+			defer wg.Done()
+
+			errorWrapper := _block.Disk.Exists(&apicalls.BlockMetadata{
+				Ctx:              ctx,
+				FileUUID:         file.UUID,
+				UUID:             _block.UUID,
+				Size:             int64(_block.Size),
+				Status:           nil,
+				Checksum:         "",
+				Content:          nil,
+				CompleteCallback: nil,
+			})
+
+			if errorWrapper.Error != nil || errorWrapper.Code == constants.REMOTE_FILE_DOES_NOT_EXIST {
+				mtx.Lock()
+				completed = false
+				mtx.Unlock()
+			}
+		}(_block)
 	}
 
-	return true
+	wg.Wait()
+
+	return completed
 }
 
 func (file *RegularFile) GetVolume() *Volume {
@@ -285,7 +311,7 @@ func (d *Directory) GetFileDBO(userUUID uuid.UUID) dbo.File {
 	return d.AbstractFile.GetFileDBO(userUUID)
 }
 
-func (d *Directory) IsCompleted() bool {
+func (d *Directory) IsCompleted(ctx *gin.Context) bool {
 	return true
 }
 
@@ -357,8 +383,8 @@ func (f *SmallerFileWrapper) GetFileDBO(userUUID uuid.UUID) dbo.File {
 	return f.ActualFile.GetFileDBO(userUUID)
 }
 
-func (f *SmallerFileWrapper) IsCompleted() bool {
-	return f.ActualFile.IsCompleted()
+func (f *SmallerFileWrapper) IsCompleted(ctx *gin.Context) bool {
+	return f.ActualFile.IsCompleted(ctx)
 }
 
 func (f *SmallerFileWrapper) GetVolume() *Volume {
@@ -488,7 +514,7 @@ func (f *FileWrapper) GetFileDBO(userUUID uuid.UUID) dbo.File {
 	}
 }
 
-func (f *FileWrapper) IsCompleted() bool {
+func (f *FileWrapper) IsCompleted(ctx *gin.Context) bool {
 	panic("uimplemented")
 }
 
