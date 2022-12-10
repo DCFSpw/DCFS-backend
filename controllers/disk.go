@@ -436,6 +436,7 @@ func DeleteDisk(c *gin.Context) {
 	var _diskUUID string
 	var _disk dbo.Disk
 	var userUUID uuid.UUID
+	var errCode string
 	var err error
 
 	// Retrieve disk from database
@@ -472,7 +473,13 @@ func DeleteDisk(c *gin.Context) {
 	}
 
 	// Trigger delete process
-	errCode, err := models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION)
+	if _disk.VirtualDiskUUID == uuid.Nil {
+		// Delete actual disk since it's not connected to virtual disk
+		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION)
+	} else {
+		// Delete virtual disk to which the actual disk is connected
+		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.DELETION)
+	}
 
 	if errCode != constants.SUCCESS {
 		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the disk failed: "+err.Error()))

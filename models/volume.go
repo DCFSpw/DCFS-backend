@@ -97,6 +97,32 @@ func (v *Volume) DeleteDisk(diskUUID uuid.UUID) {
 	logger.Logger.Debug("volume", "Successfully deleted the disk: ", diskUUID.String(), " from the volume: ", v.UUID.String(), ".")
 }
 
+// DeleteVirtualDisk - remove virtual disk from the volume
+//
+// params:
+//   - diskUUID uuid.UUID: UUID of the virtual disk to be deleted from the volume
+func (v *Volume) DeleteVirtualDisk(diskUUID uuid.UUID) {
+	if v.virtualDisks == nil {
+		logger.Logger.Warning("volume", "There are no virtual disks in the volume: ", v.UUID.String(), ".")
+		return
+	}
+
+	if v.disks == nil {
+		logger.Logger.Warning("volume", "There are no disks in the volume: ", v.UUID.String(), ".")
+		return
+	}
+
+	delete(v.virtualDisks, diskUUID)
+
+	for _, disk := range v.disks {
+		if disk.GetVirtualDiskUUID() == diskUUID {
+			delete(v.disks, disk.GetUUID())
+		}
+	}
+
+	logger.Logger.Debug("volume", "Successfully deleted the virtual disk: ", diskUUID.String(), " from the volume: ", v.UUID.String(), ".")
+}
+
 // FileUploadRequest - handle initial request for uploading file to the volume
 //
 // This function prepares file for upload to the volume. It receives data from the init

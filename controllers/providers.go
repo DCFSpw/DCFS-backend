@@ -23,7 +23,7 @@ func GetProviders(c *gin.Context) {
 	var providers []dbo.Provider
 
 	// Retrieve list of providers from the database
-	err := db.DB.DatabaseHandle.Find(&providers).Error
+	err := db.DB.DatabaseHandle.Where("type > ?", 0).Find(&providers).Error // Types < 0 are virtual providers
 	if err != nil {
 		logger.Logger.Error("api", "Could not retrieve a list of providers from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))

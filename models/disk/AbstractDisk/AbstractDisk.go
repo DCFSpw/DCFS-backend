@@ -108,6 +108,10 @@ func (d *AbstractDisk) SetIsVirtualFlag(isVirtual bool) {
 	d.IsVirtual = isVirtual
 }
 
+func (d *AbstractDisk) GetIsVirtualFlag() bool {
+	return d.IsVirtual
+}
+
 func (d *AbstractDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.VirtualDiskUUID = uuid
 }

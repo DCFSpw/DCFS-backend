@@ -178,6 +178,10 @@ func (d *SFTPDisk) SetIsVirtualFlag(isVirtual bool) {
 	d.abstractDisk.SetIsVirtualFlag(isVirtual)
 }
 
+func (d *SFTPDisk) GetIsVirtualFlag() bool {
+	return d.abstractDisk.GetIsVirtualFlag()
+}
+
 func (d *SFTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

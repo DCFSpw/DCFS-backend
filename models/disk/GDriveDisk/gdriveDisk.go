@@ -201,6 +201,10 @@ func (d *GDriveDisk) SetIsVirtualFlag(isVirtual bool) {
 	d.abstractDisk.SetIsVirtualFlag(isVirtual)
 }
 
+func (d *GDriveDisk) GetIsVirtualFlag() bool {
+	return d.abstractDisk.GetIsVirtualFlag()
+}
+
 func (d *GDriveDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

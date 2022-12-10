@@ -294,6 +294,10 @@ func (d *BackupDisk) SetIsVirtualFlag(isVirtual bool) {
 	d.abstractDisk.SetIsVirtualFlag(isVirtual)
 }
 
+func (d *BackupDisk) GetIsVirtualFlag() bool {
+	return d.abstractDisk.GetIsVirtualFlag()
+}
+
 func (d *BackupDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }
@@ -388,6 +392,9 @@ func NewBackupDisk() *BackupDisk {
 	var d *BackupDisk = new(BackupDisk)
 	d.abstractDisk.Disk = d
 	d.abstractDisk.UUID = uuid.New()
+
+	d.abstractDisk.IsVirtual = true
+	d.abstractDisk.VirtualDiskUUID = uuid.Nil
 
 	return d
 }

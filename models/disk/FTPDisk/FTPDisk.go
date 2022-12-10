@@ -182,6 +182,10 @@ func (d *FTPDisk) SetIsVirtualFlag(isVirtual bool) {
 	d.abstractDisk.SetIsVirtualFlag(isVirtual)
 }
 
+func (d *FTPDisk) GetIsVirtualFlag() bool {
+	return d.abstractDisk.GetIsVirtualFlag()
+}
+
 func (d *FTPDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
 	d.abstractDisk.SetVirtualDiskUUID(uuid)
 }

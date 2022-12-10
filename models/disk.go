@@ -40,6 +40,7 @@ type Disk interface {
 	GetCreationTime() time.Time
 
 	SetIsVirtualFlag(isVirtual bool)
+	GetIsVirtualFlag() bool
 	SetVirtualDiskUUID(uuid uuid.UUID)
 	GetVirtualDiskUUID() uuid.UUID
 

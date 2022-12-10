@@ -409,8 +409,18 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 		return constants.DATABASE_ERROR, dbErr
 	}
 
-	// Disattach disk from volume
-	volume.DeleteDisk(disk.GetUUID())
+	// In case target disk is virtual, remove connected disks from database and disattach them from volume
+	if disk.GetIsVirtualFlag() == true {
+		dbErr = db.DB.DatabaseHandle.Where("virtual_disk_uuid = ? AND is_virtual = ?", disk.GetUUID(), false).Delete(&dbo.Disk{}).Error
+		if dbErr != nil {
+			return constants.DATABASE_ERROR, dbErr
+		}
+
+		volume.DeleteVirtualDisk(disk.GetUUID())
+	} else {
+		// Disattach disk from volume
+		volume.DeleteDisk(disk.GetUUID())
+	}
 
 	return constants.SUCCESS, nil
 }
