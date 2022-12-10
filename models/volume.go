@@ -20,7 +20,7 @@ type Volume struct {
 	VolumeSettings dbo.VolumeSettings
 
 	disks        map[uuid.UUID]Disk
-	virtualDisks []Disk
+	virtualDisks map[uuid.UUID]Disk
 	partitioner  Partitioner
 }
 
@@ -30,12 +30,29 @@ type Volume struct {
 //   - diskUUID uuid.UUID: UUID of the disk to be retrieved
 func (v *Volume) GetDisk(diskUUID uuid.UUID) Disk {
 	if v.disks == nil {
-		logger.Logger.Warning("volume", "Could not find the disk: ", diskUUID.String(), ".")
+		logger.Logger.Warning("volume", "Could not find the disk: ", diskUUID.String(), " (volume's disk map is not initialized).")
 		return nil
+	} else {
+		disk, exists := v.disks[diskUUID]
+		if exists {
+			logger.Logger.Debug("volume", "Found a disk with the uuid: ", diskUUID.String(), ".")
+			return disk
+		}
 	}
 
-	logger.Logger.Debug("volume", "Found a disk with the uuid: ", diskUUID.String(), ".")
-	return v.disks[diskUUID]
+	if v.virtualDisks == nil {
+		logger.Logger.Warning("volume", "Could not find the disk: ", diskUUID.String(), " (volume's virtual disk map is not initialized).")
+		return nil
+	} else {
+		disk, exists := v.virtualDisks[diskUUID]
+		if exists {
+			logger.Logger.Debug("volume", "Found a virtual disk with the uuid: ", diskUUID.String(), ".")
+			return disk
+		}
+	}
+
+	logger.Logger.Warning("volume", "Could not find the disk: ", diskUUID.String(), ".")
+	return nil
 }
 
 // AddDisk - add disk to the volume
@@ -50,6 +67,20 @@ func (v *Volume) AddDisk(diskUUID uuid.UUID, _disk Disk) {
 
 	v.disks[diskUUID] = _disk
 	logger.Logger.Debug("volume", "Added the disk: ", diskUUID.String(), " to the volume: ", v.UUID.String(), ".")
+}
+
+// AddVirtualDisk - add virtual disk to the volume
+//
+// params:
+//   - diskUUID uuid.UUID: UUID of the disk to be added to the volume
+//   - _disk Disk: data of the disk
+func (v *Volume) AddVirtualDisk(diskUUID uuid.UUID, _disk Disk) {
+	if v.virtualDisks == nil {
+		v.virtualDisks = make(map[uuid.UUID]Disk)
+	}
+
+	v.virtualDisks[diskUUID] = _disk
+	logger.Logger.Debug("volume", "Added the virtual disk: ", diskUUID.String(), " to the volume: ", v.UUID.String(), ".")
 }
 
 // DeleteDisk - remove disk from the volume
@@ -135,7 +166,9 @@ func (v *Volume) RefreshPartitioner() {
 			disks = append(disks, disk)
 		}
 	} else {
-		disks = v.virtualDisks
+		for _, disk := range v.virtualDisks {
+			disks = append(disks, disk)
+		}
 	}
 
 	v.partitioner.FetchDisks(disks)
@@ -150,8 +183,6 @@ func (v *Volume) RefreshPartitioner() {
 // params:
 //   - _virtualDisks []dbo.VirtualDisk: list of virtual disks to be created
 func (v *Volume) InitializeBackup(_virtualDisks []dbo.Disk) {
-	var virtualDisks []Disk
-
 	// Create virtual disks based on the target backup type
 	switch v.VolumeSettings.Backup {
 	// No backup is used
@@ -185,7 +216,7 @@ func (v *Volume) InitializeBackup(_virtualDisks []dbo.Disk) {
 				virtualDisk.AssignDisk(firstDisk)
 				virtualDisk.AssignDisk(secondDisk)
 				virtualDisk.SetVolume(v)
-				virtualDisks = append(virtualDisks, virtualDisk)
+				v.AddVirtualDisk(_virtualDisk.UUID, virtualDisk)
 			} else {
 				logger.Logger.Error("volume", "RAID1+0 error. Cannot load disks assigned to virtual RAID1 drive.")
 			}
@@ -193,12 +224,6 @@ func (v *Volume) InitializeBackup(_virtualDisks []dbo.Disk) {
 	default:
 		logger.Logger.Warning("volume", "Cannot initialize backup drives. Unknown backup type.")
 	}
-
-	for _, disk := range virtualDisks {
-		logger.Logger.Debug("volume", "Created virtual disk: ", disk.GetUUID().String(), ".")
-	}
-
-	v.virtualDisks = virtualDisks
 }
 
 // NewVolume - create new volume model based on volume and disks DBO

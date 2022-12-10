@@ -103,25 +103,19 @@ func CreateDiskFromUUID(uuid uuid.UUID) Disk {
 	var disk dbo.Disk
 	var volume *Volume
 
-	d := Transport.FindEnqueuedDisk(uuid)
-	if d != nil {
-		return d
-	}
-
+	// Retrieve disk data from database
 	err := db.DB.DatabaseHandle.Where("uuid = ?", uuid).Preload("Provider").Preload("User").Preload("Volume").Find(&disk).Error
 	if err != nil {
 		return nil
 	}
 
+	// Load volume from database to transport
 	volume = Transport.GetVolume(disk.VolumeUUID)
 	if volume == nil {
 		return nil
 	}
 
-	return CreateDisk(CreateDiskMetadata{
-		Disk:   &disk,
-		Volume: volume,
-	})
+	return volume.GetDisk(disk.UUID)
 }
 
 // ComputeFreeSpace - compute free space on disk

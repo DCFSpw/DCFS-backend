@@ -120,7 +120,7 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	go func() {
 		defer waitGroup.Done()
 		err1 = d.firstDisk.Download(&blockMetadata1)
-		if err1.Error == nil {
+		if err1 == nil {
 			checksum1 = checksum.CalculateChecksum(*blockMetadata1.Content)
 		}
 	}()
@@ -129,7 +129,7 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	go func() {
 		defer waitGroup.Done()
 		err2 = d.secondDisk.Download(&blockMetadata2)
-		if err2.Error == nil {
+		if err2 == nil {
 			checksum2 = checksum.CalculateChecksum(*blockMetadata2.Content)
 		}
 	}()
@@ -138,24 +138,24 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 	waitGroup.Wait()
 
 	// Check for errors
-	if err1.Error != nil {
+	if err1 != nil {
 		logger.Logger.Error("disk", "Cannot download from the first disk, got an error: ", err1.Error.Error())
 	}
 
-	if err2.Error != nil {
+	if err2 != nil {
 		logger.Logger.Error("disk", "Cannot download from the second disk, got an error: ", err2.Error.Error())
 	}
 
 	if checksum1 == blockMetadata.Checksum || checksum2 == blockMetadata.Checksum {
 		// Return block with the correct checksum if possible
-		if err1.Error == nil && checksum1 == blockMetadata.Checksum {
+		if err1 == nil && checksum1 == blockMetadata.Checksum {
 			logger.Logger.Debug("disk", "Successfully downloaded the block from the first disk: ", blockMetadata.UUID.String(), ".")
 			blockMetadata.Content = blockMetadata1.Content
 			blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 			return nil
 		}
 
-		if err2.Error == nil && checksum2 == blockMetadata.Checksum {
+		if err2 == nil && checksum2 == blockMetadata.Checksum {
 			logger.Logger.Debug("disk", "Successfully downloaded the block from the second disk: ", blockMetadata.UUID.String(), ".")
 			blockMetadata.Content = blockMetadata2.Content
 			blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
@@ -163,14 +163,14 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		}
 	} else {
 		// Return block with the wrong checksum if one of the disks is available
-		if err1.Error == nil {
+		if err1 == nil {
 			logger.Logger.Debug("disk", "Downloaded corrupted block from the first disk: ", blockMetadata.UUID.String(), ".")
 			blockMetadata.Content = blockMetadata1.Content
 			blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 			return nil
 		}
 
-		if err2.Error == nil {
+		if err2 == nil {
 			logger.Logger.Debug("disk", "Downloaded corrupted block from the second disk: ", blockMetadata.UUID.String(), ".")
 			blockMetadata.Content = blockMetadata2.Content
 			blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
@@ -178,7 +178,7 @@ func (d *BackupDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.E
 		}
 
 		// Return error if both disks failed
-		if err1.Error != nil && err2.Error != nil {
+		if err1 != nil && err2 != nil {
 			return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "Cannot download from both of the backup disks.")
 		}
 	}
@@ -224,12 +224,12 @@ func (d *BackupDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 	waitGroup.Wait()
 
 	// Check for errors
-	if err1.Error != nil || err2.Error != nil {
-		if err1.Error != nil {
+	if err1 != nil || err2 != nil {
+		if err1 != nil {
 			logger.Logger.Error("disk", "Cannot remove from the first disk, got an error: ", err1.Error.Error())
 		}
 
-		if err2.Error != nil {
+		if err2 != nil {
 			logger.Logger.Error("disk", "Cannot remove from the second disk, got an error: ", err2.Error.Error())
 		}
 
