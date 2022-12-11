@@ -392,6 +392,10 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 	}
 }
 
+func (d *BackupDisk) IsReady() bool {
+	return d.firstDisk.IsReady() && d.secondDisk.IsReady()
+}
+
 func (d *BackupDisk) fixBlock(blockMetadata *apicalls.BlockMetadata, firstContents []uint8, secondContents []uint8, firstChecksum string, secondChecksum string) {
 	var err *apicalls.ErrorWrapper
 	var targetDisk models.Disk
