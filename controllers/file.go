@@ -283,6 +283,13 @@ func InitFileUploadRequest(c *gin.Context) {
 		return
 	}
 
+	// Verify that the volume is ready to handle file operations
+	if !volume.IsReady() {
+		logger.Logger.Error("api", "Attempted to execute file operations on a not ready volume: ", volumeUUID.String())
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_VOLUME_NOT_READY, "Selected volume is not ready. Please make sure that its disks are configured properly."))
+		return
+	}
+
 	// Verify that the rootUUID exists in the volume, and it's a directory
 	errCode := db.ValidateRootDirectory(rootUUID, volumeUUID)
 	if errCode != constants.SUCCESS {
