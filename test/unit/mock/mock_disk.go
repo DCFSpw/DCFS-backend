@@ -95,6 +95,22 @@ func (d *MockDisk) UpdateUsedSpace(change int64) {
 	d.UsedSpace = uint64(int64(d.UsedSpace) + change)
 }
 
+func (d *MockDisk) SetIsVirtualFlag(isVirtual bool) {
+	return
+}
+
+func (d *MockDisk) GetIsVirtualFlag() bool {
+	return false
+}
+
+func (d *MockDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
+	return
+}
+
+func (d *MockDisk) GetVirtualDiskUUID() uuid.UUID {
+	return uuid.Nil
+}
+
 func (d *MockDisk) SetUsedSpace(usage uint64) {
 	d.UsedSpace = usage
 }
@@ -153,6 +169,10 @@ func GetDiskDBOs(number int) []dbo.Disk {
 	}
 
 	return ret
+}
+
+func (d *MockDisk) AssignDisk(disk models.Disk) {
+	panic("Unimplemented")
 }
 
 func (d *MockDisk) IsReady() bool {

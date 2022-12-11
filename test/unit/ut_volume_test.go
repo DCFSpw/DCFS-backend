@@ -102,7 +102,7 @@ func TestFileUploadRequest(t *testing.T) {
 }
 
 func TestGetVolumeDBO(t *testing.T) {
-	volume := models.NewVolume(mock.VolumeDBO, nil)
+	volume := models.NewVolume(mock.VolumeDBO, nil, nil)
 	volumeDBO := volume.GetVolumeDBO()
 
 	Convey("Test if the volume data is properly encoded into a db object", t, func() {
@@ -122,7 +122,7 @@ func TestGetVolumeDBO(t *testing.T) {
 }
 
 func TestRefreshPartitioner(t *testing.T) {
-	volume := models.NewVolume(mock.VolumeDBO, nil)
+	volume := models.NewVolume(mock.VolumeDBO, nil, nil)
 	volume.RefreshPartitioner()
 
 	Convey("This method is excluded from the Unit Tests", t, func() {
@@ -274,6 +274,11 @@ func TestDecrypt(t *testing.T) {
 }
 
 func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk) *models.Volume {
+	var _disksPtr []*dbo.Disk
+	for _, _disk := range _disks {
+		_disksPtr = append(_disksPtr, &_disk)
+	}
+
 	for _, _disk := range _disks {
 		if _disk.Provider.Type != constants.PROVIDER_TYPE_GDRIVE && _disk.Provider.Type != constants.PROVIDER_TYPE_ONEDRIVE {
 			continue
@@ -281,6 +286,7 @@ func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk) *models.Volume {
 
 		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).WithArgs(_disk.UUID.String()).WillReturnRows(mock.DiskRow(&_disk))
 	}
+	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).WithArgs(_volumeDBO.UUID.String(), false).WillReturnRows(mock.DiskRow(_disksPtr...))
 
-	return models.NewVolume(&_volumeDBO, _disks)
+	return models.NewVolume(&_volumeDBO, _disks, nil)
 }

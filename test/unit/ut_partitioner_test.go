@@ -364,10 +364,6 @@ func TestBalancedPartitioner_Integration(t *testing.T) {
 
 		So(firstDisk, ShouldEqual, secondDisk)
 	})
-
-	Convey("The database call should be correct", t, func() {
-		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
-	})
 }
 
 func TestPriorityPartitioner_Integration(t *testing.T) {
@@ -401,10 +397,6 @@ func TestPriorityPartitioner_Integration(t *testing.T) {
 
 		So(firstDisk, ShouldEqual, 4)
 		So(secondDisk, ShouldEqual, 0)
-	})
-
-	Convey("The database call should be correct", t, func() {
-		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
 }
 

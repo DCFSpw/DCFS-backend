@@ -161,6 +161,12 @@ func CreateDummyDisk(disk *dbo.Disk, provider *dbo.Provider, dry_run bool) model
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `volumes` WHERE uuid = ? AND `volumes`.`deleted_at` IS NULL ORDER BY `volumes`.`uuid` LIMIT 1")).
 		WithArgs(disk.VolumeUUID).
 		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
+	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).
+		WithArgs(disk.VolumeUUID, false).
+		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
+	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).
+		WithArgs(disk.VolumeUUID, true).
+		WillReturnRows(mock.VolumeRow(nil))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
 		WithArgs(disk.VolumeUUID).
 		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))

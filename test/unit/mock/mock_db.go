@@ -11,7 +11,7 @@ import (
 
 var DBMock sqlmock.Sqlmock
 
-var DiskColumns []string = []string{"uuid", "user_uuid", "volume_uuid", "provider_uuid", "credentials", "name", "created_at", "used_space", "total_space"}
+var DiskColumns []string = []string{"uuid", "user_uuid", "volume_uuid", "provider_uuid", "credentials", "name", "created_at", "used_space", "total_space", "is_virtual", "virtual_disk_uuid"}
 
 var VolumeColumns []string = []string{"uuid", "name", "user_uuid", "backup", "encryption", "file_partition", "created_at", "deleted_at"}
 
@@ -38,7 +38,9 @@ func DiskRow(_dbos ...*dbo.Disk) *sqlmock.Rows {
 			_dbo.Name,
 			_dbo.CreatedAt,
 			_dbo.UsedSpace,
-			_dbo.TotalSpace)
+			_dbo.TotalSpace,
+			_dbo.IsVirtual,
+			_dbo.VirtualDiskUUID)
 	}
 
 	return ret

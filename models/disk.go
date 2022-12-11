@@ -73,7 +73,7 @@ type CreateDiskMetadata struct {
 // return type:
 //   - models.Disk: created disk model, nil if provider is invalid
 func CreateDisk(cdm CreateDiskMetadata) Disk {
-	if DiskTypesRegistry[cdm.Disk.Provider.Type] == nil || cdm.Disk.Provider.Type < 1 {
+	if DiskTypesRegistry[cdm.Disk.Provider.Type] == nil || cdm.Disk.Provider.Type < 0 {
 		return nil
 	}
 	var disk Disk = DiskTypesRegistry[cdm.Disk.Provider.Type]()
