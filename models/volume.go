@@ -212,6 +212,7 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 
 	nonce := (*block)[:gcm.NonceSize()]
 	ciphertext := (*block)[gcm.NonceSize():]
+	*block = make([]uint8, len(*block)-gcm.NonceSize())
 	*block, err = gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		logger.Logger.Error("volume", "Could not decode the file: ", err.Error(), ".")
