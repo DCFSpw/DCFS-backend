@@ -27,6 +27,9 @@ func TestMarkAsUsed(t *testing.T) {
 			So(instances.Instances[testInstance.GetUUID()].Counter, ShouldEqual, old+1)
 		})
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestMarkAsCompleted(t *testing.T) {
@@ -55,6 +58,9 @@ func TestMarkAsCompleted(t *testing.T) {
 	Convey("Instance should be deleted", t, func() {
 		So(instances.GetEnqueuedInstance(testInstance.GetUUID()), ShouldEqual, nil)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 
 	models.Transport.WaitTime = 6 * time.Minute
 }
@@ -75,6 +81,9 @@ func TestEnqueueInstance(t *testing.T) {
 	Convey("The test instance should be properly deleted from the collection after the allotted time", t, func() {
 		So(instances.GetEnqueuedInstance(testInstance.GetUUID()), ShouldEqual, nil)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 
 	models.Transport.WaitTime = 6 * time.Minute
 }
@@ -86,6 +95,9 @@ func TestGetEnqueuedInstance(t *testing.T) {
 	Convey("The instance can be properly retrieved from the collection", t, func() {
 		So(instances.GetEnqueuedInstance(testInstance.GetUUID()), ShouldEqual, testInstance)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestRemoveEnqueuedInstance(t *testing.T) {
@@ -96,10 +108,15 @@ func TestRemoveEnqueuedInstance(t *testing.T) {
 	Convey("The test item should be successfully deleted", t, func() {
 		So(instances.GetEnqueuedInstance(testInstance.GetUUID()), ShouldEqual, nil)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestVolumeKeepAlive(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 	models.Transport.ActiveVolumes.EnqueueInstance(volume.UUID, volume)
 	old := models.Transport.ActiveVolumes.Instances[volume.UUID].Counter
 
@@ -109,9 +126,9 @@ func TestVolumeKeepAlive(t *testing.T) {
 		So(models.Transport.ActiveVolumes.Instances[volume.UUID].Counter, ShouldEqual, old+1)
 	})
 
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
-		WithArgs(volume.UUID).
-		WillReturnRows(mock.DiskRow(nil))
+	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
+	//	WithArgs(volume.UUID).
+	//	WillReturnRows(mock.DiskRow(nil))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `volumes` WHERE uuid = ? AND `volumes`.`deleted_at` IS NULL ORDER BY `volumes`.`uuid` LIMIT 1")).
 		WithArgs(volume.UUID.String()).
 		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
@@ -132,23 +149,28 @@ func TestVolumeKeepAlive(t *testing.T) {
 }
 
 func TestGetVolume(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 	models.Transport.ActiveVolumes.EnqueueInstance(volume.UUID, volume)
 
 	Convey("The object should be properly queued from the transport", t, func() {
 		So(models.Transport.ActiveVolumes.GetEnqueuedInstance(volume.UUID), ShouldEqual, volume)
+	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
 
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(volume.UUID)
 }
 
 func TestGetVolumes(t *testing.T) {
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
 	_vol1DBO := *mock.VolumeDBO
 	_vol2DBO := *mock.VolumeDBO
 	_vol2DBO.UUID = uuid.New()
 
-	vol1 := MockNewVolume(_vol1DBO, nil)
-	vol2 := MockNewVolume(_vol2DBO, nil)
+	vol1 := MockNewVolume(_vol1DBO, nil, true)
+	vol2 := MockNewVolume(_vol2DBO, nil, true)
 
 	models.Transport.ActiveVolumes.EnqueueInstance(vol1.UUID, vol1)
 	models.Transport.ActiveVolumes.EnqueueInstance(vol2.UUID, vol2)
@@ -197,6 +219,9 @@ func TestFindEnqueuedDisk(t *testing.T) {
 	Convey("Return the object from upload queue", t, func() {
 		So(models.Transport.FindEnqueuedDisk(disk.UUID), ShouldEqual, disk)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 
 	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.UUID)
 	models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(file.UUID)
@@ -204,7 +229,7 @@ func TestFindEnqueuedDisk(t *testing.T) {
 }
 
 func TestFindEnqueuedVolume(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 	disk := mock.GetMockDisks(1)[0]
 	disk.Volume = volume
 	file := models.RegularFile{
@@ -232,11 +257,14 @@ func TestFindEnqueuedVolume(t *testing.T) {
 	Convey("Return the object from upload queue", t, func() {
 		So(models.Transport.FindEnqueuedVolume(volume.UUID), ShouldEqual, volume)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 	models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.UUID)
 }
 
 func TestDeleteVolume(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, false)
 	models.Transport.ActiveVolumes.EnqueueInstance(volume.UUID, volume)
 	_, err := models.Transport.DeleteVolume(volume.UUID)
 
@@ -244,14 +272,17 @@ func TestDeleteVolume(t *testing.T) {
 		So(err, ShouldEqual, nil)
 	})
 
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
-		WithArgs(volume.UUID).
-		WillReturnRows(mock.DiskRow(nil))
+	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
+	//	WithArgs(volume.UUID).
+	//	WillReturnRows(mock.DiskRow(nil))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `volumes` WHERE uuid = ? AND `volumes`.`deleted_at` IS NULL ORDER BY `volumes`.`uuid` LIMIT 1")).
 		WithArgs(volume.UUID.String()).
 		WillReturnRows(mock.VolumeRow(nil))
 
 	Convey("Item successfully deleted from Transport", t, func() {
 		So(models.Transport.GetVolume(volume.UUID), ShouldEqual, nil)
+	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
 }

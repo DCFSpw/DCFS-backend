@@ -21,9 +21,11 @@ import (
 )
 
 func TestGetDisk(t *testing.T) {
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
 	disks := mock.GetDiskDBOs(1)
-	volume := MockNewVolume(*mock.VolumeDBO, disks)
-	volume2 := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
+	volume2 := MockNewVolume(*mock.VolumeDBO, nil, true)
 
 	Convey("Should successfully retrieve the disk", t, func() {
 		So(volume.GetDisk(disks[0].UUID).GetUUID(), ShouldEqual, disks[0].UUID)
@@ -40,19 +42,24 @@ func TestGetDisk(t *testing.T) {
 
 func TestAddDisk(t *testing.T) {
 	disks := mock.GetMockDisks(1)
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 
 	volume.AddDisk(disks[0].UUID, disks[0])
 
 	Convey("The disk has been successfully added", t, func() {
 		So(volume.GetDisk(disks[0].UUID).GetUUID(), ShouldEqual, disks[0].UUID)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestDeleteDisk(t *testing.T) {
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
 	disks := mock.GetDiskDBOs(1)
-	volume := MockNewVolume(*mock.VolumeDBO, disks)
-	volume2 := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
+	volume2 := MockNewVolume(*mock.VolumeDBO, nil, true)
 
 	volume.DeleteDisk(disks[0].UUID)
 
@@ -71,8 +78,10 @@ func TestDeleteDisk(t *testing.T) {
 }
 
 func TestFileUploadRequest(t *testing.T) {
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
 	disks := mock.GetDiskDBOs(10)
-	volume := MockNewVolume(*mock.VolumeDBO, disks)
+	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
 	req := &requests.InitFileUploadRequest{
 		VolumeUUID: volume.UUID.String(),
 		RootUUID:   "",
@@ -119,6 +128,9 @@ func TestGetVolumeDBO(t *testing.T) {
 			So(volumeDBO.VolumeSettings, ShouldResemble, mock.VolumeDBO.VolumeSettings)
 		})
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestRefreshPartitioner(t *testing.T) {
@@ -128,11 +140,16 @@ func TestRefreshPartitioner(t *testing.T) {
 	Convey("This method is excluded from the Unit Tests", t, func() {
 		So(true, ShouldEqual, true)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestNewVolume(t *testing.T) {
-	disks := mock.GetDiskDBOs(10)
-	volume := MockNewVolume(*mock.VolumeDBO, disks)
+	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
+	disks := mock.GetDiskDBOs(1)
+	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
 
 	Convey("Test if the volume is created properly", t, func() {
 		Convey("UUID is set properly", func() {
@@ -163,7 +180,7 @@ func TestNewVolume(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 	block := make([]uint8, 1024)
 
 	_, _ = io.ReadFull(rand.Reader, block)
@@ -217,10 +234,13 @@ func TestEncrypt(t *testing.T) {
 
 		So(identical, ShouldEqual, true)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestDecrypt(t *testing.T) {
-	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	volume := MockNewVolume(*mock.VolumeDBO, nil, true)
 	block := make([]uint8, 1024)
 
 	_, _ = io.ReadFull(rand.Reader, block)
@@ -271,9 +291,12 @@ func TestDecrypt(t *testing.T) {
 
 		So(identical, ShouldEqual, true)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
-func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk) *models.Volume {
+func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk, dry_run bool) *models.Volume {
 	var _disksPtr []*dbo.Disk
 	for _, _disk := range _disks {
 		_disksPtr = append(_disksPtr, &_disk)
@@ -286,7 +309,11 @@ func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk) *models.Volume {
 
 		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).WithArgs(_disk.UUID.String()).WillReturnRows(mock.DiskRow(&_disk))
 	}
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).WithArgs(_volumeDBO.UUID.String(), false).WillReturnRows(mock.DiskRow(_disksPtr...))
+
+	if !dry_run {
+		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).WithArgs(_volumeDBO.UUID.String(), false).WillReturnRows(mock.DiskRow(_disksPtr...))
+		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).WithArgs(_volumeDBO.UUID.String(), true).WillReturnRows(mock.DiskRow(nil))
+	}
 
 	return models.NewVolume(&_volumeDBO, _disks, nil)
 }

@@ -106,7 +106,7 @@ func CreateDiskFromUUID(uuid uuid.UUID) Disk {
 	var volume *Volume
 
 	// Retrieve disk data from database
-	err := db.DB.DatabaseHandle.Where("uuid = ?", uuid).Preload("Provider").Preload("User").Preload("Volume").Find(&disk).Error
+	err := db.DB.DatabaseHandle.Where("uuid = ?", uuid).Find(&disk).Error
 	if err != nil {
 		return nil
 	}

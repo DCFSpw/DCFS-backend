@@ -33,14 +33,20 @@ func TestCreateDiskAndGetDiskDbo(t *testing.T) {
 		So(disks[0].TotalSpace, ShouldEqual, diskDBO.TotalSpace)
 		So(disks[0].CreatedAt, ShouldEqual, diskDBO.CreatedAt)
 	})
+	Convey("The database call should be correct", t, func() {
+		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
 }
 
 func TestCreateDiskFromUUID(t *testing.T) {
 	disks := mock.GetDiskDBOs(1)
 	fileDBO := mock.GetFileDBO(disks[0].UUID, constants.FILE_TYPE_REGULAR, constants.DEFAULT_VOLUME_BLOCK_SIZE)
-	blocks := mock.GetBlockDBOs(1, disks[0].UUID, fileDBO.UUID)
 	provider, _ := mock.GetProviderDBO(disks[0].Provider.Type)
-	// volume := MockNewVolume(*mock.VolumeDBO, disks)
+	// volume := MockNewVolume(*mock.VolumeDBO, disks, false)
+
+	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).
+		WithArgs(disks[0].UUID).
+		WillReturnRows(mock.DiskRow(&disks[0]))
 
 	Convey("CreateDiskFromUUID function works correctly", t, func() {
 		Convey("Should return nil if the disk does not exist", func() {
@@ -52,16 +58,6 @@ func TestCreateDiskFromUUID(t *testing.T) {
 		Convey("Should return a disk if it is in the db", func() {
 			disk := CreateDummyDisk(&disks[0], provider, false)
 			So(disk.GetUUID(), ShouldEqual, disks[0].UUID)
-		})
-		Convey("Should return a disk if its file is enqueued for download", func() {
-			mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `blocks` WHERE file_uuid = ?")).
-				WithArgs(fileDBO.UUID).
-				WillReturnRows(mock.BlockRow(&blocks[0]))
-			_ = CreateDummyDisk(&disks[0], provider, true)
-			file := models.NewFileFromDBO(&fileDBO)
-			models.Transport.FileDownloadQueue.EnqueueInstance(file.GetUUID(), file)
-
-			So(models.CreateDiskFromUUID(disks[0].UUID).GetUUID(), ShouldEqual, disks[0].UUID)
 		})
 		Convey("All db expectations were met", func() {
 			So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
@@ -163,16 +159,16 @@ func CreateDummyDisk(disk *dbo.Disk, provider *dbo.Provider, dry_run bool) model
 		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).
 		WithArgs(disk.VolumeUUID, false).
-		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
+		WillReturnRows(mock.DiskRow(disk))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).
 		WithArgs(disk.VolumeUUID, true).
 		WillReturnRows(mock.VolumeRow(nil))
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
-		WithArgs(disk.VolumeUUID).
-		WillReturnRows(mock.VolumeRow(mock.VolumeDBO))
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`uuid` = ?")).
-		WithArgs(disk.UserUUID).
-		WillReturnRows(mock.UserRow(nil))
+	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
+	//	WithArgs(disk.VolumeUUID).
+	//	WillReturnRows(mock.DiskRow(disk))
+	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `users` WHERE `users`.`uuid` = ?")).
+	//	WithArgs(disk.UserUUID).
+	//	WillReturnRows(mock.UserRow(nil))
 
 	if dry_run {
 		return nil

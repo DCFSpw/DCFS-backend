@@ -132,7 +132,7 @@ func (d *MockDisk) GetTotalSpace() uint64 {
 }
 
 func (d *MockDisk) SetCreationTime(creationTime time.Time) {
-	return
+	d.CreationTime = creationTime
 }
 
 func (d *MockDisk) GetCreationTime() time.Time {
