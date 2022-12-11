@@ -2,10 +2,12 @@ package models
 
 import (
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/requests"
 	"dcfs/util/logger"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"log"
 	"math"
 	"strconv"
@@ -81,6 +83,132 @@ func (v *Volume) AddVirtualDisk(diskUUID uuid.UUID, _disk Disk) {
 
 	v.virtualDisks[diskUUID] = _disk
 	logger.Logger.Debug("volume", "Added the virtual disk: ", diskUUID.String(), " to the volume: ", v.UUID.String(), ".")
+}
+
+// CreateVirtualDiskAddToVolume - create and add virtual disk with provided UUID to the volume
+//
+// params:
+//   - diskUUID uuid.UUID: UUID of the virtual disk to be added to the volume
+func (v *Volume) CreateVirtualDiskAddToVolume(_virtualDisk dbo.Disk) {
+	var virtualDisk Disk
+
+	// Initialize virtual disk map
+	if v.virtualDisks == nil {
+		v.virtualDisks = make(map[uuid.UUID]Disk)
+	}
+
+	// Create virtual disk based on the target backup type
+	switch v.VolumeSettings.Backup {
+	// No backup is used
+	case constants.BACKUP_TYPE_NO_BACKUP:
+		return
+
+	// RAID1+0 backup
+	case constants.BACKUP_TYPE_RAID_1:
+		// Initialize RAID1 virtual disks
+		var firstDisk Disk = nil
+		var secondDisk Disk = nil
+
+		// Locate real disks assigned to the virtual disk
+		for _, disk := range v.disks {
+			if disk.GetVirtualDiskUUID() == _virtualDisk.UUID {
+				if firstDisk == nil {
+					firstDisk = disk
+				} else if secondDisk == nil {
+					secondDisk = disk
+				} else {
+					logger.Logger.Error("volume", "RAID1+0 error. More than 2 disks were assigned to single RAID1 drive.")
+					return
+				}
+			}
+		}
+
+		// Create RAID1 virtual disk
+		if firstDisk != nil && secondDisk != nil {
+			virtualDisk = DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1]()
+			virtualDisk.SetUUID(_virtualDisk.UUID)
+			virtualDisk.AssignDisk(firstDisk)
+			virtualDisk.AssignDisk(secondDisk)
+			virtualDisk.SetVolume(v)
+		} else {
+			logger.Logger.Error("volume", "RAID1+0 error. Cannot load disks assigned to virtual RAID1 drive.")
+			return
+		}
+	default:
+		logger.Logger.Warning("volume", "Cannot initialize backup drives. Unknown backup type.")
+	}
+
+	// Add virtual disk to virtual disk map
+	if virtualDisk != nil {
+		v.virtualDisks[virtualDisk.GetUUID()] = virtualDisk
+		logger.Logger.Debug("volume", "Added the virtual disk: ", virtualDisk.GetUUID().String(), " to the volume: ", v.UUID.String(), ".")
+	}
+}
+
+// GenerateVirtualDisk - generate virtual disk for new disk (used by backup disks)
+//
+// params:
+//   - newDisk Disk: new disk to be connected to the new virtual disk
+//
+// return type:
+//   - uuid.UUID: virtual disk if matching is possible, uuid.Nil otherwise
+//   - error: database operation error
+func (v *Volume) GenerateVirtualDisk(newDisk Disk) (uuid.UUID, error) {
+	var virtualDisk *dbo.Disk = dbo.NewVirtualDisk()
+	virtualDisk.UUID = uuid.Nil
+
+	switch v.VolumeSettings.Backup {
+	case constants.BACKUP_TYPE_NO_BACKUP:
+		return uuid.Nil, nil
+
+	case constants.BACKUP_TYPE_RAID_1:
+		var disk dbo.Disk
+
+		// Find unassigned disk to pair with
+		result := db.DB.DatabaseHandle.Where("volume_uuid = ? AND is_virtual = ? AND virtual_disk_uuid = ?", v.UUID, false, uuid.Nil).First(&disk)
+		if result.Error != nil {
+			logger.Logger.Debug("disk", "Could not find an unassigned disk to pair with.")
+			if result.Error == gorm.ErrRecordNotFound {
+				return uuid.Nil, nil
+			} else {
+				return uuid.Nil, result.Error
+			}
+		}
+
+		// Retrieve RAID1 virtual provider from database
+		var provider dbo.Provider
+		result = db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_RAID1).First(&provider)
+		if result.Error != nil {
+			logger.Logger.Error("disk", "Could not find the provider with the type: ", string(constants.PROVIDER_TYPE_RAID1), " from the db.")
+			return uuid.Nil, result.Error
+		}
+
+		// Generate virtual disk
+		virtualDisk.UUID = uuid.New()
+		virtualDisk.UserUUID = disk.UserUUID
+		virtualDisk.VolumeUUID = v.UUID
+		virtualDisk.ProviderUUID = provider.UUID
+
+		result = db.DB.DatabaseHandle.Create(&virtualDisk)
+		if result.Error != nil {
+			return uuid.Nil, result.Error
+		}
+
+		// Save virtual disk uuid to selected disk
+		result = db.DB.DatabaseHandle.Model(disk).Update("virtual_disk_uuid", virtualDisk.UUID)
+		if result.Error != nil {
+			return uuid.Nil, result.Error
+		}
+		v.disks[disk.UUID].SetVirtualDiskUUID(virtualDisk.UUID)
+		v.disks[newDisk.GetUUID()].SetVirtualDiskUUID(virtualDisk.UUID)
+
+		// Save virtual disk to the volume
+		v.CreateVirtualDiskAddToVolume(*virtualDisk)
+
+		return virtualDisk.UUID, nil
+	default:
+		return uuid.Nil, nil
+	}
 }
 
 // DeleteDisk - remove disk from the volume
@@ -211,52 +339,14 @@ func (v *Volume) RefreshPartitioner() {
 // InitializeBackup - initialize virtual disks if backup is enabled
 //
 // This function creates virtual disks for the target backup solution
-// enabled for the volume. It also assigns real disk according to their
-// assigned virtual disk UUID and then refreshes partitioner data.
+// enabled for the volume. It also assigns real disks according to their
+// assigned virtual disk UUID.
 //
 // params:
-//   - _virtualDisks []dbo.VirtualDisk: list of virtual disks to be created
-func (v *Volume) InitializeBackup(_virtualDisks []dbo.Disk) {
-	// Create virtual disks based on the target backup type
-	switch v.VolumeSettings.Backup {
-	// No backup is used
-	case constants.BACKUP_TYPE_NO_BACKUP:
-		return
-
-	// RAID1+0 backup
-	case constants.BACKUP_TYPE_RAID_1:
-		// Initialize RAID1 virtual disks
-		for _, _virtualDisk := range _virtualDisks {
-			var firstDisk Disk = nil
-			var secondDisk Disk = nil
-
-			// Locate real disks assigned to the virtual disk
-			for _, disk := range v.disks {
-				if disk.GetVirtualDiskUUID() == _virtualDisk.UUID {
-					if firstDisk == nil {
-						firstDisk = disk
-					} else if secondDisk == nil {
-						secondDisk = disk
-					} else {
-						logger.Logger.Error("volume", "RAID1+0 error. More than 2 disks were assigned to single RAID1 drive.")
-					}
-				}
-			}
-
-			// Create RAID1 virtual disk
-			if firstDisk != nil && secondDisk != nil {
-				var virtualDisk Disk = DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1]()
-				virtualDisk.SetUUID(_virtualDisk.UUID)
-				virtualDisk.AssignDisk(firstDisk)
-				virtualDisk.AssignDisk(secondDisk)
-				virtualDisk.SetVolume(v)
-				v.AddVirtualDisk(_virtualDisk.UUID, virtualDisk)
-			} else {
-				logger.Logger.Error("volume", "RAID1+0 error. Cannot load disks assigned to virtual RAID1 drive.")
-			}
-		}
-	default:
-		logger.Logger.Warning("volume", "Cannot initialize backup drives. Unknown backup type.")
+//   - virtualDisks []dbo.VirtualDisk: list of virtual disks to be created
+func (v *Volume) InitializeBackup(virtualDisks []dbo.Disk) {
+	for _, disk := range virtualDisks {
+		v.CreateVirtualDiskAddToVolume(disk)
 	}
 }
 

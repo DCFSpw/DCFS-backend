@@ -107,14 +107,10 @@ func CreateDisk(c *gin.Context) {
 			_disk.TotalSpace = totalSpace
 			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(totalSpace, 10))
 		}
-
-		// Refresh partitioner for credential based disks
-		// OAuth disks will refresh partitioner after authorization
-		go volume.RefreshPartitioner()
 	}
 
 	// Find virtual disk uuid for new disk
-	virtualDiskUUID, err := db.GenerateVirtualDiskUUID(volume.UUID, volume.VolumeSettings.Backup)
+	virtualDiskUUID, err := volume.GenerateVirtualDisk(disk)
 	if err != nil {
 		logger.Logger.Error("api", "Could not generate virtual disk UUID.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not generate virtual disk UUID (for volumes with backup): "+err.Error()))
@@ -138,6 +134,9 @@ func CreateDisk(c *gin.Context) {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not validate database change"))
 		return
 	}
+
+	// Refresh partitioner after disk is added to the volume
+	go volume.RefreshPartitioner()
 
 	logger.Logger.Debug("api", "CreateDisk endpoint successful exit.")
 	c.JSON(200, responses.NewCreateDiskSuccessResponse(_disk, authCode))

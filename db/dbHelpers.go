@@ -5,7 +5,6 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/util/logger"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // UserFromDatabase - retrieve user from database
@@ -216,64 +215,4 @@ func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
 
 	logger.Logger.Debug("db", "Successfully generated a path: ", _path, " for a rootUUID: ", rootUUID.String())
 	return path, constants.SUCCESS
-}
-
-// GenerateVirtualDiskUUID - generate virtual disk UUID for new disk (used by backup disks)
-//
-// params:
-//   - volumeUUID string: UUID of the volume to add disk to
-//   - backupType int: constant, type of backup
-//
-// return type:
-//   - uuid.UUID: virtual disk UUID if matching is possible, uuid.Nil otherwise
-//   - error: database operation error
-func GenerateVirtualDiskUUID(volumeUUID uuid.UUID, backupType int) (uuid.UUID, error) {
-	switch backupType {
-	case constants.BACKUP_TYPE_NO_BACKUP:
-		return uuid.Nil, nil
-
-	case constants.BACKUP_TYPE_RAID_1:
-		var disk dbo.Disk
-
-		// Find unassigned disk to pair with
-		result := DB.DatabaseHandle.Where("volume_uuid = ? AND is_virtual = ? AND virtual_disk_uuid = ?", volumeUUID, false, uuid.Nil).First(&disk)
-		if result.Error != nil {
-			logger.Logger.Debug("disk", "Could not find an unassigned disk to pair with.")
-			if result.Error == gorm.ErrRecordNotFound {
-				return uuid.Nil, nil
-			} else {
-				return uuid.Nil, result.Error
-			}
-		}
-
-		// Retrieve RAID1 virtual provider from database
-		var provider dbo.Provider
-		result = DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_RAID1).First(&provider)
-		if result.Error != nil {
-			logger.Logger.Error("disk", "Could not find the provider with the type: ", string(constants.PROVIDER_TYPE_RAID1), " from the db.")
-			return uuid.Nil, result.Error
-		}
-
-		// Generate virtual disk
-		var virtualDisk *dbo.Disk = dbo.NewVirtualDisk()
-		virtualDisk.UUID = uuid.New()
-		virtualDisk.UserUUID = disk.UserUUID
-		virtualDisk.VolumeUUID = volumeUUID
-		virtualDisk.ProviderUUID = provider.UUID
-
-		result = DB.DatabaseHandle.Create(&virtualDisk)
-		if result.Error != nil {
-			return uuid.Nil, result.Error
-		}
-
-		// Save virtual disk uuid to selected disk
-		result = DB.DatabaseHandle.Model(disk).Update("virtual_disk_uuid", virtualDisk.UUID)
-		if result.Error != nil {
-			return uuid.Nil, result.Error
-		}
-
-		return virtualDisk.UUID, nil
-	default:
-		return uuid.Nil, nil
-	}
 }
