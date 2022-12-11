@@ -578,9 +578,21 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				}
 			}
 
+			// decrypt the file if needed
+			err = file.GetVolume().Decrypt(bm.Content)
+			if err != nil {
+				logger.Logger.Error("file", "Could not decrypt the block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+
+				brokenBlocksMtx.Lock()
+				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
+					brokenBlocks = append(brokenBlocks, bm.UUID)
+				}
+				brokenBlocksMtx.Unlock()
+			}
+
 			_checksum = checksum.CalculateChecksum(*bm.Content)
 			if _checksum != _b.Checksum {
-				logger.Logger.Debug("block", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+				logger.Logger.Debug("file", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
 
 				brokenBlocksMtx.Lock()
 				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {

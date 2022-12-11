@@ -410,6 +410,10 @@ func (d *OneDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
+func (d *OneDriveDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewOneDriveDisk() *OneDriveDisk {

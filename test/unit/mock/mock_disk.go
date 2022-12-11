@@ -155,6 +155,10 @@ func GetDiskDBOs(number int) []dbo.Disk {
 	return ret
 }
 
+func (d *MockDisk) IsReady() bool {
+	return true
+}
+
 func NewMockDisk() models.Disk {
 	var d *MockDisk = new(MockDisk)
 

@@ -292,6 +292,10 @@ func (d *GDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
+func (d *GDriveDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewGDriveDisk() *GDriveDisk {

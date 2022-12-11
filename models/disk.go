@@ -54,6 +54,7 @@ type Disk interface {
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
 	AssignDisk(disk Disk)
+	IsReady() bool
 }
 
 type CreateDiskMetadata struct {

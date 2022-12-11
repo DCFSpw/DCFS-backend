@@ -97,9 +97,18 @@ func GetVolume(c *gin.Context) {
 		return
 	}
 
+	v := models.Transport.GetVolume(volume.UUID)
+	if v == nil {
+		logger.Logger.Error("api", "A volume with the provided uuid: ", volumeUUID, " was not found in the db.")
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "Volume not found"))
+	}
+
 	// Return volume data
 	logger.Logger.Debug("api", "GetVolume endpoint successful exit.")
-	c.JSON(200, responses.NewVolumeDataSuccessResponse(volume))
+	c.JSON(200, responses.NewVolumeListSuccessResponse(&responses.VolumeResponse{
+		Volume:  *volume,
+		IsReady: v.IsReady(),
+	}))
 }
 
 // UpdateVolume - handler for Update volume details request
@@ -273,7 +282,7 @@ func DeleteVolume(c *gin.Context) {
 // return type:
 //   - API response with appropriate HTTP code
 func GetVolumes(c *gin.Context) {
-	var volumes []dbo.Volume
+	var _volumes []dbo.Volume
 	var volumesPagination []interface{}
 	var userUUID uuid.UUID
 	var page int
@@ -286,7 +295,7 @@ func GetVolumes(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Retrieve list of volumes of current user from the database
-	err = db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID).Find(&volumes).Error
+	err = db.DB.DatabaseHandle.Where("user_uuid = ?", userUUID).Find(&_volumes).Error
 	if err != nil {
 		logger.Logger.Error("api", "Could not retrieve a list of volumes from the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+err.Error()))
@@ -294,9 +303,19 @@ func GetVolumes(c *gin.Context) {
 	}
 
 	// Prepare pagination list
-	for _, volume := range volumes {
-		volumesPagination = append(volumesPagination, volume)
+	for _, _v := range _volumes {
+		v := models.Transport.GetVolume(_v.UUID)
+		if v == nil {
+			logger.Logger.Error("api", "A volume with the provided uuid: ", v.UUID.String(), " was not found in the db.")
+			continue
+		}
+
+		volumesPagination = append(volumesPagination, responses.VolumeResponse{
+			Volume:  _v,
+			IsReady: v.IsReady(),
+		})
 	}
+
 	pagination := models.Paginate(volumesPagination, page, constants.PAGINATION_RECORDS_PER_PAGE)
 	if pagination == nil {
 		logger.Logger.Error("api", "Could not paginate the provided list of volumes.")

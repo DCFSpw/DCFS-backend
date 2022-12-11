@@ -226,6 +226,10 @@ func (d *FTPDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
+func (d *FTPDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
+}
+
 /* Factory methods */
 
 func NewFTPDisk() *FTPDisk {

@@ -176,6 +176,11 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 	panic("Not supported for real disk")
 }
 
+func (d *AbstractDisk) IsReady() bool {
+	// TODO @lavar3l add functionality for checking whether the protected disks have backup
+	return true
+}
+
 /* Additional abstract functions */
 
 func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {
