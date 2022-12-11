@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"crypto/rand"
 	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/models"
@@ -9,6 +10,7 @@ import (
 	_ "dcfs/util/logger"
 	"github.com/google/uuid"
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 	"regexp"
 	"testing"
 
@@ -157,6 +159,117 @@ func TestNewVolume(t *testing.T) {
 
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
+	})
+}
+
+func TestEncrypt(t *testing.T) {
+	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	block := make([]uint8, 1024)
+
+	_, _ = io.ReadFull(rand.Reader, block)
+
+	original := make([]uint8, 1024)
+	for idx, _ := range block {
+		original[idx] = block[idx]
+	}
+
+	Convey("The block should not be encrypted when the encryption option is off", t, func() {
+		err := volume.Encrypt(&block)
+		Convey("The error should be nil", func() {
+			So(err, ShouldEqual, nil)
+		})
+		Convey("The files should not be encrypted and identical", func() {
+			identical := true
+
+			for i := 0; i < 1024; i++ {
+				if original[i] != block[i] {
+					identical = false
+				}
+			}
+
+			So(identical, ShouldEqual, true)
+		})
+	})
+
+	volume.VolumeSettings.Encryption = constants.ENCRYPTION_TYPE_AES_256
+	Convey("The block should be encrypted when the encryption option is on", t, func() {
+		err := volume.Encrypt(&block)
+		So(err, ShouldEqual, nil)
+
+		identical := true
+
+		for i := 0; i < 1024; i++ {
+			if original[i] != block[i] {
+				identical = false
+			}
+		}
+
+		So(identical, ShouldEqual, false)
+
+		_ = volume.Decrypt(&block)
+		identical = true
+
+		for i := 0; i < 1024; i++ {
+			if original[i] != block[i] {
+				identical = false
+			}
+		}
+
+		So(identical, ShouldEqual, true)
+	})
+}
+
+func TestDecrypt(t *testing.T) {
+	volume := MockNewVolume(*mock.VolumeDBO, nil)
+	block := make([]uint8, 1024)
+
+	_, _ = io.ReadFull(rand.Reader, block)
+
+	original := make([]uint8, 1024)
+	for idx, _ := range block {
+		original[idx] = block[idx]
+	}
+
+	volume.VolumeSettings.Encryption = constants.ENCRYPTION_TYPE_AES_256
+
+	// encrypt the block
+	_ = volume.Encrypt(&block)
+
+	volume.VolumeSettings.Encryption = constants.ENCRYPTION_TYPE_NO_ENCRYPTION
+
+	Convey("The block should not be decrypted if the encryption setting is of", t, func() {
+		err := volume.Decrypt(&block)
+		Convey("The returned error should be nil", func() {
+			So(err, ShouldEqual, nil)
+		})
+		Convey("The block should not be the same as the original", func() {
+			identical := true
+
+			for i := 0; i < 1024; i++ {
+				if original[i] != block[i] {
+					identical = false
+				}
+			}
+
+			So(identical, ShouldEqual, false)
+		})
+	})
+
+	volume.VolumeSettings.Encryption = constants.ENCRYPTION_TYPE_AES_256
+
+	Convey("The block should be successfully decrypted if the encryption setting is on", t, func() {
+		err := volume.Decrypt(&block)
+		So(err, ShouldEqual, nil)
+
+		identical := true
+
+		for i := 0; i < 1024; i++ {
+			if original[i] != block[i] {
+				identical = false
+			}
+		}
+
+		So(identical, ShouldEqual, true)
 	})
 }
 
