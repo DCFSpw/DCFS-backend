@@ -111,6 +111,25 @@ func IsVolumeEmpty(uuid uuid.UUID) (bool, error) {
 	return blockCount == 0, err
 }
 
+// FindUnassignedDisk - find disk from provided volume that is not assigned to any virtual disk
+//
+// params:
+//   - volumeUUID uuid.UUID: UUID of the volume to search in
+//
+// return type:
+//   - *dbo.Disk: unassigned disk, nil if none found
+//   - error: database operation error
+func FindUnassignedDisk(volumeUUID uuid.UUID) (*dbo.Disk, error) {
+	var disk dbo.Disk
+
+	result := DB.DatabaseHandle.Where("volume_uuid = ? AND is_virtual = ? AND virtual_disk_uuid = ?", volumeUUID, false, uuid.Nil).First(&disk)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &disk, nil
+}
+
 // IsDirectoryEmpty - verify whether directory is empty
 //
 // params:
