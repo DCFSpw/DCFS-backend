@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 	"strconv"
 )
 
@@ -504,6 +505,133 @@ func DeleteDisk(c *gin.Context) {
 	go volume.RefreshPartitioner()
 
 	c.JSON(200, responses.NewSuccessResponse(_disk))
+}
+
+// ReplaceBackupDisk - handler for Replace backup disk request
+//
+// Replace backup disk (DELETE /disks/replace/{diskUUID}) - replacing the specified disk (which is part of backup disk)
+// with another disk, and removing the old disk.
+//
+// params:
+//   - c *gin.Context: context of the request
+//
+// return type:
+//   - API response with appropriate HTTP code
+func ReplaceBackupDisk(c *gin.Context) {
+	var _diskUUID string
+	var _disk dbo.Disk
+	var _newDisk *dbo.Disk
+	var _blocks []dbo.Block
+	var volume *models.Volume
+	var virtualDisk models.Disk
+	var disk models.Disk
+	var newDisk models.Disk
+	var userUUID uuid.UUID
+	var errCode string
+	var err error
+
+	// Retrieve disk from database
+	_diskUUID = c.Param("DiskUUID")
+	err = db.DB.DatabaseHandle.Where("uuid = ? AND is_virtual = ?", _diskUUID, false).Preload("Provider").Preload("Volume").Find(&_disk).Error
+	if err != nil {
+		logger.Logger.Error("api", "Could not find a disk with the provided uuid: ", _diskUUID, " in the db.")
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.DATABASE_DISK_NOT_FOUND, "Could not find the disk with the provided UUID"))
+		return
+	}
+
+	// Retrieve userUUID from context
+	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
+
+	// Verify that the user is owner of the disk
+	if userUUID != _disk.UserUUID {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.OWNER_MISMATCH, "Disk not found"))
+		return
+	}
+
+	// Verify that the disk is part of backup disk
+	if _disk.VirtualDiskUUID == uuid.Nil {
+		c.JSON(405, responses.NewOperationFailureResponse(constants.OPERATION_NOT_SUPPORTED, "Disk is not part of backup disk"))
+		return
+	}
+
+	// Check whether disk is not enqueued for IO operation
+	_d := models.Transport.FindEnqueuedDisk(_disk.UUID)
+	if _d != nil {
+		logger.Logger.Error("api", "The disk with the uuid: ", _diskUUID, " is being enqueued for upload / download and cannot be deleted at the moment.")
+		c.JSON(405, responses.NewOperationFailureResponse(constants.TRANSPORT_DISK_IS_BEING_USED, "Requested disk is enqueued for an IO operation, can't delete it now"))
+		return
+	}
+
+	// Retrieve volume from transport
+	volume = models.Transport.GetVolume(_disk.VolumeUUID)
+	if volume == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_VOLUME_NOT_FOUND, "Volume not found"))
+		return
+	}
+
+	// Retrieve virtual disk
+	virtualDisk = volume.GetDisk(_disk.VirtualDiskUUID)
+	if virtualDisk == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Virtual disk not found"))
+		return
+	}
+
+	// Retrieve current disk
+	disk = volume.GetDisk(_disk.UUID)
+	if disk == nil {
+		c.JSON(404, responses.NewNotFoundErrorResponse(constants.TRANSPORT_DISK_NOT_FOUND, "Target disk not found"))
+		return
+	}
+
+	// Find new disk to replace current disk
+	_newDisk, err = db.FindUnassignedDisk(volume.UUID)
+	if err != nil {
+		logger.Logger.Debug("api", "Could not find an unassigned disk to pair with.")
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(405, responses.NewOperationFailureResponse(constants.DATABASE_DISK_NOT_FOUND, "There are no unassigned disks to pair with. Add new disk before replacing."))
+			return
+		} else {
+			c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not generate find unassigned disk in database: "+err.Error()))
+			return
+		}
+	}
+	newDisk = volume.GetDisk(_newDisk.UUID)
+
+	// Retrieve blocks associated with the virtual disk
+	result := db.DB.DatabaseHandle.Where("disk_uuid = ?", virtualDisk.GetUUID()).Find(&_blocks).Error
+	if result != nil {
+		logger.Logger.Error("api", "Could not find blocks associated with the disk with the uuid: ", virtualDisk.GetUUID().String(), " in the db.")
+		c.JSON(500, responses.NewNotFoundErrorResponse(constants.DATABASE_ERROR, "Could not find blocks associated with the virtual disk: "+result.Error()))
+		return
+	}
+
+	// Trigger the replacement process
+	errCode = virtualDisk.(models.VirtualDisk).ReplaceDisk(disk, newDisk, _blocks)
+	if errCode != constants.SUCCESS {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed during the relocation process"))
+		return
+	}
+
+	// Remove virtual disk uuid from the current disk
+	dbErr := db.DB.DatabaseHandle.Model(_disk).Update("virtual_disk_uuid", uuid.Nil)
+	if dbErr.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+dbErr.Error.Error()))
+		return
+	}
+	disk.SetVirtualDiskUUID(uuid.Nil)
+
+	// Add virtual disk uuid to the new disk
+	dbErr = db.DB.DatabaseHandle.Model(_newDisk).Update("virtual_disk_uuid", virtualDisk.GetUUID())
+	if dbErr.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+dbErr.Error.Error()))
+		return
+	}
+	newDisk.SetVirtualDiskUUID(virtualDisk.GetUUID())
+
+	// Refresh volume partitioner after disk change
+	go volume.RefreshPartitioner()
+
+	c.JSON(200, responses.NewEmptySuccessResponse())
 }
 
 // GetDisks - handler for Get list of disks request

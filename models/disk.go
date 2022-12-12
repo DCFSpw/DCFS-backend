@@ -57,6 +57,10 @@ type Disk interface {
 	IsReady() bool
 }
 
+type VirtualDisk interface {
+	ReplaceDisk(oldDisk Disk, newDisk Disk, blocks []dbo.Block) string
+}
+
 type CreateDiskMetadata struct {
 	Disk   *dbo.Disk
 	Volume *Volume
