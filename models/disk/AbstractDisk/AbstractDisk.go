@@ -180,6 +180,14 @@ func (d *AbstractDisk) IsReady() bool {
 	return true
 }
 
+func (d *AbstractDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   nil,
+		IsReady: d.IsReady(),
+	}
+}
+
 /* Additional abstract functions */
 
 func (d *AbstractDisk) GetProvider(providerType int) uuid.UUID {

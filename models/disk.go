@@ -55,6 +55,13 @@ type Disk interface {
 
 	AssignDisk(disk Disk)
 	IsReady() bool
+	GetResponse(_disk *dbo.Disk) *DiskResponse
+}
+
+type DiskResponse struct {
+	dbo.Disk
+	Array   []DiskResponse `json:"array"`
+	IsReady bool           `json:"isReady"`
 }
 
 type CreateDiskMetadata struct {

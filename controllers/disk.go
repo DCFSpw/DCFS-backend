@@ -305,7 +305,7 @@ func GetDisk(c *gin.Context) {
 	logger.Logger.Debug("api", "The disk capacity is: ", strconv.FormatUint(_disk.FreeSpace, 10), "/", strconv.FormatUint(_disk.TotalSpace, 10), ".")
 
 	logger.Logger.Debug("api", "GetDisk endpoint successful exit.")
-	c.JSON(200, responses.NewSuccessResponse(_disk))
+	c.JSON(200, responses.NewSuccessResponse(diskModel.GetResponse(&_disk)))
 }
 
 // UpdateDisk - handler for Update disk details request
@@ -535,13 +535,15 @@ func GetDisks(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Load list of disks from database
-	db.DB.DatabaseHandle.Where("user_uuid = ? AND is_virtual = ?", userUUID.String(), false).Preload("Provider").Preload("Volume").Find(&_disks)
-	for _, disk := range _disks {
+	db.DB.DatabaseHandle.Where("user_uuid = ? AND virtual_disk_uuid = ?", userUUID.String(), uuid.Nil).Preload("Provider").Preload("Volume").Find(&_disks)
+	for _, _disk := range _disks {
 		// Update disk spaced based on local data (for performance reasons)
-		disk.FreeSpace = disk.TotalSpace - disk.UsedSpace
+		_disk.FreeSpace = _disk.TotalSpace - _disk.UsedSpace
+		volume := models.Transport.GetVolume(_disk.VolumeUUID)
+		disk := volume.GetDisk(_disk.UUID)
 
 		// Append disk to the list
-		disks = append(disks, disk)
+		disks = append(disks, disk.GetResponse(&_disk))
 	}
 
 	// Prepare pagination
