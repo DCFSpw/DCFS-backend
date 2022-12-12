@@ -393,8 +393,17 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 	}
 }
 
-func (d *BackupDisk) IsReady(ctx *gin.Context) bool {
-	return d.firstDisk.IsReady(ctx) && d.secondDisk.IsReady(ctx)
+func (d *BackupDisk) GetReadiness() models.DiskReadiness {
+	arr := make([]models.DiskReadiness, 0)
+
+	if d.firstDisk != nil {
+		arr = append(arr, d.firstDisk.GetReadiness())
+	}
+	if d.secondDisk != nil {
+		arr = append(arr, d.secondDisk.GetReadiness())
+	}
+
+	return models.NewVirtualDiskReadiness(arr...)
 }
 
 func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
@@ -409,7 +418,7 @@ func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Disk
 	return &models.DiskResponse{
 		Disk:    *_disk,
 		Array:   arr,
-		IsReady: d.IsReady(ctx),
+		IsReady: d.GetReadiness().IsReady(ctx),
 	}
 }
 

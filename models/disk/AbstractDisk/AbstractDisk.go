@@ -28,6 +28,8 @@ type AbstractDisk struct {
 
 	Size      uint64
 	UsedSpace uint64
+
+	DiskReadiness models.DiskReadiness
 }
 
 /* Mandatory Disk interface implementations */
@@ -199,24 +201,15 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 	panic("Not supported for real disk")
 }
 
-func (d *AbstractDisk) IsReady(ctx *gin.Context) bool {
-	// check if it is possible to connect to a disk
-	if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-		Ctx:      ctx,
-		Config:   nil,
-		DiskUUID: d.GetUUID(),
-	}) == nil {
-		return false
-	}
-
-	return true
+func (d *AbstractDisk) GetReadiness() models.DiskReadiness {
+	return d.DiskReadiness
 }
 
 func (d *AbstractDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
 	return &models.DiskResponse{
 		Disk:    *_disk,
 		Array:   nil,
-		IsReady: d.IsReady(ctx),
+		IsReady: d.GetReadiness().IsReady(ctx),
 	}
 }
 
