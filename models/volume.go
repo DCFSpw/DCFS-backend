@@ -549,8 +549,10 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Disk)
 		v.InitializeBackup(_virtualDisks)
 	}
 
-	go func() { v.RefreshPartitioner() }()
+	RefreshPartitionerFunc(v)
 
 	log.Println("Created a new Volume: ", v)
 	return v
 }
+
+var RefreshPartitionerFunc func(v *Volume) = func(v *Volume) { go func() { v.RefreshPartitioner() }() }

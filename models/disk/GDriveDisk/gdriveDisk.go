@@ -312,32 +312,35 @@ func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Disk
 func NewGDriveDisk() *GDriveDisk {
 	var d *GDriveDisk = new(GDriveDisk)
 	d.abstractDisk.Disk = d
-	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
-		logger.Logger.Debug("drive", "Checking readiness for GoogleDrive drive: ", d.GetUUID().String(), ".")
-		client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-			Ctx:      ctx,
-			Config:   d.GetConfig(),
-			DiskUUID: d.GetUUID(),
-		}).(*http.Client)
-
-		srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
-		if err != nil {
-			return false
-		}
-
-		_, err = srv.Files.
-			List().
-			Q(fmt.Sprintf("name = ''")).
-			Do()
-		if err != nil {
-			return false
-		}
-
-		return true
-	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	d.abstractDisk.DiskReadiness = models.DiskReadinessRegistry[constants.PROVIDER_TYPE_GDRIVE](d)
 	return d
 }
 
 func init() {
 	models.DiskTypesRegistry[constants.PROVIDER_TYPE_GDRIVE] = func() models.Disk { return NewGDriveDisk() }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_GDRIVE] = func(d models.Disk) models.DiskReadiness {
+		return models.NewRealDiskReadiness(func(ctx context.Context) bool {
+			logger.Logger.Debug("drive", "Checking readiness for GoogleDrive drive: ", d.GetUUID().String(), ".")
+			client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+				Ctx:      ctx,
+				Config:   d.(*GDriveDisk).GetConfig(),
+				DiskUUID: d.GetUUID(),
+			}).(*http.Client)
+
+			srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+			if err != nil {
+				return false
+			}
+
+			_, err = srv.Files.
+				List().
+				Q(fmt.Sprintf("name = ''")).
+				Do()
+			if err != nil {
+				return false
+			}
+
+			return true
+		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
 }

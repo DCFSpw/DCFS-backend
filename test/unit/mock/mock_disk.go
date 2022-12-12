@@ -1,12 +1,14 @@
 package mock
 
 import (
+	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"os"
 	"time"
@@ -21,7 +23,8 @@ type MockDisk struct {
 	UsedSpace  uint64
 	TotalSpace uint64
 
-	CreationTime time.Time
+	CreationTime  time.Time
+	DiskReadiness *MockDiskReadiness
 }
 
 /* Mandatory Disk interface implementations */
@@ -175,18 +178,40 @@ func (d *MockDisk) AssignDisk(disk models.Disk) {
 	panic("Unimplemented")
 }
 
-func (d *MockDisk) IsReady() bool {
+func (d *MockDisk) GetReadiness() models.DiskReadiness {
+	return d.DiskReadiness
+}
+
+func (d *MockDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return nil
+}
+
+type MockDiskReadiness struct{}
+
+func (mdr *MockDiskReadiness) IsReady(ctx context.Context) bool {
 	return true
 }
 
-func (d *MockDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
-	return nil
+func (mdr *MockDiskReadiness) IsReadyForce(ctx context.Context) bool {
+	return true
+}
+
+func (mdr *MockDiskReadiness) IsReadyForceNonBlocking(ctx context.Context) bool {
+	return true
 }
 
 func NewMockDisk() models.Disk {
 	var d *MockDisk = new(MockDisk)
 
 	d.CreationTime = time.Now()
+	d.DiskReadiness = new(MockDiskReadiness)
+
+	return d
+}
+
+func CreateMockDisk(_d dbo.Disk) models.Disk {
+	d := NewMockDisk()
+	d.SetCreationTime(_d.GetCreationTime())
 
 	return d
 }

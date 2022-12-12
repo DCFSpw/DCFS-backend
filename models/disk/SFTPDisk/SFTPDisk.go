@@ -278,21 +278,24 @@ func (d *SFTPDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskRe
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)
 	d.abstractDisk.Disk = d
-	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
-		logger.Logger.Debug("drive", "Checking readiness for SFTP drive: ", d.GetUUID().String(), ".")
-		if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-			Ctx:      ctx,
-			Config:   nil,
-			DiskUUID: d.GetUUID(),
-		}) == nil {
-			return false
-		}
-
-		return true
-	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	d.abstractDisk.DiskReadiness = models.DiskReadinessRegistry[constants.PROVIDER_TYPE_SFTP](d)
 	return d
 }
 
 func init() {
 	models.DiskTypesRegistry[constants.PROVIDER_TYPE_SFTP] = func() models.Disk { return NewSFTPDisk() }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_SFTP] = func(d models.Disk) models.DiskReadiness {
+		return models.NewRealDiskReadiness(func(ctx context.Context) bool {
+			logger.Logger.Debug("drive", "Checking readiness for SFTP drive: ", d.GetUUID().String(), ".")
+			if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+				Ctx:      ctx,
+				Config:   nil,
+				DiskUUID: d.GetUUID(),
+			}) == nil {
+				return false
+			}
+
+			return true
+		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
 }

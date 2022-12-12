@@ -13,6 +13,7 @@ import (
 	"io"
 	"regexp"
 	"testing"
+	"time"
 
 	_ "dcfs/models/disk/FTPDisk"
 	_ "dcfs/models/disk/GDriveDisk"
@@ -307,7 +308,7 @@ func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk, dry_run bool) *mode
 			continue
 		}
 
-		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).WithArgs(_disk.UUID.String()).WillReturnRows(mock.DiskRow(&_disk))
+		// mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).WithArgs(_disk.UUID.String()).WillReturnRows(mock.DiskRow(&_disk))
 	}
 
 	if !dry_run {
@@ -315,5 +316,14 @@ func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk, dry_run bool) *mode
 		mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ? AND is_virtual = ?")).WithArgs(_volumeDBO.UUID.String(), true).WillReturnRows(mock.DiskRow(nil))
 	}
 
-	return models.NewVolume(&_volumeDBO, _disks, nil)
+	volume := models.NewVolume(&_volumeDBO, _disks, nil)
+
+	// refresh partitioner has been moved to a go routine (tests will not run it)
+	time.Sleep(1 * time.Second)
+
+	return volume
+}
+
+func init() {
+	models.RefreshPartitionerFunc = func(v *models.Volume) { v.RefreshPartitioner() }
 }

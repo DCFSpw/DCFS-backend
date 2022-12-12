@@ -44,9 +44,9 @@ func TestCreateDiskFromUUID(t *testing.T) {
 	provider, _ := mock.GetProviderDBO(disks[0].Provider.Type)
 	// volume := MockNewVolume(*mock.VolumeDBO, disks, false)
 
-	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).
-		WithArgs(disks[0].UUID).
-		WillReturnRows(mock.DiskRow(&disks[0]))
+	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).
+	//	WithArgs(disks[0].UUID).
+	//	WillReturnRows(mock.DiskRow(&disks[0]))
 
 	Convey("CreateDiskFromUUID function works correctly", t, func() {
 		Convey("Should return nil if the disk does not exist", func() {
@@ -178,4 +178,11 @@ func CreateDummyDisk(disk *dbo.Disk, provider *dbo.Provider, dry_run bool) model
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(disk.VolumeUUID)
 
 	return _disk
+}
+
+func init() {
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_SFTP] = func(d models.Disk) models.DiskReadiness { return &mock.MockDiskReadiness{} }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_FTP] = func(d models.Disk) models.DiskReadiness { return &mock.MockDiskReadiness{} }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_ONEDRIVE] = func(d models.Disk) models.DiskReadiness { return &mock.MockDiskReadiness{} }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_GDRIVE] = func(d models.Disk) models.DiskReadiness { return &mock.MockDiskReadiness{} }
 }
