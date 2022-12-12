@@ -9,6 +9,7 @@ import (
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/util/checksum"
 	"dcfs/util/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"sync"
 	"time"
@@ -392,22 +393,24 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 	}
 }
 
-func (d *BackupDisk) IsReady() bool {
-	return d.firstDisk.IsReady() && d.secondDisk.IsReady()
+func (d *BackupDisk) IsReady(ctx *gin.Context) bool {
+	return d.firstDisk.IsReady(ctx) && d.secondDisk.IsReady(ctx)
 }
 
-func (d *BackupDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
-	rsp := d.abstractDisk.GetResponse(_disk)
+func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
 	arr := make([]models.DiskResponse, 0)
 
 	firstDiskDBO := d.firstDisk.GetDiskDBO(_disk.UserUUID, _disk.ProviderUUID, _disk.VolumeUUID)
 	secondDiskDBO := d.secondDisk.GetDiskDBO(_disk.UserUUID, _disk.ProviderUUID, _disk.VolumeUUID)
 
-	arr = append(arr, *d.firstDisk.GetResponse(&firstDiskDBO))
-	arr = append(arr, *d.secondDisk.GetResponse(&secondDiskDBO))
+	arr = append(arr, *d.firstDisk.GetResponse(&firstDiskDBO, ctx))
+	arr = append(arr, *d.secondDisk.GetResponse(&secondDiskDBO, ctx))
 
-	rsp.Array = arr
-	return rsp
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   arr,
+		IsReady: d.IsReady(ctx),
+	}
 }
 
 func (d *BackupDisk) fixBlock(blockMetadata *apicalls.BlockMetadata, firstContents []uint8, secondContents []uint8, firstChecksum string, secondChecksum string) {

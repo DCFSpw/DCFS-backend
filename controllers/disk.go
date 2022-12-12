@@ -289,7 +289,7 @@ func GetDisk(c *gin.Context) {
 	logger.Logger.Debug("api", "The disk capacity is: ", strconv.FormatUint(_disk.FreeSpace, 10), "/", strconv.FormatUint(_disk.TotalSpace, 10), ".")
 
 	logger.Logger.Debug("api", "GetDisk endpoint successful exit.")
-	c.JSON(200, responses.NewSuccessResponse(diskModel.GetResponse(&_disk)))
+	c.JSON(200, responses.NewSuccessResponse(diskModel.GetResponse(&_disk, c)))
 }
 
 // UpdateDisk - handler for Update disk details request
@@ -525,7 +525,7 @@ func GetDisks(c *gin.Context) {
 		disk := volume.GetDisk(_disk.UUID)
 
 		// Append disk to the list
-		disks = append(disks, disk.GetResponse(&_disk))
+		disks = append(disks, disk.GetResponse(&_disk, c))
 	}
 
 	// Prepare pagination
