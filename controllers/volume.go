@@ -107,7 +107,7 @@ func GetVolume(c *gin.Context) {
 	logger.Logger.Debug("api", "GetVolume endpoint successful exit.")
 	c.JSON(200, responses.NewVolumeListSuccessResponse(&responses.VolumeResponse{
 		Volume:  *volume,
-		IsReady: v.IsReady(c),
+		IsReady: v.IsReady(c, false),
 	}))
 }
 
@@ -311,7 +311,7 @@ func GetVolumes(c *gin.Context) {
 
 		volumesPagination = append(volumesPagination, responses.VolumeResponse{
 			Volume:  _v,
-			IsReady: v.IsReady(c),
+			IsReady: v.IsReady(c, false),
 		})
 	}
 

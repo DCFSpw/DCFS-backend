@@ -2,6 +2,7 @@ package GDriveDisk
 
 import (
 	"bytes"
+	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
@@ -292,28 +293,8 @@ func (d *GDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *GDriveDisk) IsReady(ctx *gin.Context) bool {
-	// check if it is possible to connect to a disk
-	client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-		Ctx:      ctx,
-		Config:   d.GetConfig(),
-		DiskUUID: d.GetUUID(),
-	}).(*http.Client)
-
-	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		return false
-	}
-
-	_, err = srv.Files.
-		List().
-		Q(fmt.Sprintf("name = ''")).
-		Do()
-	if err != nil {
-		return false
-	}
-
-	return true
+func (d *GDriveDisk) GetReadiness() models.DiskReadiness {
+	return d.abstractDisk.DiskReadiness
 }
 
 func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
@@ -322,7 +303,7 @@ func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Disk
 	return &models.DiskResponse{
 		Disk:    *_disk,
 		Array:   nil,
-		IsReady: d.IsReady(ctx),
+		IsReady: d.GetReadiness().IsReady(ctx),
 	}
 }
 
@@ -331,6 +312,29 @@ func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Disk
 func NewGDriveDisk() *GDriveDisk {
 	var d *GDriveDisk = new(GDriveDisk)
 	d.abstractDisk.Disk = d
+	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
+		logger.Logger.Debug("drive", "Checking readiness for GoogleDrive drive: ", d.GetUUID().String(), ".")
+		client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+			Ctx:      ctx,
+			Config:   d.GetConfig(),
+			DiskUUID: d.GetUUID(),
+		}).(*http.Client)
+
+		srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+		if err != nil {
+			return false
+		}
+
+		_, err = srv.Files.
+			List().
+			Q(fmt.Sprintf("name = ''")).
+			Do()
+		if err != nil {
+			return false
+		}
+
+		return true
+	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
 	return d
 }
 

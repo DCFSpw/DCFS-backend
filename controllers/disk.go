@@ -107,6 +107,13 @@ func CreateDisk(c *gin.Context) {
 			_disk.TotalSpace = totalSpace
 			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(totalSpace, 10))
 		}
+
+		// check if the credentials are correct
+		if !disk.GetReadiness().IsReadyForce(c) {
+			logger.Logger.Error("api", "Credentials for a new disk: ", requestBody.Credentials.ToString(), " were incorrect.")
+			c.JSON(500, responses.NewOperationFailureResponse(constants.VAL_CREDENTIALS_INVALID, "Provided credentials were incorrect"))
+			return
+		}
 	}
 
 	// Find virtual disk uuid for new disk
@@ -392,6 +399,11 @@ func UpdateDisk(c *gin.Context) {
 		}
 
 		disk.CreateCredentials(cred)
+		if !disk.GetReadiness().IsReadyForce(c) {
+			logger.Logger.Error("api", "The provided credentials: ", body.Credentials.ToString(), " are invalid.")
+			c.JSON(405, responses.NewOperationFailureResponse(constants.VAL_CREDENTIALS_INVALID, "Provided credentials are invalid"))
+			return
+		}
 		logger.Logger.Debug("api", "Updated the credentials of the disk with the uuid: ", _diskUUID)
 	}
 

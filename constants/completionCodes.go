@@ -15,6 +15,7 @@ const (
 	VAL_PROVIDER_NOT_SUPPORTED = "VAL-020"
 	VAL_SIZE_INVALID           = "VAL-030"
 	VAL_QUOTA_EXCEEDED         = "VAL-031"
+	VAL_CREDENTIALS_INVALID    = "VAL=040"
 
 	// Database errors
 	DATABASE_ERROR            = "DB-001"
