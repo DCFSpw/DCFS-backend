@@ -1,13 +1,13 @@
 package apicalls
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 )
 
 type CredentialsAuthenticateMetadata struct {
-	Ctx      *gin.Context
+	Ctx      context.Context
 	Config   *oauth2.Config
 	DiskUUID uuid.UUID
 }
