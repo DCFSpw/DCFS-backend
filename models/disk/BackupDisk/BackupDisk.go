@@ -400,8 +400,8 @@ func (d *BackupDisk) IsReady(ctx *gin.Context) bool {
 func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
 	arr := make([]models.DiskResponse, 0)
 
-	firstDiskDBO := d.firstDisk.GetDiskDBO(_disk.UserUUID, _disk.ProviderUUID, _disk.VolumeUUID)
-	secondDiskDBO := d.secondDisk.GetDiskDBO(_disk.UserUUID, _disk.ProviderUUID, _disk.VolumeUUID)
+	firstDiskDBO := d.firstDisk.GetDiskDBO(_disk.UserUUID, d.firstDisk.GetProviderUUID(), _disk.VolumeUUID)
+	secondDiskDBO := d.secondDisk.GetDiskDBO(_disk.UserUUID, d.secondDisk.GetProviderUUID(), _disk.VolumeUUID)
 
 	arr = append(arr, *d.firstDisk.GetResponse(&firstDiskDBO, ctx))
 	arr = append(arr, *d.secondDisk.GetResponse(&secondDiskDBO, ctx))

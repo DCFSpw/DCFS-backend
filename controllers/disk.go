@@ -219,7 +219,8 @@ func DiskOAuth(c *gin.Context) {
 	logger.Logger.Debug("api", "The disk space has been set to: ", strconv.FormatUint(disk.GetTotalSpace(), 10), ".")
 
 	// Save disk credentials to database
-	result := db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
+	_diskDBO := disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID)
+	result := db.DB.DatabaseHandle.Save(&_diskDBO)
 	if result.Error != nil {
 		logger.Logger.Error("api", "Could not save the disk: ", _diskUUID, " in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
