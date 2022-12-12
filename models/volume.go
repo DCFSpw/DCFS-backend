@@ -482,11 +482,13 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 //
 // return type: bool
 func (v *Volume) IsReady() bool {
-	if len(v.disks) == 0 {
+	disks := v.GetDisks()
+
+	if len(disks) == 0 {
 		return false
 	}
 
-	for _, d := range v.disks {
+	for _, d := range disks {
 		if !d.IsReady() {
 			return false
 		}

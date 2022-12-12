@@ -177,7 +177,6 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 }
 
 func (d *AbstractDisk) IsReady() bool {
-	// TODO @lavar3l add functionality for checking whether the protected disks have backup
 	return true
 }
 

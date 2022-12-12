@@ -393,6 +393,10 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 }
 
 func (d *BackupDisk) IsReady() bool {
+	if d.firstDisk == nil || d.secondDisk == nil {
+		return false
+	}
+
 	return d.firstDisk.IsReady() && d.secondDisk.IsReady()
 }
 
