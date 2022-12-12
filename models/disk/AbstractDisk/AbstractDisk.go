@@ -7,6 +7,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/util/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"strconv"
 	"time"
@@ -198,15 +199,24 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 	panic("Not supported for real disk")
 }
 
-func (d *AbstractDisk) IsReady() bool {
+func (d *AbstractDisk) IsReady(ctx *gin.Context) bool {
+	// check if it is possible to connect to a disk
+	if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+		Ctx:      ctx,
+		Config:   nil,
+		DiskUUID: uuid.UUID{},
+	}) == nil {
+		return false
+	}
+
 	return true
 }
 
-func (d *AbstractDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+func (d *AbstractDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
 	return &models.DiskResponse{
 		Disk:    *_disk,
 		Array:   nil,
-		IsReady: d.IsReady(),
+		IsReady: d.IsReady(ctx),
 	}
 }
 
