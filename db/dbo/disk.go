@@ -22,7 +22,7 @@ type Disk struct {
 	IsVirtual       bool      `json:"-"`
 	VirtualDiskUUID uuid.UUID `json:"-"`
 
-	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"user"`
+	User     User     `gorm:"foreignKey:UserUUID;references:UUID" json:"-"`
 	Volume   Volume   `gorm:"foreignKey:VolumeUUID;references:UUID" json:"volume"`
 	Provider Provider `gorm:"foreignKey:ProviderUUID;references:UUID" json:"provider"`
 }

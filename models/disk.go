@@ -240,7 +240,8 @@ func MeasureDiskThroughput(d Disk) int {
 	downloadEnd := time.Now()
 	downloadTime = downloadEnd.Sub(downloadStart)
 
-	// TODO: Remove test block
+	// Remove test block
+	d.Remove(blockMetadata)
 
 	// Calculate throughput
 	throughput = int((uploadTime.Milliseconds()+downloadTime.Milliseconds())/2 + 1)

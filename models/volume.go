@@ -64,6 +64,18 @@ func (v *Volume) GetDisk(diskUUID uuid.UUID) Disk {
 	return nil
 }
 
+// GetDisks - retrieve map of disks of the volume (real or virtual)
+//
+// return type:
+//   - map[uuid.UUID]Disk: map of real disks if volume has no backup or map of virtual disks is backup is enabled
+func (v *Volume) GetDisks() map[uuid.UUID]Disk {
+	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
+		return v.disks
+	} else {
+		return v.virtualDisks
+	}
+}
+
 // AddDisk - add disk to the volume
 //
 // params:
@@ -256,6 +268,38 @@ func (v *Volume) DeleteVirtualDisk(diskUUID uuid.UUID) {
 	}
 
 	logger.Logger.Debug("volume", "Successfully deleted the virtual disk: ", diskUUID.String(), " from the volume: ", v.UUID.String(), ".")
+}
+
+// FindAnotherDisk - find another disk in the volume, which is not the same as the given disk
+//
+// params:
+//   - currentUUID uuid.UUID: uuid of the current disk
+//
+// return type:
+//   - models.Disk: another disk from the volume (with the largest free space), nil otherwise
+func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
+	var disks = v.GetDisks()
+
+	// Check if there are any additional disks in the volume
+	if len(disks) <= 1 {
+		return nil
+	}
+
+	// Find another disk
+	var foundDisk Disk
+	var foundDiskFreeSpace uint64
+
+	for _, disk := range disks {
+		if disk.GetUUID() != currentUUID {
+			freeSpace := ComputeFreeSpace(disk)
+			if foundDisk == nil || freeSpace > foundDiskFreeSpace {
+				foundDisk = disk
+				foundDiskFreeSpace = freeSpace
+			}
+		}
+	}
+
+	return foundDisk
 }
 
 // FileUploadRequest - handle initial request for uploading file to the volume
