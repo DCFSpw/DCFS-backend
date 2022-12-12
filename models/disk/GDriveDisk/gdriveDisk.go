@@ -297,7 +297,7 @@ func (d *GDriveDisk) IsReady(ctx *gin.Context) bool {
 	client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
 		Ctx:      ctx,
 		Config:   d.GetConfig(),
-		DiskUUID: uuid.UUID{},
+		DiskUUID: d.GetUUID(),
 	}).(*http.Client)
 
 	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))

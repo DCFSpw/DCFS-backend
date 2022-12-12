@@ -204,7 +204,7 @@ func (d *AbstractDisk) IsReady(ctx *gin.Context) bool {
 	if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
 		Ctx:      ctx,
 		Config:   nil,
-		DiskUUID: uuid.UUID{},
+		DiskUUID: d.GetUUID(),
 	}) == nil {
 		return false
 	}
