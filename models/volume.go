@@ -443,6 +443,12 @@ func (v *Volume) IsReady(ctx *gin.Context) bool {
 		return false
 	}
 
+	if v.VolumeSettings.Encryption == constants.ENCRYPTION_TYPE_AES_256 {
+		if 2*len(v.virtualDisks) != len(v.disks) {
+			return false
+		}
+	}
+
 	for _, d := range v.disks {
 		if !d.IsReady(ctx) {
 			return false
