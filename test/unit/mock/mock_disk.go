@@ -179,6 +179,10 @@ func (d *MockDisk) IsReady() bool {
 	return true
 }
 
+func (d *MockDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return nil
+}
+
 func NewMockDisk() models.Disk {
 	var d *MockDisk = new(MockDisk)
 

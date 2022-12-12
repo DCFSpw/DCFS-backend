@@ -268,6 +268,10 @@ func (d *SFTPDisk) IsReady() bool {
 	return d.abstractDisk.IsReady()
 }
 
+func (d *SFTPDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk)
+}
+
 /* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)

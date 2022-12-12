@@ -414,6 +414,10 @@ func (d *OneDriveDisk) IsReady() bool {
 	return d.abstractDisk.IsReady()
 }
 
+func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk)
+}
+
 /* Factory methods */
 
 func NewOneDriveDisk() *OneDriveDisk {
