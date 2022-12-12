@@ -317,6 +317,8 @@ func (d *GDriveDisk) IsReady(ctx *gin.Context) bool {
 }
 
 func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	_disk.Credentials = ""
+
 	return &models.DiskResponse{
 		Disk:    *_disk,
 		Array:   nil,
