@@ -7,6 +7,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"os"
 	"time"
@@ -175,11 +176,11 @@ func (d *MockDisk) AssignDisk(disk models.Disk) {
 	panic("Unimplemented")
 }
 
-func (d *MockDisk) IsReady() bool {
-	return true
+func (d *MockDisk) GetReadiness() models.DiskReadiness {
+	return nil
 }
 
-func (d *MockDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+func (d *MockDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
 	return nil
 }
 
