@@ -477,10 +477,12 @@ func DeleteDisk(c *gin.Context) {
 	// Trigger delete process
 	if _disk.VirtualDiskUUID == uuid.Nil {
 		// Delete actual disk since it's not connected to virtual disk
-		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION)
+		newDisk := volume.FindAnotherDisk(_disk.UUID)
+		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.RELOCATION, newDisk)
 	} else {
 		// Delete virtual disk to which the actual disk is connected
-		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.DELETION)
+		newDisk := volume.FindAnotherDisk(_disk.VirtualDiskUUID)
+		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.RELOCATION, newDisk)
 	}
 
 	if errCode != constants.SUCCESS {

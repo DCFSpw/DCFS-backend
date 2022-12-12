@@ -283,7 +283,7 @@ func (transport *transport) FindEnqueuedVolume(volumeUUID uuid.UUID) *Volume {
 			if block.Disk == nil {
 				continue
 			}
-			
+
 			volume := block.Disk.GetVolume()
 			if volume.UUID == volumeUUID {
 				logger.Logger.Debug("transport", "Found a volume: ", volumeUUID.String(), " enqueued.")
@@ -316,10 +316,17 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 
 	// Trigger delete process in all disks assigned to this volume
 	waitGroup, _ := errgroup.WithContext(context.Background())
+	var disks map[uuid.UUID]Disk
 
-	for _, disk := range volume.disks {
+	if volume.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
+		disks = volume.disks
+	} else {
+		disks = volume.virtualDisks
+	}
+
+	for _, disk := range disks {
 		waitGroup.Go(func() error {
-			errCode, err := transport.DeleteDisk(disk, volume, constants.DELETION)
+			errCode, err := transport.DeleteDisk(disk, volume, constants.DELETION, nil)
 			if errCode != constants.SUCCESS {
 				logger.Logger.Error("transport", "Could not delete the disk: ", disk.GetUUID().String(), ".")
 				return err
@@ -346,13 +353,20 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 // params:
 //   - disk models.Disk: target disk to be deleted
 //   - volume *models.Volume: volume to which the disk belongs
-//   - deletionType constants.DeletionType: type of operation (deletion of blocks or relocation to another disk)
+//   - deletionType constants.DeletionType: flag with type of operation (false - deletion of blocks, true -  relocation to another disk)
+//   - newDisk models.Disk: new disk to upload relocated blocks to, nil if relocate is not requested
 //
 // return type:
 //   - errorCode string: constant.SUCCESS if password match, error code otherwise
 //   - error error: nil if operation was successful, error otherwise
-func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool) (string, error) {
+func (transport *transport) DeleteDisk(disk Disk, volume *Volume, deletionType bool, newDisk Disk) (string, error) {
 	var blocks []dbo.Block
+
+	// Check if valid new disk is provided if relocation requested
+	if deletionType == constants.RELOCATION && (newDisk == nil || newDisk.GetUUID() == disk.GetUUID()) {
+		logger.Logger.Error("disk", "Delete disk error: no new disk provided for relocation.")
+		return constants.OPERATION_FAILED, errors.New("Failed to delete disk: relocation requested but no new disk available.")
+	}
 
 	// Retrieve list of blocks on disk
 	dBErr := db.DB.DatabaseHandle.Where("disk_uuid = ?", disk.GetUUID()).Find(&blocks).Error
@@ -377,30 +391,59 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, relocate bool)
 
 			// Prepare apicall metadata
 			var status int
+			var contents []uint8 = make([]uint8, block.Size)
 			var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
 			blockMetadata.Ctx = _ctx
 			blockMetadata.FileUUID = block.FileUUID
-			blockMetadata.Content = nil
+			blockMetadata.Content = &contents
 			blockMetadata.UUID = block.UUID
 			blockMetadata.Size = int64(block.Size)
 			blockMetadata.Status = &status
 			blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
 			}
 
-			// Delete block from current disk
-			var result *apicalls.ErrorWrapper
+			// Relocate block to another disk if requested
+			if deletionType == constants.RELOCATION {
+				// Download block from the current disk
+				result := disk.Download(blockMetadata)
+				if result != nil {
+					logger.Logger.Error("disk", "Relocation failed: cannot download block ", blockMetadata.UUID.String(), " from target disk ", disk.GetUUID().String(), ".")
+					taskCompleted = false
+					return
+				}
 
-			result = disk.Remove(blockMetadata)
+				// Upload block to another disk
+				result = newDisk.Upload(blockMetadata)
+				if result != nil {
+					logger.Logger.Error("disk", "Relocation failed: cannot download block ", blockMetadata.UUID.String(), " to new disk ", disk.GetUUID().String(), ".")
+					taskCompleted = false
+					return
+				}
+
+				// Update block's disk uuid
+				dBErr := db.DB.DatabaseHandle.Model(&dbo.Block{}).Where("uuid = ?", blockMetadata.UUID).Update("disk_uuid", newDisk.GetUUID()).Error
+				if dBErr != nil {
+					logger.Logger.Error("disk", "Relocation failed: cannot update block's disk UUID in database ", blockMetadata.UUID.String(), ".")
+					taskCompleted = false
+					return
+				}
+			}
+
+			// Delete block from current disk
+			result := disk.Remove(blockMetadata)
 			if result != nil {
 				taskCompleted = false
 				return
 			}
 
-			// Remove block from database
-			dBErr := db.DB.DatabaseHandle.Delete(&block).Error
-			if dBErr != nil {
-				taskCompleted = false
-				return
+			// Delete block from database if data wasn't relocated
+			if deletionType == constants.DELETION {
+				// Remove block from database
+				dBErr := db.DB.DatabaseHandle.Delete(&block).Error
+				if dBErr != nil {
+					taskCompleted = false
+					return
+				}
 			}
 
 			return
