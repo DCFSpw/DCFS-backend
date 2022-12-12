@@ -322,6 +322,9 @@ func TestThroughputPartitioner_AssignBlocks(t *testing.T) {
 	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
 	partitioner := volume.GetPartitioner()
 
+	partitioner.(*models.ThroughputPartitioner).Weights[0] = 100
+	partitioner.(*models.ThroughputPartitioner).Weights[0] = 1
+
 	Convey("Test if throughput partitioner assigns more blocks to faster disk", t, func() {
 		numberOfBlocks := 10
 

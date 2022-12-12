@@ -430,25 +430,28 @@ func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Di
 func NewOneDriveDisk() *OneDriveDisk {
 	var d *OneDriveDisk = new(OneDriveDisk)
 	d.abstractDisk.Disk = d
-	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
-		logger.Logger.Debug("drive", "Checking readiness for OneDrive drive: ", d.GetUUID().String(), ".")
-		client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-			Ctx:      ctx,
-			Config:   d.GetConfig(),
-			DiskUUID: d.GetUUID(),
-		}).(*http.Client)
-		oneDriveClient := onedrive.NewClient(client)
-
-		_, err := oneDriveClient.Drives.List(ctx)
-		if err != nil {
-			return false
-		}
-
-		return true
-	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	d.abstractDisk.DiskReadiness = models.DiskReadinessRegistry[constants.PROVIDER_TYPE_ONEDRIVE](d)
 	return d
 }
 
 func init() {
 	models.DiskTypesRegistry[constants.PROVIDER_TYPE_ONEDRIVE] = func() models.Disk { return NewOneDriveDisk() }
+	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_ONEDRIVE] = func(d models.Disk) models.DiskReadiness {
+		return models.NewRealDiskReadiness(func(ctx context.Context) bool {
+			logger.Logger.Debug("drive", "Checking readiness for OneDrive drive: ", d.GetUUID().String(), ".")
+			client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+				Ctx:      ctx,
+				Config:   d.(*OneDriveDisk).GetConfig(),
+				DiskUUID: d.GetUUID(),
+			}).(*http.Client)
+			oneDriveClient := onedrive.NewClient(client)
+
+			_, err := oneDriveClient.Drives.List(ctx)
+			if err != nil {
+				return false
+			}
+
+			return true
+		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
 }
