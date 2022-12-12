@@ -296,6 +296,10 @@ func (d *GDriveDisk) IsReady() bool {
 	return d.abstractDisk.IsReady()
 }
 
+func (d *GDriveDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk)
+}
+
 /* Factory methods */
 
 func NewGDriveDisk() *GDriveDisk {

@@ -177,8 +177,15 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 }
 
 func (d *AbstractDisk) IsReady() bool {
-	// TODO @lavar3l add functionality for checking whether the protected disks have backup
 	return true
+}
+
+func (d *AbstractDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   nil,
+		IsReady: d.IsReady(),
+	}
 }
 
 /* Additional abstract functions */

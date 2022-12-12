@@ -230,6 +230,10 @@ func (d *FTPDisk) IsReady() bool {
 	return d.abstractDisk.IsReady()
 }
 
+func (d *FTPDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk)
+}
+
 /* Factory methods */
 
 func NewFTPDisk() *FTPDisk {
