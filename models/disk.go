@@ -54,8 +54,8 @@ type Disk interface {
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
 	AssignDisk(disk Disk)
-	IsReady() bool
-	GetResponse(_disk *dbo.Disk) *DiskResponse
+	IsReady(ctx *gin.Context) bool
+	GetResponse(_disk *dbo.Disk, ctx *gin.Context) *DiskResponse
 }
 
 type DiskResponse struct {

@@ -9,6 +9,7 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/requests"
 	"dcfs/util/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"io"
@@ -481,15 +482,13 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 // IsReady - check if the volume is ready to begin operations on files
 //
 // return type: bool
-func (v *Volume) IsReady() bool {
-	disks := v.GetDisks()
-
-	if len(disks) == 0 {
+func (v *Volume) IsReady(ctx *gin.Context) bool {
+	if len(v.disks) == 0 {
 		return false
 	}
 
-	for _, d := range disks {
-		if !d.IsReady() {
+	for _, d := range v.disks {
+		if !d.IsReady(ctx) {
 			return false
 		}
 	}

@@ -292,12 +292,36 @@ func (d *GDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *GDriveDisk) IsReady() bool {
-	return d.abstractDisk.IsReady()
+func (d *GDriveDisk) IsReady(ctx *gin.Context) bool {
+	// check if it is possible to connect to a disk
+	client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+		Ctx:      ctx,
+		Config:   d.GetConfig(),
+		DiskUUID: uuid.UUID{},
+	}).(*http.Client)
+
+	srv, err := drive.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		return false
+	}
+
+	_, err = srv.Files.
+		List().
+		Q(fmt.Sprintf("name = ''")).
+		Do()
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
-func (d *GDriveDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
-	return d.abstractDisk.GetResponse(_disk)
+func (d *GDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   nil,
+		IsReady: d.IsReady(ctx),
+	}
 }
 
 /* Factory methods */

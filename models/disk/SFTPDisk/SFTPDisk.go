@@ -10,6 +10,7 @@ import (
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/util/logger"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -264,12 +265,12 @@ func (d *SFTPDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *SFTPDisk) IsReady() bool {
-	return d.abstractDisk.IsReady()
+func (d *SFTPDisk) IsReady(ctx *gin.Context) bool {
+	return d.abstractDisk.IsReady(ctx)
 }
 
-func (d *SFTPDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
-	return d.abstractDisk.GetResponse(_disk)
+func (d *SFTPDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk, ctx)
 }
 
 /* Factory methods */

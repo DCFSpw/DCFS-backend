@@ -410,12 +410,29 @@ func (d *OneDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *OneDriveDisk) IsReady() bool {
-	return d.abstractDisk.IsReady()
+func (d *OneDriveDisk) IsReady(ctx *gin.Context) bool {
+	// check if it is possible to connect to a disk
+	client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+		Ctx:      ctx,
+		Config:   d.GetConfig(),
+		DiskUUID: uuid.UUID{},
+	}).(*http.Client)
+	oneDriveClient := onedrive.NewClient(client)
+
+	_, err := oneDriveClient.Drives.List(ctx)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
-func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk) *models.DiskResponse {
-	return d.abstractDisk.GetResponse(_disk)
+func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   nil,
+		IsReady: d.IsReady(ctx),
+	}
 }
 
 /* Factory methods */
