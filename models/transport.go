@@ -376,7 +376,6 @@ func (transport *transport) DeleteDisk(disk Disk, volume *Volume, deletionType b
 
 	for _, block := range blocks {
 		go func(block dbo.Block) {
-			log.Println("Deleting block", block.UUID)
 			defer waitGroup.Done()
 
 			// Prepare test context
