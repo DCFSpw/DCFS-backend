@@ -171,10 +171,9 @@ func UpdateVolume(c *gin.Context) {
 	// Update options for empty volume
 	empty, err := db.IsVolumeEmpty(volume.UUID)
 	if empty && err == nil {
-		volume.VolumeSettings.Backup = requestBody.Settings.Backup
 		volume.VolumeSettings.Encryption = requestBody.Settings.Encryption
 
-		logger.Logger.Debug("api", "Updated backup to: ", strconv.Itoa(requestBody.Settings.Backup), ", encryption to: ", strconv.Itoa(requestBody.Settings.Encryption), " of the volume: ", volumeUUID.String(), ".")
+		logger.Logger.Debug("api", "Updated encryption to: ", strconv.Itoa(requestBody.Settings.Encryption), " of the volume: ", volumeUUID.String(), ".")
 	}
 
 	// Save volume to database

@@ -328,13 +328,13 @@ func (d *BackupDisk) GetProviderSpace() (uint64, uint64, string) {
 	}
 
 	// Return available space in both disks
-	var used uint64
+	var free uint64
 	var total uint64
 
-	if used1 > used2 {
-		used = used1
+	if total1-used1 < total2-used2 {
+		free = total1 - used1
 	} else {
-		used = used2
+		free = total2 - used2
 	}
 
 	if total1 < total2 {
@@ -343,7 +343,7 @@ func (d *BackupDisk) GetProviderSpace() (uint64, uint64, string) {
 		total = total2
 	}
 
-	return used, total, constants.SUCCESS
+	return free, total, constants.SUCCESS
 }
 
 func (d *BackupDisk) SetTotalSpace(quota uint64) {
