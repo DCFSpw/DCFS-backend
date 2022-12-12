@@ -62,6 +62,18 @@ func (v *Volume) GetDisk(diskUUID uuid.UUID) Disk {
 	return nil
 }
 
+// GetDisks - retrieve map of disks of the volume (real or virtual)
+//
+// return type:
+//   - map[uuid.UUID]Disk: map of real disks if volume has no backup or map of virtual disks is backup is enabled
+func (v *Volume) GetDisks() map[uuid.UUID]Disk {
+	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
+		return v.disks
+	} else {
+		return v.virtualDisks
+	}
+}
+
 // AddDisk - add disk to the volume
 //
 // params:
@@ -264,13 +276,7 @@ func (v *Volume) DeleteVirtualDisk(diskUUID uuid.UUID) {
 // return type:
 //   - models.Disk: another disk from the volume (with the largest free space), nil otherwise
 func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
-	var disks map[uuid.UUID]Disk
-
-	if v.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
-		disks = v.disks
-	} else {
-		disks = v.virtualDisks
-	}
+	var disks = v.GetDisks()
 
 	// Check if there are any additional disks in the volume
 	if len(disks) <= 1 {

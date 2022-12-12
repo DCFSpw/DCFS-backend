@@ -316,13 +316,7 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 
 	// Trigger delete process in all disks assigned to this volume
 	waitGroup, _ := errgroup.WithContext(context.Background())
-	var disks map[uuid.UUID]Disk
-
-	if volume.VolumeSettings.Backup == constants.BACKUP_TYPE_NO_BACKUP {
-		disks = volume.disks
-	} else {
-		disks = volume.virtualDisks
-	}
+	var disks = volume.GetDisks()
 
 	for _, disk := range disks {
 		waitGroup.Go(func() error {
