@@ -158,6 +158,25 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		credentials = d.Credentials.ToString()
 	}
 
+	var provider dbo.Provider
+	var user dbo.User
+	var volume dbo.Volume
+
+	err := db.DB.DatabaseHandle.Where("uuid = ?", providerUUID).First(&provider).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the provider object with uuid: ", providerUUID.String(), ".")
+	}
+
+	err = db.DB.DatabaseHandle.Where("uuid = ?", userUUID).First(&user).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the user object with uuid: ", userUUID.String(), ".")
+	}
+
+	err = db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&volume).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the volume object with uuid: ", volumeUUID.String(), ".")
+	}
+
 	return dbo.Disk{
 		AbstractDatabaseObject: dbo.AbstractDatabaseObject{UUID: d.UUID},
 		UserUUID:               userUUID,
@@ -169,6 +188,9 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		UsedSpace:              d.UsedSpace,
 		IsVirtual:              d.IsVirtual,
 		VirtualDiskUUID:        d.VirtualDiskUUID,
+		User:                   user,
+		Volume:                 volume,
+		Provider:               provider,
 	}
 }
 
