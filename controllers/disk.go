@@ -208,6 +208,12 @@ func DiskOAuth(c *gin.Context) {
 	}
 	logger.Logger.Debug("api", "Got the oauth token pair for the disk: ", _diskUUID, ".")
 
+	if tok.RefreshToken == "" {
+		logger.Logger.Error("api", "The refresh token was null")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.OAUTH_BAD_CODE, "The refresh token was null"))
+		return
+	}
+
 	// Save refresh token to disk credentials
 	disk.SetCredentials(&credentials2.OauthCredentials{Token: tok})
 
