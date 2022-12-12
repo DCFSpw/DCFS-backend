@@ -415,7 +415,7 @@ func (d *OneDriveDisk) IsReady(ctx *gin.Context) bool {
 	client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
 		Ctx:      ctx,
 		Config:   d.GetConfig(),
-		DiskUUID: uuid.UUID{},
+		DiskUUID: d.GetUUID(),
 	}).(*http.Client)
 	oneDriveClient := onedrive.NewClient(client)
 
