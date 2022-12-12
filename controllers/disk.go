@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
+	"gorm.io/gorm"
 	"strconv"
 )
 
@@ -610,10 +611,10 @@ func ReplaceBackupDisk(c *gin.Context) {
 	newDisk = volume.GetDisk(_newDisk.UUID)
 
 	// Retrieve blocks associated with the virtual disk
-	result := db.DB.DatabaseHandle.Where("disk_uuid = ?", virtualDisk.GetUUID()).Find(&_blocks)
-	if result.Error != nil {
+	result := db.DB.DatabaseHandle.Where("disk_uuid = ?", virtualDisk.GetUUID()).Find(&_blocks).Error
+	if result != nil {
 		logger.Logger.Error("api", "Could not find blocks associated with the disk with the uuid: ", virtualDisk.GetUUID().String(), " in the db.")
-		c.JSON(500, responses.NewNotFoundErrorResponse(constants.DATABASE_ERROR, "Could not find blocks associated with the virtual disk: "+result.Error.Error()))
+		c.JSON(500, responses.NewNotFoundErrorResponse(constants.DATABASE_ERROR, "Could not find blocks associated with the virtual disk: "+result.Error()))
 		return
 	}
 
@@ -625,17 +626,17 @@ func ReplaceBackupDisk(c *gin.Context) {
 	}
 
 	// Remove virtual disk uuid from the current disk
-	result = db.DB.DatabaseHandle.Model(&_disk).Update("virtual_disk_uuid", uuid.Nil)
-	if result.Error != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+result.Error.Error()))
+	dbErr := db.DB.DatabaseHandle.Model(_disk).Update("virtual_disk_uuid", uuid.Nil)
+	if dbErr.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+dbErr.Error.Error()))
 		return
 	}
 	disk.SetVirtualDiskUUID(uuid.Nil)
 
 	// Add virtual disk uuid to the new disk
-	result = db.DB.DatabaseHandle.Model(&_newDisk).Update("virtual_disk_uuid", virtualDisk.GetUUID())
-	if result.Error != nil {
-		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+result.Error.Error()))
+	dbErr = db.DB.DatabaseHandle.Model(_newDisk).Update("virtual_disk_uuid", virtualDisk.GetUUID())
+	if dbErr.Error != nil {
+		c.JSON(500, responses.NewOperationFailureResponse(errCode, "Replacement of the disk failed: "+dbErr.Error.Error()))
 		return
 	}
 	newDisk.SetVirtualDiskUUID(virtualDisk.GetUUID())
