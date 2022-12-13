@@ -90,6 +90,7 @@ func CreateDisk(c *gin.Context) {
 	})
 	if disk == nil {
 		logger.Logger.Error("api", "Could not create the desired disk.")
+		volume.DeleteDisk(_disk.UUID)
 		c.JSON(422, responses.NewValidationErrorResponseSingle(constants.VAL_PROVIDER_NOT_SUPPORTED, "ProviderUUID", "Provided ProviderUUID is not a supported provider"))
 		return
 	}
@@ -112,6 +113,7 @@ func CreateDisk(c *gin.Context) {
 		// check if the credentials are correct
 		if !disk.GetReadiness().IsReadyForce(c) {
 			logger.Logger.Error("api", "Credentials for a new disk: ", requestBody.Credentials.ToString(), " were incorrect.")
+			volume.DeleteDisk(_disk.UUID)
 			c.JSON(500, responses.NewOperationFailureResponse(constants.VAL_CREDENTIALS_INVALID, "Provided credentials were incorrect"))
 			return
 		}
@@ -121,6 +123,7 @@ func CreateDisk(c *gin.Context) {
 	virtualDiskUUID, err := volume.GenerateVirtualDisk(disk)
 	if err != nil {
 		logger.Logger.Error("api", "Could not generate virtual disk UUID.")
+		volume.DeleteDisk(_disk.UUID)
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Could not generate virtual disk UUID (for volumes with backup): "+err.Error()))
 		return
 	} else if virtualDiskUUID != uuid.Nil {
@@ -131,6 +134,7 @@ func CreateDisk(c *gin.Context) {
 	result := db.DB.DatabaseHandle.Create(&_disk)
 	if result.Error != nil {
 		logger.Logger.Error("api", "Could not save the newly created disk with the uuid: ", _disk.UUID.String(), " in the db.")
+		volume.DeleteDisk(_disk.UUID)
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
 		return
 	}
