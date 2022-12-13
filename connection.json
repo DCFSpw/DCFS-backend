@@ -1,7 +1,7 @@
 {
   "username": "root",
-  "password": "",
+  "password": "aWyB4cD831y3#PA!5IG$E4WH",
   "connectionType": "tcp",
-  "address": "127.0.0.1:3306",
+  "address": "mariadb:3306",
   "dbName": "dcfs"
 }

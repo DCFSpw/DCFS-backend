@@ -18,12 +18,11 @@ pipeline {
                 ONEDRIVE_PRODUCTION = credentials('onedrive-production-oauth-configuration')
                 ENCRYPTION_KEY = credentials('backend-encryption-key')
                 DB_PASSWORD = credentials('db-password')
-}
+            }
             steps {
                 script {
-                    sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
                     sh 'echo -n $ENCRYPTION_KEY > ./encryption.key'
-                    sh 'sed -i "s/"password": ""/"password": "$DB_PASSWORD"/" connection.json'
+                    sh 'echo $DB_PASSWORD > connection.json'
 
                     if (env.BRANCH_NAME == 'develop') {
                         sh('echo $GDRIVE_DEVELOPMENT > ./models/disk/GDriveDisk/credentials.json')

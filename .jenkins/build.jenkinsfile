@@ -41,9 +41,8 @@ pipeline {
                     }
                     steps {
                             script {
-                                sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
                                 sh 'echo -n $ENCRYPTION_KEY > ./encryption.key'
-                                sh 'sed -i "s/"password": ""/"password": "$DB_PASSWORD"/" connection.json'
+                                sh 'echo $DB_PASSWORD > connection.json'
 
                                 if (env.BRANCH_NAME == 'develop') {
                                     sh 'sed -i "s/dcfs/dcfs_develop/g" connection.json'
