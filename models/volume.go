@@ -311,7 +311,7 @@ func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
 //
 // return type:
 //   - RegularFile: created volume model
-func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, userUUID uuid.UUID, rootUUID uuid.UUID) RegularFile {
+func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, userUUID uuid.UUID, rootUUID uuid.UUID) *RegularFile {
 	var f File = NewFileFromRequest(request, rootUUID)
 	f.SetVolume(v)
 
@@ -332,12 +332,17 @@ func (v *Volume) FileUploadRequest(request *requests.InitFileUploadRequest, user
 
 		// Create a new block
 		var block *Block = NewBlock(uuid.New(), userUUID, f, v.partitioner.AssignDisk(currentSize), currentSize, "", constants.BLOCK_STATUS_QUEUED, i)
-		_f.Blocks[block.UUID] = block
 
+		if block.Disk == nil {
+			logger.Logger.Error("disk", "Partitioner did not assign a disk to the block: ", block.UUID.String(), ".")
+			return nil
+		}
+
+		_f.Blocks[block.UUID] = block
 		logger.Logger.Debug("disk", "Block ", strconv.Itoa(i), " assigned to", block.Disk.GetName())
 	}
 
-	return *_f
+	return _f
 }
 
 // GetVolumeDBO - generate volume DBO object based on the volume model

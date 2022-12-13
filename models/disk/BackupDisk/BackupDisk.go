@@ -345,7 +345,7 @@ func (d *BackupDisk) GetProviderSpace() (uint64, uint64, string) {
 		total = total2
 	}
 
-	return free, total, constants.SUCCESS
+	return total - free, total, constants.SUCCESS
 }
 
 func (d *BackupDisk) SetTotalSpace(quota uint64) {

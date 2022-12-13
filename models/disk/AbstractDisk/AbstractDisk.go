@@ -190,6 +190,7 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		TotalSpace:             d.Size,
 		UsedSpace:              d.UsedSpace,
 		IsVirtual:              d.IsVirtual,
+		FreeSpace:              d.Size - d.UsedSpace,
 		VirtualDiskUUID:        d.VirtualDiskUUID,
 		User:                   user,
 		Volume:                 volume,

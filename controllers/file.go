@@ -235,7 +235,7 @@ func InitFileUploadRequest(c *gin.Context) {
 	var volumeUUID uuid.UUID
 	var rootUUID uuid.UUID
 
-	var file models.RegularFile
+	var file *models.RegularFile
 	var volume *models.Volume
 
 	// Retrieve and validate data from request
@@ -302,12 +302,17 @@ func InitFileUploadRequest(c *gin.Context) {
 
 	// Enqueue file for upload
 	file = volume.FileUploadRequest(&requestBody, userUUID, rootUUID)
-	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), &file)
+	if file == nil {
+		logger.Logger.Error("api", "Could not create file upload request. No ready disks were found.")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.OPERATION_FAILED, "Could not create file upload request. No ready disks were found."))
+		return
+	}
 
+	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), &file)
 	logger.Logger.Debug("api", "Prepared a request with ", strconv.FormatUint(uint64(len(file.Blocks)), 10), " blocks")
 
 	logger.Logger.Debug("api", "InitFileUploadRequest endpoint successful exit.")
-	c.JSON(200, responses.NewInitFileUploadRequestResponse(userUUID, &file))
+	c.JSON(200, responses.NewInitFileUploadRequestResponse(userUUID, file))
 }
 
 // UploadBlock - handler for Upload block details request
