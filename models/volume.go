@@ -484,7 +484,7 @@ func (v *Volume) IsReady(ctx *gin.Context, blocking bool) bool {
 		return false
 	}
 
-	if v.VolumeSettings.Encryption == constants.ENCRYPTION_TYPE_AES_256 {
+	if v.VolumeSettings.Backup != constants.BACKUP_TYPE_NO_BACKUP {
 		if 2*len(v.virtualDisks) != len(v.disks) {
 			return false
 		}
