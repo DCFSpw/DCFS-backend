@@ -34,6 +34,7 @@ func (d *SFTPDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
+	defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
@@ -81,6 +82,7 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
+	defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
@@ -97,6 +99,7 @@ func (d *SFTPDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 		return apicalls.CreateErrorWrapper(constants.REMOTE_BAD_FILE, "Cannot open remote file:", err.Error())
 	}
 	defer remoteFile.Close()
+	defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 	// Download remote file
 	buff, err := io.ReadAll(remoteFile)
@@ -121,6 +124,7 @@ func (d *SFTPDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
+	defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 	_p := d.abstractDisk.Credentials.GetPath()
 	downloadPath := fmt.Sprintf("%s/%s", _p, blockMetadata.UUID.String())
@@ -225,6 +229,7 @@ func (d *SFTPDisk) GetProviderSpace() (uint64, uint64, string) {
 	// Connect to the remote server
 	var client *sftp.Client = _client.(*sftp.Client)
 	defer client.Close()
+	defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 	path := d.abstractDisk.Credentials.GetPath()
 	if path == "" {
@@ -280,13 +285,18 @@ func NewSFTPDisk() *SFTPDisk {
 	d.abstractDisk.Disk = d
 	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
 		logger.Logger.Debug("drive", "Checking readiness for SFTP drive: ", d.GetUUID().String(), ".")
-		if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+		_client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
 			Ctx:      ctx,
 			Config:   nil,
 			DiskUUID: d.GetUUID(),
-		}) == nil {
+		})
+		if _client == nil {
 			return false
 		}
+
+		var client *sftp.Client = _client.(*sftp.Client)
+		defer client.Close()
+		defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 		return true
 	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })

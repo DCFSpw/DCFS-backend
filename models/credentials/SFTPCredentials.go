@@ -15,6 +15,8 @@ import (
 
 type SFTPCredentials struct {
 	FTPCredentials
+
+	SSHConnection *ssh.Client
 }
 
 // Authenticate - authenticate to remote server using saved credentials
@@ -62,6 +64,7 @@ func (credentials *SFTPCredentials) Authenticate(md *apicalls.CredentialsAuthent
 		return nil
 	}
 
+	credentials.SSHConnection = conn
 	return sftpClient
 }
 
