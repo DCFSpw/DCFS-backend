@@ -2,6 +2,7 @@ package FTPDisk
 
 import (
 	"bytes"
+	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
@@ -10,6 +11,7 @@ import (
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/util/logger"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jlaffaye/ftp"
 	"io"
@@ -226,8 +228,12 @@ func (d *FTPDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *FTPDisk) IsReady() bool {
-	return d.abstractDisk.IsReady()
+func (d *FTPDisk) GetReadiness() models.DiskReadiness {
+	return d.abstractDisk.DiskReadiness
+}
+
+func (d *FTPDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return d.abstractDisk.GetResponse(_disk, ctx)
 }
 
 /* Factory methods */
@@ -235,6 +241,18 @@ func (d *FTPDisk) IsReady() bool {
 func NewFTPDisk() *FTPDisk {
 	var d *FTPDisk = new(FTPDisk)
 	d.abstractDisk.Disk = d
+	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
+		logger.Logger.Debug("drive", "Checking readiness for FTP drive: ", d.GetUUID().String(), ".")
+		if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
+			Ctx:      ctx,
+			Config:   nil,
+			DiskUUID: d.GetUUID(),
+		}) == nil {
+			return false
+		}
+
+		return true
+	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
 	return d
 }
 

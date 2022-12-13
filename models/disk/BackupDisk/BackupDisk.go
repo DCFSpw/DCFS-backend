@@ -394,12 +394,122 @@ func (d *BackupDisk) AssignDisk(disk models.Disk) {
 	}
 }
 
-func (d *BackupDisk) IsReady() bool {
-	if d.firstDisk == nil || d.secondDisk == nil {
-		return false
+func (d *BackupDisk) GetReadiness() models.DiskReadiness {
+	arr := make([]models.DiskReadiness, 0)
+
+	if d.firstDisk != nil {
+		arr = append(arr, d.firstDisk.GetReadiness())
+	}
+	if d.secondDisk != nil {
+		arr = append(arr, d.secondDisk.GetReadiness())
 	}
 
-	return d.firstDisk.IsReady() && d.secondDisk.IsReady()
+	return models.NewVirtualDiskReadiness(arr...)
+}
+
+func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	arr := make([]models.DiskResponse, 0)
+
+	firstDiskDBO := d.firstDisk.GetDiskDBO(_disk.UserUUID, d.firstDisk.GetProviderUUID(), _disk.VolumeUUID)
+	secondDiskDBO := d.secondDisk.GetDiskDBO(_disk.UserUUID, d.secondDisk.GetProviderUUID(), _disk.VolumeUUID)
+
+	arr = append(arr, *d.firstDisk.GetResponse(&firstDiskDBO, ctx))
+	arr = append(arr, *d.secondDisk.GetResponse(&secondDiskDBO, ctx))
+
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   arr,
+		IsReady: d.GetReadiness().IsReady(ctx),
+	}
+}
+
+func (d *BackupDisk) ReplaceDisk(disk models.Disk, newDisk models.Disk, blocks []dbo.Block) string {
+	var sourceDisk *models.Disk
+	var targetDisk *models.Disk
+	var oldDisk *models.Disk
+
+	// Check if the old disk is assigned to the backup disk
+	if d.firstDisk == disk {
+		sourceDisk = &d.secondDisk
+		targetDisk = &newDisk
+		oldDisk = &d.firstDisk
+	} else if d.secondDisk == disk {
+		sourceDisk = &d.firstDisk
+		targetDisk = &newDisk
+		oldDisk = &d.secondDisk
+	} else {
+		// If both disks are already assigned, ignore the new disk
+		logger.Logger.Error("disk", "Cannot replace disk in backup disk, provided disk is not assigned.")
+		return constants.FS_DISK_MISMATCH
+	}
+
+	// Transfer all blocks to the new disk
+	var waitGroup sync.WaitGroup
+	var taskCompleted bool = true
+
+	waitGroup.Add(len(blocks))
+
+	for _, block := range blocks {
+		go func(block dbo.Block) {
+			defer waitGroup.Done()
+
+			// Prepare test context
+			writer := httptest.NewRecorder()
+			_ctx, _ := gin.CreateTestContext(writer)
+
+			// Prepare apicall metadata
+			var status int
+			var contents []uint8 = make([]uint8, block.Size)
+			var blockMetadata *apicalls.BlockMetadata = new(apicalls.BlockMetadata)
+			blockMetadata.Ctx = _ctx
+			blockMetadata.FileUUID = block.FileUUID
+			blockMetadata.Content = &contents
+			blockMetadata.UUID = block.UUID
+			blockMetadata.Size = int64(block.Size)
+			blockMetadata.Status = &status
+			blockMetadata.CompleteCallback = func(UUID uuid.UUID, status *int) {
+			}
+
+			// Download block from the source disk
+			result := (*sourceDisk).Download(blockMetadata)
+			if result != nil {
+				logger.Logger.Error("disk", "Replacement failed: cannot download block ", blockMetadata.UUID.String(), " from target disk ", disk.GetUUID().String(), ".")
+				taskCompleted = false
+				return
+			}
+
+			// Upload block to target disk
+			result = (*targetDisk).Upload(blockMetadata)
+			if result != nil {
+				logger.Logger.Error("disk", "Replacement failed: cannot download block ", blockMetadata.UUID.String(), " to new disk ", disk.GetUUID().String(), ".")
+				taskCompleted = false
+				return
+			}
+
+			// Delete block from old disk
+			result = (*oldDisk).Remove(blockMetadata)
+			if result != nil {
+				taskCompleted = false
+				return
+			}
+
+			return
+		}(block)
+	}
+	waitGroup.Wait()
+
+	if taskCompleted != true {
+		return constants.OPERATION_FAILED
+	}
+
+	// Replace disk in backup disk
+	if d.firstDisk == disk {
+		d.firstDisk = newDisk
+	} else if d.secondDisk == disk {
+		d.secondDisk = newDisk
+	}
+
+	return constants.SUCCESS
 }
 
 func (d *BackupDisk) ReplaceDisk(disk models.Disk, newDisk models.Disk, blocks []dbo.Block) string {

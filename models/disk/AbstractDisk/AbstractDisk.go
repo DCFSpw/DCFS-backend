@@ -7,6 +7,7 @@ import (
 	"dcfs/models"
 	"dcfs/models/credentials"
 	"dcfs/util/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"strconv"
 	"time"
@@ -27,6 +28,8 @@ type AbstractDisk struct {
 
 	Size      uint64
 	UsedSpace uint64
+
+	DiskReadiness models.DiskReadiness
 }
 
 /* Mandatory Disk interface implementations */
@@ -158,6 +161,25 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		credentials = d.Credentials.ToString()
 	}
 
+	var provider dbo.Provider
+	var user dbo.User
+	var volume dbo.Volume
+
+	err := db.DB.DatabaseHandle.Where("uuid = ?", providerUUID).First(&provider).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the provider object with uuid: ", providerUUID.String(), ".")
+	}
+
+	err = db.DB.DatabaseHandle.Where("uuid = ?", userUUID).First(&user).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the user object with uuid: ", userUUID.String(), ".")
+	}
+
+	err = db.DB.DatabaseHandle.Where("uuid = ?", volumeUUID).First(&volume).Error
+	if err != nil {
+		logger.Logger.Warning("disk", "could not fetch the volume object with uuid: ", volumeUUID.String(), ".")
+	}
+
 	return dbo.Disk{
 		AbstractDatabaseObject: dbo.AbstractDatabaseObject{UUID: d.UUID},
 		UserUUID:               userUUID,
@@ -169,6 +191,9 @@ func (d *AbstractDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, vo
 		UsedSpace:              d.UsedSpace,
 		IsVirtual:              d.IsVirtual,
 		VirtualDiskUUID:        d.VirtualDiskUUID,
+		User:                   user,
+		Volume:                 volume,
+		Provider:               provider,
 	}
 }
 
@@ -176,8 +201,16 @@ func (d *AbstractDisk) AssignDisk(disk models.Disk) {
 	panic("Not supported for real disk")
 }
 
-func (d *AbstractDisk) IsReady() bool {
-	return true
+func (d *AbstractDisk) GetReadiness() models.DiskReadiness {
+	return d.DiskReadiness
+}
+
+func (d *AbstractDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
+	return &models.DiskResponse{
+		Disk:    *_disk,
+		Array:   nil,
+		IsReady: d.GetReadiness().IsReady(ctx),
+	}
 }
 
 /* Additional abstract functions */

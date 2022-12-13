@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -9,6 +10,7 @@ import (
 	"dcfs/db/dbo"
 	"dcfs/requests"
 	"dcfs/util/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"io"
@@ -477,16 +479,26 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 // IsReady - check if the volume is ready to begin operations on files
 //
 // return type: bool
-func (v *Volume) IsReady() bool {
-	disks := v.GetDisks()
-
-	if len(disks) == 0 {
+func (v *Volume) IsReady(ctx *gin.Context, blocking bool) bool {
+	if len(v.disks) == 0 {
 		return false
 	}
 
-	for _, d := range disks {
-		if !d.IsReady() {
+	if v.VolumeSettings.Encryption == constants.ENCRYPTION_TYPE_AES_256 {
+		if 2*len(v.virtualDisks) != len(v.disks) {
 			return false
+		}
+	}
+
+	for _, d := range v.disks {
+		if blocking {
+			if !d.GetReadiness().IsReadyForce(ctx) {
+				return false
+			}
+		} else {
+			if !d.GetReadiness().IsReady(ctx) {
+				return false
+			}
 		}
 	}
 
@@ -525,6 +537,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Disk)
 
 		if d != nil {
 			v.AddDisk(d.GetUUID(), d)
+			d.GetReadiness().IsReadyForceNonBlocking(context.TODO())
 		}
 	}
 
@@ -532,7 +545,7 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Disk)
 		v.InitializeBackup(_virtualDisks)
 	}
 
-	v.RefreshPartitioner()
+	go func() { v.RefreshPartitioner() }()
 
 	log.Println("Created a new Volume: ", v)
 	return v
