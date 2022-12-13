@@ -37,11 +37,13 @@ pipeline {
                         ONEDRIVE_DEVELOPMENT = credentials('onedrive-development-oauth-configuration')
                         ONEDRIVE_PRODUCTION = credentials('onedrive-production-oauth-configuration')
                         ENCRYPTION_KEY = credentials('backend-encryption-key')
+                        DB_PASSWORD = credentials('db-password')
                     }
                     steps {
                             script {
                                 sh 'sed -i "s/127.0.0.1/mariadb/g" connection.json'
                                 sh 'echo -n $ENCRYPTION_KEY > ./encryption.key'
+                                sh 'sed -i "s/"password": ""/"password": "$DB_PASSWORD"/"'
 
                                 if (env.BRANCH_NAME == 'develop') {
                                     sh 'sed -i "s/dcfs/dcfs_develop/g" connection.json'
