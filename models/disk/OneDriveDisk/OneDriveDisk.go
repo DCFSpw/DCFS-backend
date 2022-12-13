@@ -2,7 +2,6 @@ package OneDriveDisk
 
 import (
 	"bytes"
-	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
@@ -411,18 +410,8 @@ func (d *OneDriveDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *OneDriveDisk) GetReadiness() models.DiskReadiness {
-	return d.abstractDisk.DiskReadiness
-}
-
-func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
-	_disk.Credentials = ""
-
-	return &models.DiskResponse{
-		Disk:    *_disk,
-		Array:   nil,
-		IsReady: d.GetReadiness().IsReady(ctx),
-	}
+func (d *OneDriveDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
 }
 
 /* Factory methods */
@@ -430,22 +419,6 @@ func (d *OneDriveDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Di
 func NewOneDriveDisk() *OneDriveDisk {
 	var d *OneDriveDisk = new(OneDriveDisk)
 	d.abstractDisk.Disk = d
-	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
-		logger.Logger.Debug("drive", "Checking readiness for OneDrive drive: ", d.GetUUID().String(), ".")
-		client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-			Ctx:      ctx,
-			Config:   d.GetConfig(),
-			DiskUUID: d.GetUUID(),
-		}).(*http.Client)
-		oneDriveClient := onedrive.NewClient(client)
-
-		_, err := oneDriveClient.Drives.List(ctx)
-		if err != nil {
-			return false
-		}
-
-		return true
-	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
 	return d
 }
 

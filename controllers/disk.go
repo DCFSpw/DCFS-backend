@@ -108,13 +108,6 @@ func CreateDisk(c *gin.Context) {
 			_disk.TotalSpace = totalSpace
 			logger.Logger.Debug("api", "Set the disk total space to: ", strconv.FormatUint(totalSpace, 10))
 		}
-
-		// check if the credentials are correct
-		if !disk.GetReadiness().IsReadyForce(c) {
-			logger.Logger.Error("api", "Credentials for a new disk: ", requestBody.Credentials.ToString(), " were incorrect.")
-			c.JSON(500, responses.NewOperationFailureResponse(constants.VAL_CREDENTIALS_INVALID, "Provided credentials were incorrect"))
-			return
-		}
 	}
 
 	// Find virtual disk uuid for new disk
@@ -227,8 +220,7 @@ func DiskOAuth(c *gin.Context) {
 	logger.Logger.Debug("api", "The disk space has been set to: ", strconv.FormatUint(disk.GetTotalSpace(), 10), ".")
 
 	// Save disk credentials to database
-	_diskDBO := disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID)
-	result := db.DB.DatabaseHandle.Save(&_diskDBO)
+	result := db.DB.DatabaseHandle.Save(disk.GetDiskDBO(userUUID, _disk.ProviderUUID, _disk.VolumeUUID))
 	if result.Error != nil {
 		logger.Logger.Error("api", "Could not save the disk: ", _diskUUID, " in the db.")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.DATABASE_ERROR, "Database operation failed: "+result.Error.Error()))
@@ -308,7 +300,7 @@ func GetDisk(c *gin.Context) {
 	logger.Logger.Debug("api", "The disk capacity is: ", strconv.FormatUint(_disk.FreeSpace, 10), "/", strconv.FormatUint(_disk.TotalSpace, 10), ".")
 
 	logger.Logger.Debug("api", "GetDisk endpoint successful exit.")
-	c.JSON(200, responses.NewSuccessResponse(diskModel.GetResponse(&_disk, c)))
+	c.JSON(200, responses.NewSuccessResponse(_disk))
 }
 
 // UpdateDisk - handler for Update disk details request
@@ -394,11 +386,6 @@ func UpdateDisk(c *gin.Context) {
 		}
 
 		disk.CreateCredentials(cred)
-		if !disk.GetReadiness().IsReadyForce(c) {
-			logger.Logger.Error("api", "The provided credentials: ", body.Credentials.ToString(), " are invalid.")
-			c.JSON(405, responses.NewOperationFailureResponse(constants.VAL_CREDENTIALS_INVALID, "Provided credentials are invalid"))
-			return
-		}
 		logger.Logger.Debug("api", "Updated the credentials of the disk with the uuid: ", _diskUUID)
 	}
 
@@ -670,15 +657,13 @@ func GetDisks(c *gin.Context) {
 	userUUID = c.MustGet("UserData").(middleware.UserData).UserUUID
 
 	// Load list of disks from database
-	db.DB.DatabaseHandle.Where("user_uuid = ? AND virtual_disk_uuid = ?", userUUID.String(), uuid.Nil).Preload("Provider").Preload("Volume").Find(&_disks)
-	for _, _disk := range _disks {
+	db.DB.DatabaseHandle.Where("user_uuid = ? AND is_virtual = ?", userUUID.String(), false).Preload("Provider").Preload("Volume").Find(&_disks)
+	for _, disk := range _disks {
 		// Update disk spaced based on local data (for performance reasons)
-		_disk.FreeSpace = _disk.TotalSpace - _disk.UsedSpace
-		volume := models.Transport.GetVolume(_disk.VolumeUUID)
-		disk := volume.GetDisk(_disk.UUID)
+		disk.FreeSpace = disk.TotalSpace - disk.UsedSpace
 
 		// Append disk to the list
-		disks = append(disks, disk.GetResponse(&_disk, c))
+		disks = append(disks, disk)
 	}
 
 	// Prepare pagination

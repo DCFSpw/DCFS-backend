@@ -2,7 +2,6 @@ package SFTPDisk
 
 import (
 	"bytes"
-	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db/dbo"
@@ -11,7 +10,6 @@ import (
 	"dcfs/models/disk/AbstractDisk"
 	"dcfs/util/logger"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 	"io"
@@ -266,30 +264,14 @@ func (d *SFTPDisk) AssignDisk(disk models.Disk) {
 	d.abstractDisk.AssignDisk(disk)
 }
 
-func (d *SFTPDisk) GetReadiness() models.DiskReadiness {
-	return d.abstractDisk.DiskReadiness
-}
-
-func (d *SFTPDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskResponse {
-	return d.abstractDisk.GetResponse(_disk, ctx)
+func (d *SFTPDisk) IsReady() bool {
+	return d.abstractDisk.IsReady()
 }
 
 /* Factory methods */
 func NewSFTPDisk() *SFTPDisk {
 	var d *SFTPDisk = new(SFTPDisk)
 	d.abstractDisk.Disk = d
-	d.abstractDisk.DiskReadiness = models.NewRealDiskReadiness(func(ctx context.Context) bool {
-		logger.Logger.Debug("drive", "Checking readiness for SFTP drive: ", d.GetUUID().String(), ".")
-		if d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
-			Ctx:      ctx,
-			Config:   nil,
-			DiskUUID: d.GetUUID(),
-		}) == nil {
-			return false
-		}
-
-		return true
-	}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
 	return d
 }
 

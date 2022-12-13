@@ -54,18 +54,7 @@ type Disk interface {
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
 	AssignDisk(disk Disk)
-	GetReadiness() DiskReadiness
-	GetResponse(_disk *dbo.Disk, ctx *gin.Context) *DiskResponse
-}
-
-type DiskResponse struct {
-	dbo.Disk
-	Array   []DiskResponse `json:"array"`
-	IsReady bool           `json:"isReady"`
-}
-
-type VirtualDisk interface {
-	ReplaceDisk(oldDisk Disk, newDisk Disk, blocks []dbo.Block) string
+	IsReady() bool
 }
 
 type VirtualDisk interface {
