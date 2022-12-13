@@ -308,7 +308,7 @@ func InitFileUploadRequest(c *gin.Context) {
 		return
 	}
 
-	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), &file)
+	models.Transport.FileUploadQueue.EnqueueInstance(file.GetUUID(), file)
 	logger.Logger.Debug("api", "Prepared a request with ", strconv.FormatUint(uint64(len(file.Blocks)), 10), " blocks")
 
 	logger.Logger.Debug("api", "InitFileUploadRequest endpoint successful exit.")
