@@ -280,11 +280,6 @@ func (v *Volume) DeleteVirtualDisk(diskUUID uuid.UUID) {
 func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
 	var disks = v.GetDisks()
 
-	// Check if there are any additional disks in the volume
-	if len(disks) <= 1 {
-		return nil
-	}
-
 	// Find another disk
 	var foundDisk Disk
 	var foundDiskFreeSpace uint64
