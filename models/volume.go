@@ -430,7 +430,7 @@ func (v *Volume) Encrypt(block *[]uint8) error {
 		return err
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
+	nonce := make([]byte, constants.VOLUME_NONCE_SIZE)
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		logger.Logger.Error("volume", "Could not populate the cipher nonce with a random seed: ", err.Error())
 		return err
@@ -469,9 +469,9 @@ func (v *Volume) Decrypt(block *[]uint8) error {
 		return err
 	}
 
-	nonce := (*block)[:gcm.NonceSize()]
-	ciphertext := (*block)[gcm.NonceSize():]
-	*block = make([]uint8, len(*block)-gcm.NonceSize())
+	nonce := (*block)[:constants.VOLUME_NONCE_SIZE]
+	ciphertext := (*block)[constants.VOLUME_NONCE_SIZE:]
+	*block = make([]uint8, 0)
 	*block, err = gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
 		logger.Logger.Error("volume", "Could not decode the file: ", err.Error(), ".")

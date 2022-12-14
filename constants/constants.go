@@ -66,3 +66,8 @@ const (
 	DELETION   bool = false
 	RELOCATION bool = true
 )
+
+const (
+	VOLUME_NONCE_SIZE      int = 12
+	VOLUME_CIPHER_TAG_SIZE int = 16
+)

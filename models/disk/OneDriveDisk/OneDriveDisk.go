@@ -205,7 +205,12 @@ func (d *OneDriveDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls
 		return apicalls.CreateErrorWrapper(constants.REMOTE_FAILED_JOB, "downloaded not enough bytes:", fmt.Sprint(n), "out of:", strconv.FormatInt(blockMetadata.Size, 10))
 	}
 
-	block := buf.Bytes()[0:blockMetadata.Size]
+	blockSize := blockMetadata.Size
+	if d.GetVolume().VolumeSettings.Encryption != constants.ENCRYPTION_TYPE_NO_ENCRYPTION {
+		blockSize += int64(constants.VOLUME_NONCE_SIZE + constants.VOLUME_CIPHER_TAG_SIZE)
+	}
+
+	block := buf.Bytes()[0:blockSize]
 	blockMetadata.Content = &block
 	blockMetadata.CompleteCallback(blockMetadata.FileUUID, blockMetadata.Status)
 
