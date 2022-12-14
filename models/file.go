@@ -389,10 +389,20 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 
 	block.Status = constants.BLOCK_STATUS_QUEUED
 	rsp := block.Disk.Download(blockMetadata)
+	if rsp != nil && rsp.Error != nil {
+		logger.Logger.Error("api", "Could not download block: ", block.UUID.String(), ": ", rsp.Error.Error(), ".")
+		return rsp
+	}
+
+	err := f.GetVolume().Decrypt(blockMetadata.Content)
+	if err != nil {
+		logger.Logger.Error("file", "Could not decrypt the block: ", block.UUID.String(), " is invalid. Block integrity is compromised.")
+		// error will be handled by the checksum error
+	}
 
 	// verify integrity of the downloaded block
-	checksum := checksum.CalculateChecksum(*blockMetadata.Content)
-	if checksum != block.Checksum {
+	chksum := checksum.CalculateChecksum(*blockMetadata.Content)
+	if chksum != block.Checksum {
 		blockCompleteness = "not complete"
 	}
 
