@@ -177,7 +177,8 @@ type transport struct {
 	FileDownloadQueue *ConcurrentInstances
 	FileUploadQueue   *ConcurrentInstances
 
-	WaitTime time.Duration
+	WaitTime        time.Duration
+	MaximumFileSize int
 }
 
 /* public methods */
@@ -585,6 +586,7 @@ func NewTransport() *transport {
 		FileDownloadQueue: NewConcurrentInstances(),
 		FileUploadQueue:   NewConcurrentInstances(),
 		WaitTime:          6 * time.Minute,
+		MaximumFileSize:   4 * 1024 * 1024 * 1024,
 	}
 }
 

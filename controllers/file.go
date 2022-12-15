@@ -11,6 +11,7 @@ import (
 	"dcfs/responses"
 	"dcfs/util/checksum"
 	"dcfs/util/logger"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"strconv"
@@ -242,6 +243,12 @@ func InitFileUploadRequest(c *gin.Context) {
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
 		logger.Logger.Error("api", "Wrong request body.")
 		c.JSON(422, responses.NewValidationErrorResponse(err))
+		return
+	}
+
+	if requestBody.File.Size > models.Transport.MaximumFileSize {
+		logger.Logger.Error("api", "The size: ", strconv.Itoa(requestBody.File.Size), " is to big. The maximum file size is: ", strconv.Itoa(models.Transport.MaximumFileSize), ".")
+		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_FILE_TOO_BIG, fmt.Sprintf("The uploaded file is too big. Please make sure that the files are no larger than: %dB.", models.Transport.MaximumFileSize)))
 		return
 	}
 
