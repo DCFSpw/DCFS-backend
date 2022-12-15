@@ -422,9 +422,6 @@ func UploadBlock(c *gin.Context) {
 		return
 	}
 
-	// Calculate block checksum
-	file.Blocks[blockUUID].Checksum = checksum.CalculateChecksum(contents)
-
 	// encrypt the file
 	err = file.Volume.Encrypt(blockMetadata.Content)
 	if err != nil {
@@ -432,6 +429,9 @@ func UploadBlock(c *gin.Context) {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.ENCRYPTION_JOB_FAILED, "Failed to encrypt file: "+file.UUID.String()))
 		return
 	}
+
+	// Calculate block checksum
+	file.Blocks[blockUUID].Checksum = checksum.CalculateChecksum(contents)
 
 	// Upload file to target disk
 	errorWrapper := file.Blocks[blockUUID].Disk.Upload(blockMetadata)
