@@ -37,10 +37,13 @@ func main() {
 	rspw := flag.Bool("respawn", false, "set to true to drop and create the database anew")
 	debugLevel := flag.Int("debug", 1, "debug level: 2 - debug, warnings and errors, 1 - warnings and errors, 0 - errors, -1 - none, default: 1")
 	logScope := flag.String("log", "", "a comma separated list of modules to collect logs from, available are: middleware, api, db, disks, credentials, file, partitioner, transport, volume. The option: all enables logs from all modules")
+	fileMaximumSize := flag.Int("max_file_size", 4*1024*1024*1024, "Maximum file size in bytes, the default one is 4294967296 (4GB)")
 	flag.Parse()
 
 	logger.Logger.SetLogLevel(*debugLevel)
 	logger.Logger.SetScopes(strings.Split(*logScope, ","))
+
+	models.Transport.MaximumFileSize = *fileMaximumSize
 
 	absolutePath, err := filepath.Abs(*path)
 	if err != nil {
