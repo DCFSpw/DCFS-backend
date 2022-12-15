@@ -394,15 +394,16 @@ func (f *SmallerFileWrapper) Download(blockMetadata *apicalls.BlockMetadata) *ap
 		return rsp
 	}
 
-	err := f.GetVolume().Decrypt(blockMetadata.Content)
-	if err != nil {
-		logger.Logger.Error("file", "Could not decrypt the block: ", block.UUID.String(), " is invalid. Block integrity is compromised.")
-		// error will be handled by the checksum error
-	}
-
 	// verify integrity of the downloaded block
 	chksum := checksum.CalculateChecksum(*blockMetadata.Content)
 	if chksum != block.Checksum {
+		logger.Logger.Error("file", "Checksum of the block: ", block.UUID.String(), " is invalid. Block integrity is compromised.")
+		blockCompleteness = "not complete"
+	}
+
+	err := f.GetVolume().Decrypt(blockMetadata.Content)
+	if err != nil {
+		logger.Logger.Error("file", "Could not decrypt the block: ", block.UUID.String(), " is invalid. Block integrity is compromised.")
 		blockCompleteness = "not complete"
 	}
 
@@ -569,7 +570,6 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				},
 			}
 
-			var _checksum string
 			errWrapper := _b.Disk.Download(bm)
 			if errWrapper != nil {
 				// one retry
@@ -588,10 +588,9 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				}
 			}
 
-			// decrypt the file if needed
-			err = file.GetVolume().Decrypt(bm.Content)
-			if err != nil {
-				logger.Logger.Error("file", "Could not decrypt the block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+			_checksum := checksum.CalculateChecksum(*bm.Content)
+			if _checksum != _b.Checksum {
+				logger.Logger.Debug("file", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
 
 				brokenBlocksMtx.Lock()
 				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
@@ -600,9 +599,10 @@ func (f *FileWrapper) downloadFile(_path string, file File, blockMetadata *apica
 				brokenBlocksMtx.Unlock()
 			}
 
-			_checksum = checksum.CalculateChecksum(*bm.Content)
-			if _checksum != _b.Checksum {
-				logger.Logger.Debug("file", "Checksum of downloaded block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
+			// decrypt the file if needed
+			err = file.GetVolume().Decrypt(bm.Content)
+			if err != nil {
+				logger.Logger.Error("file", "Could not decrypt the block: ", _b.UUID.String(), " is invalid. Block integrity is compromised.")
 
 				brokenBlocksMtx.Lock()
 				if !util.SliceContains[uuid.UUID](brokenBlocks, bm.UUID) {
