@@ -16,8 +16,6 @@ import (
 // doesn't contain these entries. It creates providers for disks and sample
 // user account with empty volume.
 func Seed() {
-	rootUUID := models.RootUUID
-	volume := dbo.Volume{}
 	provider1 := dbo.Provider{}
 	provider2 := dbo.Provider{}
 	provider3 := dbo.Provider{}
@@ -34,17 +32,6 @@ func Seed() {
 		user.Email = "root@root.com"
 		user.Password = dbo.HashPassword("password")
 		db.DB.DatabaseHandle.Create(&user)
-	}
-
-	// Add some volumes
-	db.DB.DatabaseHandle.Where("user_uuid = ?", rootUUID).First(&volume)
-	if volume.UserUUID != rootUUID {
-		// Create a new volume
-		volume.UUID = uuid.New()
-		volume.UserUUID = rootUUID
-		volume.VolumeSettings = dbo.VolumeSettings{Backup: constants.BACKUP_TYPE_NO_BACKUP, Encryption: constants.ENCRYPTION_TYPE_NO_ENCRYPTION, FilePartition: constants.PARTITION_TYPE_BALANCED}
-
-		db.DB.DatabaseHandle.Create(&volume)
 	}
 
 	// Add providers
