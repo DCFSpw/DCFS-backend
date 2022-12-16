@@ -71,6 +71,7 @@ const (
 	FS_BLOCK_UPLOAD_FAILED = "FS-020"
 	FS_BAD_FILE            = "FS-030"
 	FS_DIRECTORY_NOT_EMPTY = "FS-040"
+	FS_PATH_CYCLE          = "FS-050"
 
 	// Ownership errors
 	OWNER_MISMATCH = "OWN-001"
