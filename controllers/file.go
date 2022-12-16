@@ -702,6 +702,12 @@ func InitFileDownloadRequest(c *gin.Context) {
 			return
 		}
 
+		if file.Type == constants.FILE_TYPE_DIRECTORY {
+			logger.Logger.Error("disk", "Directory download is not permitted.")
+			c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_BAD_REQUEST, "Directory download is not permitted."))
+			return
+		}
+
 		if file.Size <= constants.FRONT_RAM_CAPACITY {
 			blocks, code = db.BlocksFromDatabase(fileUUID.String())
 			if blocks == nil {
@@ -728,9 +734,15 @@ func InitFileDownloadRequest(c *gin.Context) {
 		var _files []models.File
 		for _, UUID := range files {
 			_f, code := db.FileFromDatabase(UUID.String())
-			if file == nil {
+			if _f == nil {
 				logger.Logger.Error("api", "A File with the uuid: ", UUID.String(), " was not found in the db.")
 				c.JSON(404, responses.NewNotFoundErrorResponse(code, "File not found"))
+				return
+			}
+
+			if _f.Type == constants.FILE_TYPE_DIRECTORY {
+				logger.Logger.Error("disk", "Directory download is not permitted.")
+				c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_BAD_REQUEST, "Directory download is not permitted."))
 				return
 			}
 
