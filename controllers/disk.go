@@ -518,7 +518,7 @@ func DeleteDisk(c *gin.Context) {
 		} else {
 			// Delete the last disk along with filesystem data
 			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION, nil)
-			dbErr := volume.ClearFilesystem()
+			dbErr := models.ClearFilesystemFunc(volume)
 			if dbErr != nil {
 				logger.Logger.Error("api", "Could not clear the filesystem in database after last disk deletion: ", _disk.UUID.String(), ".")
 				c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the disk failed: "+err.Error()))
@@ -534,7 +534,7 @@ func DeleteDisk(c *gin.Context) {
 		} else {
 			// Delete the last virtual disk along with filesystem data
 			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.DELETION, nil)
-			dbErr := volume.ClearFilesystem()
+			dbErr := models.ClearFilesystemFunc(volume)
 			if dbErr != nil {
 				logger.Logger.Error("api", "Could not clear the filesystem in database after last disk deletion: ", _disk.UUID.String(), ".")
 				c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the virtual disk failed: "+err.Error()))

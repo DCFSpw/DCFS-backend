@@ -567,3 +567,4 @@ func NewVolume(_volume *dbo.Volume, _disks []dbo.Disk, _virtualDisks []dbo.Disk)
 }
 
 var RefreshPartitionerFunc func(v *Volume) = func(v *Volume) { go func() { v.RefreshPartitioner() }() }
+var ClearFilesystemFunc func(v *Volume) error = func(v *Volume) error { return v.ClearFilesystem() }

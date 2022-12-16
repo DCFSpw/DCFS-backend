@@ -265,6 +265,7 @@ func TestFindEnqueuedVolume(t *testing.T) {
 
 func TestDeleteVolume(t *testing.T) {
 	volume := MockNewVolume(*mock.VolumeDBO, nil, false)
+
 	models.Transport.ActiveVolumes.EnqueueInstance(volume.UUID, volume)
 	_, err := models.Transport.DeleteVolume(volume.UUID)
 
@@ -272,9 +273,6 @@ func TestDeleteVolume(t *testing.T) {
 		So(err, ShouldEqual, nil)
 	})
 
-	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE volume_uuid = ?")).
-	//	WithArgs(volume.UUID).
-	//	WillReturnRows(mock.DiskRow(nil))
 	mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `volumes` WHERE uuid = ? AND `volumes`.`deleted_at` IS NULL ORDER BY `volumes`.`uuid` LIMIT 1")).
 		WithArgs(volume.UUID.String()).
 		WillReturnRows(mock.VolumeRow(nil))
