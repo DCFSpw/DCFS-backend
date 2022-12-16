@@ -515,6 +515,7 @@ func UpdateFile(c *gin.Context) {
 	var userUUID uuid.UUID
 	var rootUUID uuid.UUID
 	var file *dbo.File
+	var path []dbo.PathEntry
 
 	// Retrieve and validate fileUUID
 	fileUUID = c.Param("FileUUID")
@@ -568,6 +569,22 @@ func UpdateFile(c *gin.Context) {
 		logger.Logger.Error("api", "The provided root directory: ", rootUUID.String(), " was not found on the volume: ", file.VolumeUUID.String(), ".")
 		c.JSON(404, responses.NewNotFoundErrorResponse(errCode, "Root directory not found"))
 		return
+	}
+
+	// Verify that change of the root uuid would not cause a cycle
+	path, dbErr = db.GenerateFileFullPath(file.RootUUID)
+	if dbErr != constants.SUCCESS {
+		logger.Logger.Error("api", "Could not generate the complete path for the file with the uuid: ", file.UUID.String(), ".")
+		c.JSON(404, responses.NewNotFoundErrorResponse(dbErr, "File not found"))
+		return
+	}
+
+	for _, entry := range path {
+		if entry.UUID == file.UUID {
+			logger.Logger.Error("api", "The provided root directory: ", rootUUID.String(), " would cause a cycle in the file path.")
+			c.JSON(422, responses.NewValidationErrorResponseSingle(constants.FS_PATH_CYCLE, "RootUUID", "Provided root directory would cause a cycle in the file path"))
+			return
+		}
 	}
 
 	// Update file name and root directory

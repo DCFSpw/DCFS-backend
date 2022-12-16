@@ -207,6 +207,7 @@ func ValidateRootDirectory(rootUUID uuid.UUID, volumeUUID uuid.UUID) string {
 //   - []dbo.PathEntry: list of directories from the full path
 //   - string: completion code
 func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
+	var pathMap map[uuid.UUID]bool = make(map[uuid.UUID]bool)
 	var path []dbo.PathEntry = make([]dbo.PathEntry, 0)
 	var _path string = ""
 
@@ -227,9 +228,14 @@ func GenerateFileFullPath(rootUUID uuid.UUID) ([]dbo.PathEntry, string) {
 			Name: parent.Name,
 		})
 		_path = "/" + _path + parent.Name
+		pathMap[parent.UUID] = true
 
 		// Move to parent directory
 		rootUUID = parent.RootUUID
+		if pathMap[rootUUID] {
+			logger.Logger.Error("api", "Found a cycle in the file system.")
+			return nil, constants.FS_PATH_CYCLE
+		}
 	}
 
 	logger.Logger.Debug("db", "Successfully generated a path: ", _path, " for a rootUUID: ", rootUUID.String())
