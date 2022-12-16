@@ -512,11 +512,35 @@ func DeleteDisk(c *gin.Context) {
 	if _disk.VirtualDiskUUID == uuid.Nil {
 		// Delete actual disk since it's not connected to virtual disk
 		newDisk := volume.FindAnotherDisk(_disk.UUID)
-		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.RELOCATION, newDisk)
+		if newDisk != nil {
+			// Delete disk and relocate data to another disk
+			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.RELOCATION, newDisk)
+		} else {
+			// Delete the last disk along with filesystem data
+			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.UUID), volume, constants.DELETION, nil)
+			dbErr := volume.ClearFilesystem()
+			if dbErr != nil {
+				logger.Logger.Error("api", "Could not clear the filesystem in database after last disk deletion: ", _disk.UUID.String(), ".")
+				c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the disk failed: "+err.Error()))
+				return
+			}
+		}
 	} else {
 		// Delete virtual disk to which the actual disk is connected
 		newDisk := volume.FindAnotherDisk(_disk.VirtualDiskUUID)
-		errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.RELOCATION, newDisk)
+		if newDisk != nil {
+			// Delete virtual disk and relocate data to another virtual disk
+			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.RELOCATION, newDisk)
+		} else {
+			// Delete the last virtual disk along with filesystem data
+			errCode, err = models.Transport.DeleteDisk(volume.GetDisk(_disk.VirtualDiskUUID), volume, constants.DELETION, nil)
+			dbErr := volume.ClearFilesystem()
+			if dbErr != nil {
+				logger.Logger.Error("api", "Could not clear the filesystem in database after last disk deletion: ", _disk.UUID.String(), ".")
+				c.JSON(500, responses.NewOperationFailureResponse(errCode, "Deletion of the virtual disk failed: "+err.Error()))
+				return
+			}
+		}
 	}
 
 	if errCode != constants.SUCCESS {

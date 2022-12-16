@@ -277,12 +277,12 @@ func (v *Volume) DeleteVirtualDisk(diskUUID uuid.UUID) {
 //   - currentUUID uuid.UUID: uuid of the current disk
 //
 // return type:
-//   - models.Disk: another disk from the volume (with the largest free space), nil otherwise
+//   - *models.Disk: another disk from the volume (with the largest free space), nil otherwise
 func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
 	var disks = v.GetDisks()
 
 	// Find another disk
-	var foundDisk Disk
+	var foundDisk Disk = nil
 	var foundDiskFreeSpace uint64
 
 	for _, disk := range disks {
@@ -296,6 +296,16 @@ func (v *Volume) FindAnotherDisk(currentUUID uuid.UUID) Disk {
 	}
 
 	return foundDisk
+}
+
+// ClearFilesystem - delete all files and directories located in volume's filesystem from database
+//
+// return type:
+//   - error: database operation error
+func (v *Volume) ClearFilesystem() error {
+	result := db.DB.DatabaseHandle.Where("volume_uuid = ?", v.UUID).Delete(&dbo.File{}).Error
+
+	return result
 }
 
 // FileUploadRequest - handle initial request for uploading file to the volume

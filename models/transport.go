@@ -336,6 +336,13 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 		return constants.OPERATION_FAILED, err
 	}
 
+	// Clear volume filesystem
+	err = volume.ClearFilesystem()
+	if err != nil {
+		logger.Logger.Error("transport", "Could not clear the volume filesystem: ", volumeUUID.String(), "in database.")
+		return constants.OPERATION_FAILED, err
+	}
+
 	// Remove volume from transport
 	transport.ActiveVolumes.RemoveEnqueuedInstance(volumeUUID)
 
