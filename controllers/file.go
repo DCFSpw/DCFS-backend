@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"strconv"
+	"time"
 )
 
 // CreateDirectory - handler for Create directory request
@@ -320,6 +321,54 @@ func InitFileUploadRequest(c *gin.Context) {
 
 	logger.Logger.Debug("api", "InitFileUploadRequest endpoint successful exit.")
 	c.JSON(200, responses.NewInitFileUploadRequestResponse(userUUID, file))
+
+	// periodically check if the file was successfully transferred
+	go func(file models.File, ctx *gin.Context) {
+		// wait for the typical transport remove time
+		for models.Transport.FileUploadQueue.GetEnqueuedInstance(file.GetUUID()) != nil {
+			time.Sleep(models.Transport.WaitTime)
+		}
+
+		// if file was successfully transferred, terminate
+		if file.IsCompleted() {
+			return
+		}
+
+		logger.Logger.Error("api", "File: ", file.GetUUID().String(), " was not uploaded, will attempt to delete the parts that were transferred to remote.")
+
+		// delete outstanding file blocks from remote servers, if the file has not been transferred and is no longer in the queue
+		for _, block := range file.GetBlocks() {
+			if block.Status == constants.BLOCK_STATUS_TRANSFERRED {
+				logger.Logger.Error("api", "Block: ", block.UUID.String(), " of file: ", file.GetUUID().String(), " was transferred to remote (but file was not successfully uploaded), will be deleted.")
+				bm := apicalls.BlockMetadata{
+					Ctx:              c,
+					FileUUID:         file.GetUUID(),
+					UUID:             block.UUID,
+					Size:             0,
+					Status:           new(int),
+					Checksum:         "",
+					Content:          nil,
+					CompleteCallback: func(UUID uuid.UUID, status *int) {},
+				}
+
+				errWrapper := block.Disk.Remove(&bm)
+				if errWrapper != nil {
+					// repeat after 30 mins (onedrive case)
+					logger.Logger.Error("api", "Could not delete block: ", block.UUID.String(), " from remote. Will retry again in 30 minutes")
+
+					go func(bm apicalls.BlockMetadata) {
+						time.Sleep(30 * time.Minute)
+						err := block.Disk.Remove(&bm)
+						if err != nil {
+							logger.Logger.Error("api", "Could not delete block: ", block.UUID.String(), " from remote.")
+							// this error cannot be properly handled
+						}
+					}(bm)
+				}
+			}
+		}
+
+	}(file, c)
 }
 
 // UploadBlock - handler for Upload block details request
@@ -419,14 +468,6 @@ func UploadBlock(c *gin.Context) {
 
 		// Unblock the current file in the FileUploadQueue when this block is transferred
 		models.Transport.FileUploadQueue.MarkAsCompleted(UUID)
-	}
-
-	// Block the current file in the FileUploadQueue
-	err = models.Transport.FileUploadQueue.MarkAsUsed(fileUUID)
-	if err != nil {
-		logger.Logger.Error("api", "Failed to lock file: ", file.UUID.String())
-		c.JSON(500, responses.NewOperationFailureResponse(constants.TRANSPORT_LOCK_FAILED, "Failed to lock file: "+err.Error()))
-		return
 	}
 
 	// encrypt the file
