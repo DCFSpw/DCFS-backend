@@ -670,6 +670,11 @@ func InitFileDownloadRequest(c *gin.Context) {
 			}
 
 			f := models.NewFileFromDBO(file)
+
+			for _, b := range f.GetBlocks() {
+				b.Status = constants.BLOCK_STATUS_QUEUED
+			}
+
 			f = models.NewFileWrapper(constants.FILE_TYPE_SMALLER_WRAPPER, []models.File{f})
 			models.Transport.FileDownloadQueue.EnqueueInstance(f.GetUUID(), f)
 			logger.Logger.Debug("api", "Successfully enqueued the file: ", file.UUID.String(), " for download")
@@ -689,6 +694,11 @@ func InitFileDownloadRequest(c *gin.Context) {
 			}
 
 			f := models.NewFileFromDBO(_f)
+
+			for _, b := range f.GetBlocks() {
+				b.Status = constants.BLOCK_STATUS_QUEUED
+			}
+
 			_files = append(_files, f)
 		}
 
@@ -764,6 +774,11 @@ func DownloadBlock(c *gin.Context) {
 	if errorWrapper != nil {
 		logger.Logger.Error("api", "Failed to download the block with the code: ", errorWrapper.Code, ".")
 		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
+	}
+
+	if file.IsCompleted() {
+		logger.Logger.Debug("api", "All blocks of the file: ", file.GetUUID().String(), " were transferred, deleting it from the FileUploadQueue")
+		models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.GetUUID())
 	}
 
 	logger.Logger.Debug("api", "DownloadBlock endpoint successful exit.")
