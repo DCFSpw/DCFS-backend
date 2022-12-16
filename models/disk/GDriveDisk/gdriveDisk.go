@@ -5,6 +5,7 @@ import (
 	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
@@ -347,5 +348,25 @@ func init() {
 
 			return true
 		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
+	models.ProviderTypesRegistry[constants.PROVIDER_TYPE_GDRIVE] = func() {
+		disk := GDriveDisk{}
+		config := disk.GetConfig()
+
+		if config == nil {
+			logger.Logger.Warning("disk", "Could not load configuration for Google Drive")
+			return
+		}
+
+		provider := dbo.Provider{}
+		db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_GDRIVE).First(&provider)
+		if provider.Type != constants.PROVIDER_TYPE_GDRIVE {
+			provider.UUID = uuid.New()
+			provider.Type = constants.PROVIDER_TYPE_GDRIVE
+			provider.Name = "GoogleDrive"
+			provider.Logo = "https://upload.wikimedia.org/wikipedia/commons/d/da/Google_Drive_logo.png"
+
+			db.DB.DatabaseHandle.Create(&provider)
+		}
 	}
 }
