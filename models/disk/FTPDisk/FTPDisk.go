@@ -5,6 +5,7 @@ import (
 	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
@@ -260,5 +261,17 @@ func init() {
 
 			return true
 		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
+	models.ProviderTypesRegistry[constants.PROVIDER_TYPE_FTP] = func() {
+		provider := dbo.Provider{}
+		db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_FTP).First(&provider)
+		if provider.Type != constants.PROVIDER_TYPE_FTP {
+			provider.UUID = uuid.New()
+			provider.Type = constants.PROVIDER_TYPE_FTP
+			provider.Name = "FTP drive"
+			provider.Logo = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Antu_gFTP.svg/640px-Antu_gFTP.svg.png"
+
+			db.DB.DatabaseHandle.Create(&provider)
+		}
 	}
 }

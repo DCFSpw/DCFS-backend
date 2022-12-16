@@ -17,6 +17,7 @@ import (
 var RootUUID uuid.UUID
 var DiskTypesRegistry map[int]func() Disk = make(map[int]func() Disk)
 var DiskReadinessRegistry map[int]func(d Disk) DiskReadiness = make(map[int]func(d Disk) DiskReadiness)
+var ProviderTypesRegistry map[int]func() = make(map[int]func())
 
 type Disk interface {
 	Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper

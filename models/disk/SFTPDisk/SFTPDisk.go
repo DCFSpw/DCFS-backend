@@ -5,6 +5,7 @@ import (
 	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
@@ -292,7 +293,7 @@ func init() {
 	models.DiskReadinessRegistry[constants.PROVIDER_TYPE_SFTP] = func(d models.Disk) models.DiskReadiness {
 		return models.NewRealDiskReadiness(func(ctx context.Context) bool {
 			logger.Logger.Debug("drive", "Checking readiness for SFTP drive: ", d.GetUUID().String(), ".")
-			
+
 			_client := d.GetCredentials().Authenticate(&apicalls.CredentialsAuthenticateMetadata{
 				Ctx:      ctx,
 				Config:   nil,
@@ -301,12 +302,24 @@ func init() {
 			if _client == nil {
 				return false
 			}
-	
+
 			var client *sftp.Client = _client.(*sftp.Client)
 			defer client.Close()
 			defer d.GetCredentials().(*credentials.SFTPCredentials).SSHConnection.Close()
 
 			return true
 		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
+	models.ProviderTypesRegistry[constants.PROVIDER_TYPE_SFTP] = func() {
+		provider := dbo.Provider{}
+		db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_SFTP).First(&provider)
+		if provider.Type != constants.PROVIDER_TYPE_SFTP {
+			provider.UUID = uuid.New()
+			provider.Type = constants.PROVIDER_TYPE_SFTP
+			provider.Name = "SFTP drive"
+			provider.Logo = "https://cdn.iconscout.com/icon/free/png-256/sftp-1758329-1496548.png"
+
+			db.DB.DatabaseHandle.Create(&provider)
+		}
 	}
 }

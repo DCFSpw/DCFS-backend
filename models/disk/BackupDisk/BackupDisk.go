@@ -3,6 +3,7 @@ package BackupDisk
 import (
 	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
@@ -584,4 +585,16 @@ func NewBackupDisk() *BackupDisk {
 
 func init() {
 	models.DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1] = func() models.Disk { return NewBackupDisk() }
+	models.ProviderTypesRegistry[constants.PROVIDER_TYPE_RAID1] = func() {
+		providerRAID1 := dbo.Provider{}
+		db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_RAID1).First(&providerRAID1)
+		if providerRAID1.Type != constants.PROVIDER_TYPE_RAID1 {
+			providerRAID1.UUID = uuid.New()
+			providerRAID1.Type = constants.PROVIDER_TYPE_RAID1
+			providerRAID1.Name = "RAID1 virtual drive"
+			providerRAID1.Logo = ""
+
+			db.DB.DatabaseHandle.Create(&providerRAID1)
+		}
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
+	"dcfs/db"
 	"dcfs/db/dbo"
 	"dcfs/models"
 	"dcfs/models/credentials"
@@ -458,5 +459,25 @@ func init() {
 
 			return true
 		}, func() bool { return models.Transport.ActiveVolumes.GetEnqueuedInstance(d.GetVolume().UUID) != nil })
+	}
+	models.ProviderTypesRegistry[constants.PROVIDER_TYPE_ONEDRIVE] = func() {
+		disk := OneDriveDisk{}
+		config := disk.GetConfig()
+
+		if config == nil {
+			logger.Logger.Warning("disk", "Could not load configuration for OneDrive Drive")
+			return
+		}
+
+		provider := dbo.Provider{}
+		db.DB.DatabaseHandle.Where("type = ?", constants.PROVIDER_TYPE_ONEDRIVE).First(&provider)
+		if provider.Type != constants.PROVIDER_TYPE_ONEDRIVE {
+			provider.UUID = uuid.New()
+			provider.Type = constants.PROVIDER_TYPE_ONEDRIVE
+			provider.Name = "OneDrive"
+			provider.Logo = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Microsoft_Office_OneDrive_%282019%E2%80%93present%29.svg"
+
+			db.DB.DatabaseHandle.Create(&provider)
+		}
 	}
 }
