@@ -500,7 +500,13 @@ func (f *FileWrapper) GetFileDBO(userUUID uuid.UUID) dbo.File {
 }
 
 func (f *FileWrapper) IsCompleted() bool {
-	panic("uimplemented")
+	for _, file := range f.Files {
+		if !file.IsCompleted() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (f *FileWrapper) GetVolume() *Volume {
