@@ -326,4 +326,5 @@ func MockNewVolume(_volumeDBO dbo.Volume, _disks []dbo.Disk, dry_run bool) *mode
 
 func init() {
 	models.RefreshPartitionerFunc = func(v *models.Volume) { v.RefreshPartitioner() }
+	models.ClearFilesystemFunc = func(v *models.Volume) error { return nil }
 }
