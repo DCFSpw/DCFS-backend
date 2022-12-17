@@ -14,6 +14,22 @@ import utils
 
 
 class VolumeTests(unittest.TestCase):
+    encryption_options = {
+        'on': -2,
+        'off': -1
+    }
+
+    backup_options = {
+        'RAID10': -2,
+        'off': -1
+    }
+
+    partitioner_options = {
+        'balanced': -3,
+        'priority': -2,
+        'throughput': -1
+    }
+
     def setUp(self):
         # initiate selenium
         options = Options()
@@ -68,6 +84,69 @@ class VolumeTests(unittest.TestCase):
         cursor.execute(f'DELETE FROM volumes WHERE name = \'{name}\'')
         db.commit()
 
+    @staticmethod
+    def add_volume(driver, name, backup, encryption, partitioner):
+        time.sleep(2)
+
+        # go into the volumes tab
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-focusable.q-hoverable')[2].click()
+        time.sleep(1)
+
+        # click the 'new volume' button
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-positive.text-white.q-btn--actionable.q-focusable.q-hoverable.q-ma-sm')[0].click()
+        time.sleep(1)
+
+        form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')
+        form_fields[0].send_keys(name)  # name
+        form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__inner.relative-position.col.self-stretch')
+        time.sleep(1)
+
+        # backup
+        form_fields[1].click()
+        time.sleep(1)
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item__section.column.q-item__section--main.justify-center')[backup].click()
+        time.sleep(1)
+
+        # encryption
+        form_fields[2].click()
+        time.sleep(1)
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item__section.column.q-item__section--main.justify-center')[encryption].click()
+        time.sleep(1)
+
+        # partitioner
+        form_fields[3].click()
+        time.sleep(1)
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item__section.column.q-item__section--main.justify-center')[partitioner].click()
+        time.sleep(1)
+
+        # click create
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-positive.text-white.q-btn--actionable.q-focusable.q-hoverable')[1].click()
+        utils.Logger.debug('[test00_Volume] added a new volume')
+
+        if backup == VolumeTests.backup_options['RAID10']:
+            # confirm backup instruction
+            buttons = driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--flat.q-btn--rectangle.text-amber.q-btn--actionable.q-focusable.q-hoverable')
+            if len(buttons) > 0:
+                buttons[0].click()
+
+    @staticmethod
+    def delete_volume(driver, volume_name):
+        time.sleep(2)
+
+        # go into the volumes tab
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-focusable.q-hoverable')[2].click()
+        time.sleep(1)
+
+        volumes = driver.find_elements(by=By.CSS_SELECTOR, value='.q-card__section.q-card__section--vert.col-auto')
+        delete_buttons = driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-negative.text-white.q-btn--actionable.q-focusable.q-hoverable.q-ma-sm')
+        for index, volume in enumerate(volumes):
+            if volume_name == volume.text:
+                delete_buttons[index].click()
+                time.sleep(1)
+                driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-primary.text-white.q-btn--actionable.q-focusable.q-hoverable')[-1].click()
+                time.sleep(2)
+
+        utils.Logger.debug('The volume has been successfully deleted')
     def test00_Volume(self):
         """
         add a volume
