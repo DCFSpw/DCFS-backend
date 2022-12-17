@@ -124,6 +124,7 @@ class VolumeTests(unittest.TestCase):
         utils.Logger.debug('[test00_Volume] added a new volume')
 
         if backup == VolumeTests.backup_options['RAID10']:
+            time.sleep(1)
             # confirm backup instruction
             buttons = driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--flat.q-btn--rectangle.text-amber.q-btn--actionable.q-focusable.q-hoverable')
             if len(buttons) > 0:

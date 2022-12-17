@@ -3,5 +3,5 @@
   "password": "",
   "connectionType": "tcp",
   "address": "127.0.0.1:3306",
-  "dbName": "dcfs"
+  "dbName": "dcfs_test"
 }
