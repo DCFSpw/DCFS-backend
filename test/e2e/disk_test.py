@@ -1,3 +1,5 @@
+import json
+
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -15,6 +17,8 @@ import utils
 
 
 class DiskTests(unittest.TestCase):
+    provider_options = ['SFTP', 'FTP', 'GoogleDrive']
+
     def setUp(self):
         # initiate selenium
         options = Options()
@@ -107,7 +111,79 @@ class DiskTests(unittest.TestCase):
         cursor.execute('DELETE FROM disks WHERE uuid = \'922bb551-a419-49cc-b269-298ab88e90bf\'')
         db.commit()
 
-    def test00_Disk(self):
+    @staticmethod
+    def add_disk(driver, name, volume_name, size, provider):
+        time.sleep(1)
+
+        # go into the disks tab
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-focusable.q-hoverable')[3].click()
+        time.sleep(1)
+
+        # click the 'new disk' button
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-positive.text-white.q-btn--actionable.q-focusable.q-hoverable.q-ma-sm')[0].click()
+        time.sleep(1)
+
+        form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')
+        form_fields[0].send_keys(name)  # name
+        form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__inner.relative-position.col.self-stretch')
+        time.sleep(1)
+
+        # choose the volume
+        form_fields[1].click()
+        time.sleep(1)
+        volumes = driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-manual-focusable')
+        for volume in volumes:
+            if volume_name in volume.text:
+                volume.click()
+        time.sleep(1)
+
+        # set free space
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')[1].send_keys(size)
+        time.sleep(1)
+
+        # balanced partitioner
+        form_fields[3].click()
+        time.sleep(1)
+
+        options = driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-manual-focusable')
+        for opt in options:
+            if provider in opt.text:
+                opt.click()
+        time.sleep(1)
+
+        if provider == 'SFTP' or provider == 'FTP':
+            with open("./DiskLoginData.json", 'r') as f:
+                loginData = json.load(f)
+
+            key = provider.lower()
+            form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')
+            form_fields[2].send_keys(loginData[key]['login'])  # login
+            form_fields[3].send_keys(loginData[key]['password'])  # password
+            form_fields[4].send_keys(loginData[key]['host'])  # host
+            form_fields[5].send_keys(loginData[key]['port'])  # port
+            form_fields[6].send_keys(loginData[key]['path'])  # path
+            time.sleep(1)
+
+        # click create
+        driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-positive.text-white.q-btn--actionable.q-focusable.q-hoverable')[1].click()
+        time.sleep(1)
+
+        if provider == 'GoogleDrive':
+            # login
+            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['GoogleDrive']['login'])
+            driver.find_elements(by=By.CSS_SELECTOR, value='.VfPpkd-RLmnJb')[0].click()
+
+            # password
+            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['GoogleDrive']['password'])
+            driver.find_elements(by=By.CSS_SELECTOR, value='.VfPpkd-RLmnJb')[0].click()
+
+            # click yes
+            driver.find_elements(by=By.CSS_SELECTOR, value='VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-dgl2Hf.ksBjEc.lKxP2d.LQeN7.uRo0Xe.TrZEUc.lw1w4b')[0].click()
+            driver.find_elements(by=By.CSS_SELECTOR, value='VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-INsAgc.VfPpkd-LgbsSe-OWXEXe-dgl2Hf.Rj2Mlf.OLiIxf.PDpWxe.P62QJc.LQeN7.xYnMae.TrZEUc.lw1w4b')[0].click()
+
+        utils.Logger.debug('Added a new volume')
+
+    def test01_Disk(self):
         """
         add an SFTP disk
         """

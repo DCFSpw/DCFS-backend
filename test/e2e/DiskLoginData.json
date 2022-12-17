@@ -1,0 +1,20 @@
+{
+  "sftp": {
+    "login": "tester",
+    "password": "password",
+    "host": "localhost",
+    "port": "2222",
+    "path": "/"
+  },
+  "ftp": {
+    "login": "test",
+    "password": "test",
+    "host": "localhost",
+    "port": "21",
+    "path": "ftp"
+  },
+  "googleDrive": {
+    "login": "dcfs.pw.test@gmail.com",
+    "password": "UszatekM*01"
+  }
+}
