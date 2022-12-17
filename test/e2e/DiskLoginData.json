@@ -1,12 +1,12 @@
 {
-  "sftp": {
+  "sftp drive": {
     "login": "tester",
     "password": "password",
     "host": "localhost",
     "port": "2222",
     "path": "/"
   },
-  "ftp": {
+  "ftp drive": {
     "login": "test",
     "password": "test",
     "host": "localhost",
