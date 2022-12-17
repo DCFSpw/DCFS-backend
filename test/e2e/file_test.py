@@ -33,7 +33,7 @@ for enc_index, (enc_key, enc_value) in enumerate(VolumeTests.encryption_options.
                         "encryption": enc_value,
                         "backup": bck_value,
                         "partitioner": par_value,
-                        "disks": ['SFTP', 'FTP']
+                        "disks": ['SFTP drive', 'FTP drive']
                     }
                 )
 
@@ -44,7 +44,7 @@ for enc_index, (enc_key, enc_value) in enumerate(VolumeTests.encryption_options.
                         "encryption": enc_value,
                         "backup": bck_value,
                         "partitioner": par_value,
-                        "disks": ['SFTP', 'GoogleDrive', 'FTP', 'GoogleDrive']
+                        "disks": ['SFTP drive', 'GoogleDrive', 'FTP drive', 'GoogleDrive']
                     }
                 )
             else:
@@ -128,21 +128,19 @@ class FileTests(unittest.TestCase):
         # get the volume options
         volumes = driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-manual-focusable')
         for volume in volumes:
-            if volume_name in volume.text:
+            if volume_name == volume.text:
                 volume.click()
+                break
 
         # drag and drop the file
         upload = driver.find_element('xpath', '//*[@id="fileInput"]')
         file = os.path.join(os.path.abspath(os.getcwd()), filename)
         upload.send_keys(file)
 
-        time.sleep(10)
+        time.sleep(1)
 
         # wait til the uploading box disappears
         utils.wait_til_disappeared(1000, driver, '.q-card.q-card--dark.q-dark.fixed-bottom-right.upload-progress')
-
-        # temporary solution until the problem with disappearing files is remedied
-        time.sleep(10)
 
         utils.Logger.debug('Uploaded the file')
 
@@ -164,15 +162,12 @@ class FileTests(unittest.TestCase):
             if 'Download' in option.text:
                 option.click()
 
-        time.sleep(10)
+        time.sleep(2)
 
         # wait til the file downloads
         utils.wait_til_disappeared(1000, driver, '.q-card.q-card--dark.q-dark.fixed-bottom-right.upload-progress')
 
-        time.sleep(10)
-
         utils.Logger.debug('Downloaded the file')
-
     @staticmethod
     def delete_file(driver, filename, download_path):
         time.sleep(1)
@@ -209,10 +204,12 @@ class FileTests(unittest.TestCase):
         disks = params["disks"]
 
         utils.Logger.debug(f'[file_tests] testing: {name}')
-        volume_name = f'{encryption}:{backup}:{partitioner}:f{len(disks)}'
+        volume_name = f'{encryption}:{backup}:{partitioner}:{len(disks)}'
 
         # create volume
         VolumeTests.add_volume(self.driver, volume_name, backup, encryption, partitioner)
+
+        time.sleep(1)
 
         # add disks
         for disk in disks:

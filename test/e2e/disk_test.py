@@ -17,7 +17,7 @@ import utils
 
 
 class DiskTests(unittest.TestCase):
-    provider_options = ['SFTP', 'FTP', 'GoogleDrive']
+    provider_options = ['SFTP drive', 'FTP drive', 'GoogleDrive']
 
     def setUp(self):
         # initiate selenium
@@ -133,7 +133,7 @@ class DiskTests(unittest.TestCase):
         time.sleep(1)
         volumes = driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-manual-focusable')
         for volume in volumes:
-            if volume_name in volume.text:
+            if volume_name == volume.text:
                 volume.click()
         time.sleep(1)
 
@@ -141,17 +141,16 @@ class DiskTests(unittest.TestCase):
         driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')[1].send_keys(size)
         time.sleep(1)
 
-        # balanced partitioner
+        # provider
         form_fields[3].click()
         time.sleep(1)
-
         options = driver.find_elements(by=By.CSS_SELECTOR, value='.q-item.q-item-type.row.no-wrap.q-item--dark.q-item--clickable.q-link.cursor-pointer.q-manual-focusable')
         for opt in options:
-            if provider in opt.text:
+            if provider == opt.text:
                 opt.click()
         time.sleep(1)
 
-        if provider == 'SFTP' or provider == 'FTP':
+        if provider == 'SFTP drive' or provider == 'FTP drive':
             with open("./DiskLoginData.json", 'r') as f:
                 loginData = json.load(f)
 
@@ -167,6 +166,8 @@ class DiskTests(unittest.TestCase):
         # click create
         driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-positive.text-white.q-btn--actionable.q-focusable.q-hoverable')[1].click()
         time.sleep(1)
+
+        utils.wait_til_disappeared(1000, driver, '.q-field__native.q-placeholder')
 
         if provider == 'GoogleDrive':
             # login
