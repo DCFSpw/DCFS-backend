@@ -336,6 +336,14 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 		return constants.OPERATION_FAILED, err
 	}
 
+	// Remove all unassigned disks from the backup volume
+	if volume.VolumeSettings.Backup != constants.BACKUP_TYPE_NO_BACKUP {
+		err = db.DB.DatabaseHandle.Where("volume_uuid = ? AND virtual_disk_uuid = ?", volumeUUID.String(), uuid.Nil.String()).Delete(&dbo.Disk{}).Error
+		if err != nil {
+			return constants.OPERATION_FAILED, err
+		}
+	}
+
 	// Clear volume filesystem
 	err = ClearFilesystemFunc(volume)
 	if err != nil {
