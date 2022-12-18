@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"dcfs/apicalls"
 	"dcfs/constants"
 	"dcfs/db"
@@ -11,7 +10,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http/httptest"
 	"strconv"
@@ -316,36 +314,38 @@ func (transport *transport) DeleteVolume(volumeUUID uuid.UUID) (string, error) {
 	}
 
 	// Trigger delete process in all disks assigned to this volume
-	waitGroup, _ := errgroup.WithContext(context.Background())
+	var waitGroup sync.WaitGroup
+	var taskError error = nil
 	var disks = volume.GetDisks()
 
 	for _, disk := range disks {
-		waitGroup.Go(func() error {
+		waitGroup.Add(1)
+		go func(disk Disk) {
+			defer waitGroup.Done()
+
 			errCode, err := transport.DeleteDisk(disk, volume, constants.DELETION, nil)
 			if errCode != constants.SUCCESS {
 				logger.Logger.Error("transport", "Could not delete the disk: ", disk.GetUUID().String(), ".")
-				return err
+				taskError = err
 			}
-
-			return nil
-		})
+		}(disk)
 	}
 
-	err := waitGroup.Wait()
-	if err != nil {
-		return constants.OPERATION_FAILED, err
+	waitGroup.Wait()
+	if taskError != nil {
+		return constants.OPERATION_FAILED, taskError
 	}
 
 	// Remove all unassigned disks from the backup volume
 	if volume.VolumeSettings.Backup != constants.BACKUP_TYPE_NO_BACKUP {
-		err = db.DB.DatabaseHandle.Where("volume_uuid = ? AND virtual_disk_uuid = ?", volumeUUID.String(), uuid.Nil.String()).Delete(&dbo.Disk{}).Error
+		err := db.DB.DatabaseHandle.Where("volume_uuid = ? AND virtual_disk_uuid = ?", volumeUUID.String(), uuid.Nil.String()).Delete(&dbo.Disk{}).Error
 		if err != nil {
 			return constants.OPERATION_FAILED, err
 		}
 	}
 
 	// Clear volume filesystem
-	err = ClearFilesystemFunc(volume)
+	err := ClearFilesystemFunc(volume)
 	if err != nil {
 		logger.Logger.Error("transport", "Could not clear the volume filesystem: ", volumeUUID.String(), "in database.")
 		return constants.OPERATION_FAILED, err

@@ -28,47 +28,47 @@ for enc_index, (enc_key, enc_value) in enumerate(VolumeTests.encryption_options.
             if bck_key == 'RAID10':
                 # one virtual disk
                 options_matrix.append(
-                    {
-                        "name": f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: (SFTP + FTP)',
-                        "encryption": enc_value,
-                        "backup": bck_value,
-                        "partitioner": par_value,
-                        "disks": ['SFTP drive', 'FTP drive']
-                    }
+                    (
+                        f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: (SFTP + FTP)',
+                        enc_value,
+                        bck_value,
+                        par_value,
+                        ['SFTP drive', 'FTP drive']
+                    )
                 )
 
                 # two virtual disks
                 options_matrix.append(
-                    {
-                        "name": f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: (SFTP + GoogleDrive), (FTP + GoogleDrive)',
-                        "encryption": enc_value,
-                        "backup": bck_value,
-                        "partitioner": par_value,
-                        "disks": ['SFTP drive', 'GoogleDrive', 'FTP drive', 'GoogleDrive']
-                    }
+                    (
+                        f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: (SFTP + FTP), (SFTP + FTP)',
+                        enc_value,
+                        bck_value,
+                        par_value,
+                        ['SFTP drive', 'FTP drive', 'FTP drive', 'SFTP drive']
+                    )
                 )
             else:
                 # one option of every disk
                 for p_type in DiskTests.provider_options:
                     options_matrix.append(
-                        {
-                            "name": f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: {p_type}',
-                            "encryption": enc_value,
-                            "backup": bck_value,
-                            "partitioner": par_value,
-                            "disks": [p_type]
-                        }
+                        (
+                            f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: {p_type}',
+                            enc_value,
+                            bck_value,
+                            par_value,
+                            [p_type]
+                        )
                     )
 
                 # one option with all disks
                 options_matrix.append(
-                    {
-                        "name": f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: {[p_type for p_type in DiskTests.provider_options]}',
-                        "encryption": enc_value,
-                        "backup": bck_value,
-                        "partitioner": par_value,
-                        "disks": DiskTests.provider_options
-                    }
+                    (
+                        f'encryption: {enc_key}, backup: {bck_key}, partitioner: {par_key}, disks: {[p_type for p_type in DiskTests.provider_options]}',
+                        enc_value,
+                        bck_value,
+                        par_value,
+                        DiskTests.provider_options
+                    )
                 )
 
 
@@ -142,6 +142,8 @@ class FileTests(unittest.TestCase):
         # wait til the uploading box disappears
         utils.wait_til_disappeared(1000, driver, '.q-card.q-card--dark.q-dark.fixed-bottom-right.upload-progress')
 
+        upload.clear()
+
         utils.Logger.debug('Uploaded the file')
 
     @staticmethod
@@ -189,26 +191,19 @@ class FileTests(unittest.TestCase):
         # click delete
         driver.find_elements(by=By.CSS_SELECTOR, value='.q-btn.q-btn-item.non-selectable.no-outline.q-btn--standard.q-btn--rectangle.bg-primary.text-white.q-btn--actionable.q-focusable.q-hoverable')[0].click()
 
-        time.sleep(5)
+        time.sleep(2)
 
         os.remove(os.path.join(download_path, filename))
 
         utils.Logger.debug('Removed the file')
 
-    def test00_file_tests(self):
-        params = options_matrix[0]
-        name = params["name"]
-        encryption = params["encryption"]
-        backup = params["backup"]
-        partitioner = params["partitioner"]
-        disks = params["disks"]
-
+    @parameterized.expand(options_matrix)
+    def test_file_tests(self, name, encryption, backup, partitioner, disks):
         utils.Logger.debug(f'[file_tests] testing: {name}')
         volume_name = f'{encryption}:{backup}:{partitioner}:{len(disks)}'
 
         # create volume
         VolumeTests.add_volume(self.driver, volume_name, backup, encryption, partitioner)
-
         time.sleep(1)
 
         # add disks
@@ -244,20 +239,57 @@ class FileTests(unittest.TestCase):
 
         # delete the volume
         VolumeTests.delete_volume(self.driver, volume_name)
-"""
-    @parameterized.expand(options_matrix)
-    def test_file_tests(self, params):
-        name = params["name"]
-        encryption = params["encryption"]
-        backup = params["backup"]
-        partitioner = params["partitioner"]
-        disks = params["disks"]
+
+    """
+    Uncomment the next method to perform manual tests and debugging.
+    The tests are as follows:
+        0. encryption: on, backup: RAID10, partitioner: balanced, disks: (SFTP + FTP)
+        1. encryption: on, backup: RAID10, partitioner: balanced, disks: (SFTP + FTP), (SFTP + FTP)
+        2. encryption: on, backup: RAID10, partitioner: priority, disks: (SFTP + FTP)
+        3. encryption: on, backup: RAID10, partitioner: priority, disks: (SFTP + FTP), (SFTP + FTP)
+        4. encryption: on, backup: RAID10, partitioner: throughput, disks: (SFTP + FTP)
+        5. encryption: on, backup: RAID10, partitioner: throughput, disks: (SFTP + FTP), (SFTP + FTP)
+        6. encryption: on, backup: off, partitioner: balanced, disks: SFTP drive
+        7. encryption: on, backup: off, partitioner: balanced, disks: FTP drive
+        8. encryption: on, backup: off, partitioner: balanced, disks: ['SFTP drive', 'FTP drive']
+        9. encryption: on, backup: off, partitioner: priority, disks: SFTP drive
+        10. encryption: on, backup: off, partitioner: priority, disks: FTP drive
+        11. encryption: on, backup: off, partitioner: priority, disks: ['SFTP drive', 'FTP drive']
+        12. encryption: on, backup: off, partitioner: throughput, disks: SFTP drive
+        13. encryption: on, backup: off, partitioner: throughput, disks: FTP drive
+        14. encryption: on, backup: off, partitioner: throughput, disks: ['SFTP drive', 'FTP drive']
+        15. encryption: off, backup: RAID10, partitioner: balanced, disks: (SFTP + FTP)
+        16. encryption: off, backup: RAID10, partitioner: balanced, disks: (SFTP + FTP), (SFTP + FTP)
+        17. encryption: off, backup: RAID10, partitioner: priority, disks: (SFTP + FTP)
+        18. encryption: off, backup: RAID10, partitioner: priority, disks: (SFTP + FTP), (SFTP + FTP)
+        19. encryption: off, backup: RAID10, partitioner: throughput, disks: (SFTP + FTP)
+        20. encryption: off, backup: RAID10, partitioner: throughput, disks: (SFTP + FTP), (SFTP + FTP)
+        21. encryption: off, backup: off, partitioner: balanced, disks: SFTP drive
+        22. encryption: off, backup: off, partitioner: balanced, disks: FTP drive
+        23. encryption: off, backup: off, partitioner: balanced, disks: ['SFTP drive', 'FTP drive']
+        24. encryption: off, backup: off, partitioner: priority, disks: SFTP drive
+        25. encryption: off, backup: off, partitioner: priority, disks: FTP drive
+        26. encryption: off, backup: off, partitioner: priority, disks: ['SFTP drive', 'FTP drive']
+        27. encryption: off, backup: off, partitioner: throughput, disks: SFTP drive
+        28. encryption: off, backup: off, partitioner: throughput, disks: FTP drive
+        29. encryption: off, backup: off, partitioner: throughput, disks: ['SFTP drive', 'FTP drive']
+    """
+    """
+    def test00_file_manual_tests(self):
+        params = options_matrix[28]
+        name = params[0]
+        encryption = params[1]
+        backup = params[2]
+        partitioner = params[3]
+        disks = params[4]
 
         utils.Logger.debug(f'[file_tests] testing: {name}')
-        volume_name = f'{encryption}:{backup}:{partitioner}:f{len(disks)}'
+        volume_name = f'{encryption}:{backup}:{partitioner}:{len(disks)}'
 
         # create volume
         VolumeTests.add_volume(self.driver, volume_name, backup, encryption, partitioner)
+
+        time.sleep(1)
 
         # add disks
         for disk in disks:
@@ -276,10 +308,12 @@ class FileTests(unittest.TestCase):
         utils.Logger.debug('[file_tests] downloaded the test files')
 
         # compare the files
-        comparison = filecmp.cmp(os.path.join(self.download_path, '16'), os.path.join(os.getcwd(), '16'), shallow=False)
+        comparison = filecmp.cmp(os.path.join(self.download_path, '16'), os.path.join(os.getcwd(), '16'),
+                                 shallow=False)
         self.assertTrue(comparison)
 
-        comparison = filecmp.cmp(os.path.join(self.download_path, '4'), os.path.join(os.getcwd(), '4'), shallow=False)
+        comparison = filecmp.cmp(os.path.join(self.download_path, '4'), os.path.join(os.getcwd(), '4'),
+                                 shallow=False)
         self.assertTrue(comparison)
 
         utils.Logger.debug('[file_tests] compared the test files')
@@ -292,4 +326,5 @@ class FileTests(unittest.TestCase):
 
         # delete the volume
         VolumeTests.delete_volume(self.driver, volume_name)
-        """
+    """
+
