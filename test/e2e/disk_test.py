@@ -17,7 +17,7 @@ import utils
 
 
 class DiskTests(unittest.TestCase):
-    provider_options = ['SFTP drive', 'FTP drive', 'GoogleDrive']
+    provider_options = ['SFTP drive', 'FTP drive']
 
     def setUp(self):
         # initiate selenium
@@ -150,10 +150,10 @@ class DiskTests(unittest.TestCase):
                 opt.click()
         time.sleep(1)
 
-        if provider == 'SFTP drive' or provider == 'FTP drive':
-            with open("./DiskLoginData.json", 'r') as f:
-                loginData = json.load(f)
+        with open("./DiskLoginData.json", 'r') as f:
+            loginData = json.load(f)
 
+        if provider == 'SFTP drive' or provider == 'FTP drive':
             key = provider.lower()
             form_fields = driver.find_elements(by=By.CSS_SELECTOR, value='.q-field__native.q-placeholder')
             form_fields[2].send_keys(loginData[key]['login'])  # login
@@ -171,18 +171,18 @@ class DiskTests(unittest.TestCase):
 
         if provider == 'GoogleDrive':
             # login
-            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['GoogleDrive']['login'])
-            driver.find_elements(by=By.CSS_SELECTOR, value='.VfPpkd-RLmnJb')[0].click()
+            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['googleDrive']['login'])
+            driver.find_elements(by=By.CSS_SELECTOR, value='.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-k8QpJ.VfPpkd-LgbsSe-OWXEXe-dgl2Hf.nCP5yc.AjY5Oe.DuMIQc.LQeN7.qIypjc.TrZEUc.lw1w4b')[0].click()
 
             # password
-            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['GoogleDrive']['password'])
+            driver.find_elements(by=By.CSS_SELECTOR, value='.whsOnd.zHQkBf')[0].send_keys(loginData['googleDrive']['password'])
             driver.find_elements(by=By.CSS_SELECTOR, value='.VfPpkd-RLmnJb')[0].click()
 
             # click yes
             driver.find_elements(by=By.CSS_SELECTOR, value='VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-dgl2Hf.ksBjEc.lKxP2d.LQeN7.uRo0Xe.TrZEUc.lw1w4b')[0].click()
             driver.find_elements(by=By.CSS_SELECTOR, value='VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-INsAgc.VfPpkd-LgbsSe-OWXEXe-dgl2Hf.Rj2Mlf.OLiIxf.PDpWxe.P62QJc.LQeN7.xYnMae.TrZEUc.lw1w4b')[0].click()
 
-        utils.Logger.debug('Added a new volume')
+        utils.Logger.debug('Added a new disk')
 
     def test01_Disk(self):
         """
