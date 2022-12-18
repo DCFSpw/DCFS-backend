@@ -831,7 +831,7 @@ func DownloadBlock(c *gin.Context) {
 		Checksum:         file.GetBlocks()[blockUUID].Checksum,
 	}
 
-	// Block the current file in the FileUploadQueue
+	// Block the current file in the FileDownloadQueue
 	err = models.Transport.FileDownloadQueue.MarkAsUsed(fileUUID)
 	if err != nil {
 		logger.Logger.Error("api", "Failed to lock the file: ", fileUUID.String(), " with an error: ", err.Error(), ".")
@@ -846,9 +846,12 @@ func DownloadBlock(c *gin.Context) {
 		c.JSON(500, responses.NewOperationFailureResponse(constants.REMOTE_FAILED_JOB, errorWrapper.Code))
 	}
 
+	// Unblock the current file in the FileDownloadQueue when this block is transferred
+	models.Transport.FileDownloadQueue.MarkAsCompleted(fileUUID)
+
 	if file.IsCompleted() {
 		logger.Logger.Debug("api", "All blocks of the file: ", file.GetUUID().String(), " were transferred, deleting it from the FileUploadQueue")
-		models.Transport.FileUploadQueue.RemoveEnqueuedInstance(file.GetUUID())
+		models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(file.GetUUID())
 	}
 
 	logger.Logger.Debug("api", "DownloadBlock endpoint successful exit.")
