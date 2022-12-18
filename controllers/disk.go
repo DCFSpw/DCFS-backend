@@ -708,7 +708,14 @@ func GetDisks(c *gin.Context) {
 	for _, _disk := range _disks {
 		// Update disk spaced based on local data (for performance reasons)
 		_disk.FreeSpace = _disk.TotalSpace - _disk.UsedSpace
+
 		volume := models.Transport.GetVolume(_disk.VolumeUUID)
+		if volume == nil {
+			logger.Logger.Error("api", "Could not get the volume: ", _disk.VolumeUUID.String(), ".")
+			c.JSON(500, responses.NewOperationFailureResponse(constants.OPERATION_FAILED, "Internal error occurred. Please try again later."))
+			return
+		}
+
 		disk := volume.GetDisk(_disk.UUID)
 
 		// Append disk to the list
