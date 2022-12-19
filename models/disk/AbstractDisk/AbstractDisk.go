@@ -42,10 +42,6 @@ func (d *AbstractDisk) Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapp
 	panic("Unimplemented abstract method")
 }
 
-func (d *AbstractDisk) Rename(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	panic("Unimplemented abstract method")
-}
-
 func (d *AbstractDisk) Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	panic("Unimplemented abstract method")
 }

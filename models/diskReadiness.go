@@ -23,6 +23,13 @@ type RealDiskReadiness struct {
 	alivenessChecker func() bool
 }
 
+// IsReady - verifies if the disk is ready to be used and sets up its periodic check
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the disk is ready, false otherwise
 func (dr *RealDiskReadiness) IsReady(ctx context.Context) bool {
 	dr.isReadyMtx.Lock()
 	defer dr.isReadyMtx.Unlock()
@@ -38,6 +45,11 @@ func (dr *RealDiskReadiness) IsReady(ctx context.Context) bool {
 	return false
 }
 
+// isReadyPeriodicCheck - verifies periodically if the disk is ready to be used and sets up its readiness flag
+//
+// params:
+//   - timeout time.Duration: duration to wait before checking the disk readiness
+//   - ctx context.Context: context of the request
 func (dr *RealDiskReadiness) isReadyPeriodicCheck(timeout time.Duration, ctx context.Context) {
 	dr.isReadyCheckQueuedMtx.Lock()
 	defer dr.isReadyCheckQueuedMtx.Unlock()
@@ -70,6 +82,13 @@ func (dr *RealDiskReadiness) isReadyPeriodicCheck(timeout time.Duration, ctx con
 	}()
 }
 
+// IsReadyForce - verifies if the disk is ready right now (regardless of the periodic checks) and sets up its readiness flag
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the disk is ready, false otherwise
 func (dr *RealDiskReadiness) IsReadyForce(ctx context.Context) bool {
 	dr.isReadyMtx.Lock()
 	defer dr.isReadyMtx.Unlock()
@@ -78,6 +97,13 @@ func (dr *RealDiskReadiness) IsReadyForce(ctx context.Context) bool {
 	return dr.isReady
 }
 
+// IsReadyForceNonBlocking - verifies in background if the disk is ready to be used and sets up its readiness flag
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the disk is ready, false otherwise
 func (dr *RealDiskReadiness) IsReadyForceNonBlocking(ctx context.Context) bool {
 	dr.isReadyMtx.Lock()
 	defer dr.isReadyMtx.Unlock()
@@ -128,6 +154,13 @@ func NewVirtualDiskReadiness(objects ...DiskReadiness) *VirtualDiskReadiness {
 	return vdr
 }
 
+// forAll - perform operation on all real disks associated with the virtual disk
+//
+// params:
+//   - op func(dr DiskReadiness) bool: operation to perform on each real disk
+//
+// return type:
+//   - bool: true if the operation was successful on all real disks, false otherwise
 func (vdr *VirtualDiskReadiness) forAll(op func(dr DiskReadiness) bool) bool {
 	for _, obj := range vdr.RealDiskReadinessObjects {
 		if op(obj) == false {
@@ -138,14 +171,35 @@ func (vdr *VirtualDiskReadiness) forAll(op func(dr DiskReadiness) bool) bool {
 	return true
 }
 
+// IsReady - verifies if the virtual disk is ready to be used (all its real disks are ready)
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the virtual disk is ready, false otherwise
 func (vdr *VirtualDiskReadiness) IsReady(ctx context.Context) bool {
 	return vdr.forAll(func(dr DiskReadiness) bool { return dr.IsReady(ctx) })
 }
 
+// IsReadyForce - verifies if the virtual disk is ready right now (regardless of the periodic checks) and sets up its readiness flag
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the virtual disk is ready, false otherwise
 func (vdr *VirtualDiskReadiness) IsReadyForce(ctx context.Context) bool {
 	return vdr.forAll(func(dr DiskReadiness) bool { return dr.IsReadyForce(ctx) })
 }
 
+// IsReadyForceNonBlocking - verifies in background if the virtual disk is ready to be used and sets up its readiness flag
+//
+// params:
+//   - ctx context.Context: context of the request
+//
+// return type:
+//   - bool: true if the virtual disk is ready, false otherwise
 func (vdr *VirtualDiskReadiness) IsReadyForceNonBlocking(ctx context.Context) bool {
 	return vdr.forAll(func(dr DiskReadiness) bool { return dr.IsReadyForceNonBlocking(ctx) })
 }

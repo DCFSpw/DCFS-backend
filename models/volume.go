@@ -146,8 +146,8 @@ func (v *Volume) CreateVirtualDiskAddToVolume(_virtualDisk dbo.Disk) {
 		if firstDisk != nil && secondDisk != nil {
 			virtualDisk = DiskTypesRegistry[constants.PROVIDER_TYPE_RAID1]()
 			virtualDisk.SetUUID(_virtualDisk.UUID)
-			virtualDisk.AssignDisk(firstDisk)
-			virtualDisk.AssignDisk(secondDisk)
+			virtualDisk.(VirtualDisk).AssignDisk(firstDisk)
+			virtualDisk.(VirtualDisk).AssignDisk(secondDisk)
 			virtualDisk.SetVolume(v)
 		} else {
 			logger.Logger.Error("volume", "RAID1+0 error. Cannot load disks assigned to virtual RAID1 drive.")

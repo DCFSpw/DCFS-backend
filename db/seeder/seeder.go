@@ -1,7 +1,5 @@
 package seeder
 
-// TODO: Move seeding to another package to avoid cyclic imports
-
 import (
 	"dcfs/db"
 	"dcfs/db/dbo"
