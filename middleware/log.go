@@ -7,6 +7,10 @@ import (
 	"strconv"
 )
 
+// LogApi - log the incoming API requests and outgoing responses
+//
+// return type:
+//   - gin.HandlerFunc: gin middleware function for authentication
 func LogApi() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		req, err := httputil.DumpRequest(c.Request, true)

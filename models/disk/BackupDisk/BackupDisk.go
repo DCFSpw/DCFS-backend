@@ -27,8 +27,6 @@ type BackupDisk struct {
 /* Mandatory Disk interface methods */
 
 func (d *BackupDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
-	// TODO: Verify that onedrive doesn't modify the content
-
 	// Create a copy of the block contents
 	contents := &blockMetadata.Content
 
@@ -383,6 +381,10 @@ func (d *BackupDisk) GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volu
 	panic("Not supported for backup disk")
 }
 
+// AssignDisk - assign a real disk to the backup disk. If two disks are already assigned to RAID1, request is ignored by the backup disk.
+//
+// params:
+//   - disk models.Disk - disk to be attached to the virtual disk
 func (d *BackupDisk) AssignDisk(disk models.Disk) {
 	if d.firstDisk == nil {
 		d.firstDisk = disk
@@ -424,6 +426,21 @@ func (d *BackupDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.Disk
 	}
 }
 
+// ReplaceDisk - replace single disk in the backup disk with a new disk
+//
+// This method is used to replace a single disk in the backup disk with a new disk. During the replacement process, the
+// blocks located on the virtual disk will be copied to the new disk (from the other disk in the backup disk). After the
+// replacement process is completed, the old disk will be removed from the backup disk (and blocks on it will be deleted).
+// The intention of this method is to provide a way to replace a disk in the backup disk with a new disk, if it will be
+// no longer available or if it is damaged, this is why data is copied from the other disk to the new one.
+//
+// params:
+//   - disk models.Disk - disk to be disattached from the backup disk
+//   - newDisk models.Disk - disk to be attached to the backup disk in place of the old disk
+//   - block []dbo.Block - list of blocks located on the disk (to be transferred to the new disk)
+//
+// return type:
+//   - string - completion code, constants.SUCCESS if operation was successful, otherwise an error code
 func (d *BackupDisk) ReplaceDisk(disk models.Disk, newDisk models.Disk, blocks []dbo.Block) string {
 	var sourceDisk *models.Disk
 	var targetDisk *models.Disk
@@ -513,6 +530,18 @@ func (d *BackupDisk) ReplaceDisk(disk models.Disk, newDisk models.Disk, blocks [
 	return constants.SUCCESS
 }
 
+// fixBlock - internal function to attempt to fix a corrupted block on a backup disk during a download operation
+//
+// This function will attempt to fix a corrupted block on a backup disk by replacing the corrupted block with a copy of
+// the correct block from the other disk. If the block is not corrupted, this function will do nothing.
+// If both disks are corrupted, the blocks will remain unchanged.
+//
+// params:
+//   - blockMetadata *apicalls.BlockMetadata - metadata for the block operation
+//   - firstContents []uint8 - contents of the block downloaded from the first disk
+//   - secondContents []uint8 - contents of the block downloaded from the second disk
+//   - firstChecksum []uint8 - checksum of the block downloaded from the first disk
+//   - secondChecksum []uint8 - checksum of the block downloaded from the second disk
 func (d *BackupDisk) fixBlock(blockMetadata *apicalls.BlockMetadata, firstContents []uint8, secondContents []uint8, firstChecksum string, secondChecksum string) {
 	var err *apicalls.ErrorWrapper
 	var targetDisk models.Disk

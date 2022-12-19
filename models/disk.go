@@ -20,43 +20,193 @@ var DiskReadinessRegistry map[int]func(d Disk) DiskReadiness = make(map[int]func
 var ProviderTypesRegistry map[int]func() = make(map[int]func())
 
 type Disk interface {
+	// Upload - upload a block to the disk
+	//
+	// params:
+	//   - bm *apicalls.BlockMetadata - metadata for the block operation
+	//
+	// return type:
+	//   - *apicalls.ErrorWrapper - nil if operation was successful, error otherwise
 	Upload(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+
+	// Download - download a block from the disk
+	//
+	// params:
+	//   - bm *apicalls.BlockMetadata - metadata for the block operation
+	//
+	// return type:
+	//   - *apicalls.ErrorWrapper - nil if operation was successful, error otherwise
 	Download(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
+
+	// Remove - remove a block from the disk
+	//
+	// params:
+	//   - bm *apicalls.BlockMetadata - metadata for the block operation
+	//
+	// return type:
+	//   - *apicalls.ErrorWrapper - nil if operation was successful, error otherwise
 	Remove(bm *apicalls.BlockMetadata) *apicalls.ErrorWrapper
 
+	// SetUUID - set disk's UUID
+	//
+	// params:
+	//   - uuid.UUID: disk's UUID
 	SetUUID(uuid.UUID)
+
+	// GetUUID - get disk's UUID
+	//
+	// return type:
+	//   - uuid.UUID: disk's UUID
 	GetUUID() uuid.UUID
 
+	// SetVolume - set disk's volume
+	//
+	// params:
+	//   - *Volume - pointer to volume object the disk should belong to
 	SetVolume(volume *Volume)
+
+	// GetVolume - get volume the disk is attached to
+	//
+	// return type:
+	//   - *Volume - pointer to volume object the disk belongs to
 	GetVolume() *Volume
 
+	// GetName - get disk name
+	//
+	// return type:
+	//   - string - disk name
 	GetName() string
+
+	// SetName - set disk name
+	//
+	// params:
+	//   - name string - disk name
 	SetName(name string)
 
+	// GetCredentials - get credentials for the disk
+	//
+	// return type:
+	//   - credentials.Credentials - credentials object for the disk
 	GetCredentials() credentials.Credentials
+
+	// SetCredentials - set credentials for the disk
+	//
+	// params:
+	//   - credentials.Credentials - credentials object for the disk
 	SetCredentials(credentials.Credentials)
+
+	// CreateCredentials - create credentials for the disk based on provided connection string
+	//
+	// params:
+	//   - credentials string - connection string for the disk
 	CreateCredentials(credentials string)
+
+	// GetProviderUUID - get disk provider uuid
+	//
+	// return type:
+	//   - uuid.UUID - disk provider uuid
 	GetProviderUUID() uuid.UUID
 
+	// SetCreationTime - get disk's creation time
+	//
+	// params:
+	//   - creationTime time.Time - creation time of the disk
 	SetCreationTime(creationTime time.Time)
+
+	// GetCreationTime - get disk's creation time
+	//
+	// params:
+	//   - time.Time - creation time of the disk
 	GetCreationTime() time.Time
 
+	// SetIsVirtualFlag - set is virtual flag
+	//
+	// params:
+	//   - isVirtual bool - true if disk is virtual, false otherwise
 	SetIsVirtualFlag(isVirtual bool)
+
+	// GetIsVirtualFlag - get is virtual flag
+	//
+	// params:
+	//   - bool - true if disk is virtual, false otherwise
 	GetIsVirtualFlag() bool
+
+	// SetVirtualDiskUUID - set disk's virtual disk uuid
+	//
+	// params:
+	//   - uuid uuid.UUID - uuid of the virtual disk the disk should be attached to
 	SetVirtualDiskUUID(uuid uuid.UUID)
+
+	// GetVirtualDiskUUID - get disk's virtual disk uuid
+	//
+	// return type:
+	//   - uuid.UUID - uuid of the virtual disk the disk is attached to
 	GetVirtualDiskUUID() uuid.UUID
 
+	// GetProviderSpace - get disk space information from cloud provider
+	//
+	// return type:
+	//   - uint64 - used space in bytes
+	//   - uint64 - total space in bytes
+	//   - string - completion code, constants.SUCCESS if operation was successful, error code if operation failed,
+	//              constants.OPERATION_NOT_SUPPORTED if provider does not support disk space information retrieval
 	GetProviderSpace() (uint64, uint64, string)
+
+	// SetTotalSpace - set disk total space as an internal data
+	//
+	// params:
+	//   - usage uint64 - new total space in bytes
 	SetTotalSpace(quota uint64)
+
+	// GetTotalSpace - get disk total space based on the internal data
+	//
+	// return type:
+	//   - uint64 - total space in bytes
 	GetTotalSpace() uint64
+
+	// SetUsedSpace - set disk used space as an internal data
+	//
+	// params:
+	//   - usage uint64 - new used space in bytes
 	SetUsedSpace(usage uint64)
+
+	// GetUsedSpace - get disk used space based on the internal data
+	//
+	// return type:
+	//   - uint64 - used space in bytes
 	GetUsedSpace() uint64
+
+	// UpdateUsedSpace - set disk used space as an internal data
+	//
+	// params:
+	//   - change int64 - change in used space in bytes (positive for new data or negative for removed data)
 	UpdateUsedSpace(change int64)
 
+	// GetDiskDBO - get disk dbo object
+	//
+	// params:
+	//   - userUUID uuid.UUID - uuid of the owner of the disk
+	//   - provider uuid.UUID - uuid of the provider of the disk
+	//   - volumeUUID uuid.UUID - uuid of the volume the disk is attached to
+	//
+	// return type:
+	//   - dbo.Disk - disk dbo object
 	GetDiskDBO(userUUID uuid.UUID, providerUUID uuid.UUID, volumeUUID uuid.UUID) dbo.Disk
 
-	AssignDisk(disk Disk)
+	// GetReadiness - get disk readiness information for performing operations
+	//
+	// return type:
+	//   - DiskReadiness - disk readiness information
 	GetReadiness() DiskReadiness
+
+	// GetResponse - get disk information to be returned to the API
+	//
+	// params:
+	//   - _disk *dbo.Disk - disk information
+	//   - ctx *gin.Context - gin API context
+	//
+	// return type:
+	//   - *DiskResponse - disk information
 	GetResponse(_disk *dbo.Disk, ctx *gin.Context) *DiskResponse
 }
 
@@ -67,6 +217,21 @@ type DiskResponse struct {
 }
 
 type VirtualDisk interface {
+	// AssignDisk - assign a real disk to the virtual disk. If all disks are assigned, request is ignored by the virtual disk.
+	//
+	// params:
+	//   - disk models.Disk - disk to be attached to the virtual disk
+	AssignDisk(disk Disk)
+
+	// ReplaceDisk - replace provided disk in the virtual disk with a new disk
+	//
+	// params:
+	//   - disk models.Disk - disk to be disattached from the virtual disk
+	//   - newDisk models.Disk - disk to be attached to the virtual disk in place of the old disk
+	//   - block []dbo.Block - list of blocks located on the disk (to be transferred to the new disk)
+	//
+	// return type:
+	//   - string - completion code, constants.SUCCESS if operation was successful, otherwise an error code
 	ReplaceDisk(oldDisk Disk, newDisk Disk, blocks []dbo.Block) string
 }
 

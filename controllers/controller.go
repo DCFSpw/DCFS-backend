@@ -23,7 +23,6 @@ func ServeBackend() {
 	r.Use(cors.New(corsConfig))
 
 	// Logger middleware for printing logs
-	// TODO: rethink logger here
 	r.Use(gin.Logger())
 	r.Use(middleware.LogApi())
 
