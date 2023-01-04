@@ -259,7 +259,7 @@ func (p *ThroughputPartitioner) FetchDisks(disks []Disk) {
 
 	// Compute throughput weights and reset allocations
 	for i, disk := range p.Disks {
-		p.Weights[i] = MeasureDiskThroughput(disk)
+		p.Weights[i] = MeasureDiskThroughputFunction(disk)
 		p.Allocations[i] = 0
 	}
 
@@ -279,3 +279,4 @@ func NewThroughputPartitioner(volume *Volume) *ThroughputPartitioner {
 }
 
 var CalculateDiskSpaceFunction func(d Disk) uint64 = func(d Disk) uint64 { return ComputeFreeSpace(d) }
+var MeasureDiskThroughputFunction func(d Disk) int = func(d Disk) int { return MeasureDiskThroughput(d) }

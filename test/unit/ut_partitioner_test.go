@@ -316,6 +316,11 @@ func TestThroughputPartitioner_FullDisks(t *testing.T) {
 }
 
 func TestThroughputPartitioner_AssignBlocks(t *testing.T) {
+	oldMeasureThroughputFunction := models.MeasureDiskThroughputFunction
+	models.MeasureDiskThroughputFunction = func(d models.Disk) int { return 100 }
+	oldCalculateDiskSpaceFunction := models.CalculateDiskSpaceFunction
+	models.CalculateDiskSpaceFunction = func(d models.Disk) uint64 { return uint64(2 * constants.DEFAULT_VOLUME_BLOCK_SIZE) }
+
 	disks := mock.GetDiskDBOs(2)
 
 	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_THROUGHPUT
@@ -351,6 +356,9 @@ func TestThroughputPartitioner_AssignBlocks(t *testing.T) {
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
+
+	models.MeasureDiskThroughputFunction = oldMeasureThroughputFunction
+	models.CalculateDiskSpaceFunction = oldCalculateDiskSpaceFunction
 }
 
 func TestPartitionerFactory(t *testing.T) {
