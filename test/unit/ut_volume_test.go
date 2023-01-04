@@ -56,6 +56,13 @@ func TestAddDisk(t *testing.T) {
 }
 
 func TestDeleteDisk(t *testing.T) {
+	// disable partitioner calculation of real disk space
+	oldCalculateDiskSpaceFunction := models.CalculateDiskSpaceFunction
+	models.CalculateDiskSpaceFunction = func(d models.Disk) uint64 { return uint64(2 * constants.DEFAULT_VOLUME_BLOCK_SIZE) }
+
+	// make sure the mockVolume will have a balanced partitioner
+	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
+
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
 
 	disks := mock.GetDiskDBOs(1)
@@ -76,13 +83,23 @@ func TestDeleteDisk(t *testing.T) {
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
+
+	models.CalculateDiskSpaceFunction = oldCalculateDiskSpaceFunction
 }
 
 func TestFileUploadRequest(t *testing.T) {
+	// disable partitioner calculation of real disk space
+	oldCalculateDiskSpaceFunction := models.CalculateDiskSpaceFunction
+	models.CalculateDiskSpaceFunction = func(d models.Disk) uint64 { return uint64(2 * constants.DEFAULT_VOLUME_BLOCK_SIZE) }
+
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeDBO.UUID)
+
+	// make sure the mockVolume will have a balanced partitioner
+	mock.VolumeDBO.VolumeSettings.FilePartition = constants.PARTITION_TYPE_BALANCED
 
 	disks := mock.GetDiskDBOs(10)
 	volume := MockNewVolume(*mock.VolumeDBO, disks, true)
+
 	req := &requests.InitFileUploadRequest{
 		VolumeUUID: volume.UUID.String(),
 		RootUUID:   "",
@@ -109,6 +126,8 @@ func TestFileUploadRequest(t *testing.T) {
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
+
+	models.CalculateDiskSpaceFunction = oldCalculateDiskSpaceFunction
 }
 
 func TestGetVolumeDBO(t *testing.T) {

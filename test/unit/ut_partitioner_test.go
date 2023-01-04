@@ -516,4 +516,7 @@ func init() {
 	mockProvider.Name = "Mock provider"
 	mockProvider.Type = PROVIDER_TYPE_MOCK
 	mockProvider.Logo = "Mock logo"
+
+	// disable throughput partitioners
+	models.RefreshPartitionerFunc = func(v *models.Volume) {}
 }

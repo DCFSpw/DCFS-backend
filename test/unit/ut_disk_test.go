@@ -48,6 +48,10 @@ func TestCreateDiskFromUUID(t *testing.T) {
 	//	WithArgs(disks[0].UUID).
 	//	WillReturnRows(mock.DiskRow(&disks[0]))
 
+	// disable partitioner calculation of real disk space
+	oldCalculateDiskSpaceFunction := models.CalculateDiskSpaceFunction
+	models.CalculateDiskSpaceFunction = func(d models.Disk) uint64 { return uint64(2 * constants.DEFAULT_VOLUME_BLOCK_SIZE) }
+
 	Convey("CreateDiskFromUUID function works correctly", t, func() {
 		Convey("Should return nil if the disk does not exist", func() {
 			mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ?")).
@@ -66,6 +70,7 @@ func TestCreateDiskFromUUID(t *testing.T) {
 
 	models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(fileDBO.UUID)
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
+	models.CalculateDiskSpaceFunction = oldCalculateDiskSpaceFunction
 }
 
 func TestComputeFreeSpace(t *testing.T) {
