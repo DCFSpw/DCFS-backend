@@ -33,6 +33,18 @@ func TestCreateDiskAndGetDiskDbo(t *testing.T) {
 		So(disks[0].TotalSpace, ShouldEqual, diskDBO.TotalSpace)
 		So(disks[0].CreatedAt, ShouldEqual, diskDBO.CreatedAt)
 	})
+
+	Convey("Will not be able to create disk if the type is not supported", t, func() {
+		md := models.CreateDiskMetadata{
+			Disk:   &disks[0],
+			Volume: volume,
+		}
+
+		md.Disk.Provider.Type = 100
+		
+		So(models.CreateDisk(md), ShouldEqual, nil)
+	})
+
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
