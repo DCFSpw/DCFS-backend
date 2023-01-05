@@ -26,12 +26,23 @@ type MockDisk struct {
 
 	CreationTime  time.Time
 	DiskReadiness *MockDiskReadiness
+
+	UploadSuccess   bool
+	DownloadSuccess bool
+	RemoveSuccess   bool
 }
 
 /* Mandatory Disk interface implementations */
 
 func (d *MockDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
+
+	if !d.UploadSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
 
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
@@ -42,6 +53,13 @@ func (d *MockDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 func (d *MockDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
 
+	if !d.DownloadSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
+
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
 
@@ -49,6 +67,13 @@ func (d *MockDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 }
 
 func (d *MockDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	if !d.RemoveSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
+
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
 
@@ -210,6 +235,9 @@ func NewMockDisk() models.Disk {
 	d.DiskReadiness = new(MockDiskReadiness)
 	d.DiskReadiness.Readiness = true
 	d.UUID = uuid.New()
+	d.RemoveSuccess = true
+	d.DownloadSuccess = true
+	d.UploadSuccess = true
 
 	return d
 }
