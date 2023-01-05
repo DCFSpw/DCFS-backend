@@ -17,6 +17,12 @@ var VolumeSettings dbo.VolumeSettings = dbo.VolumeSettings{
 	FilePartition: constants.PARTITION_TYPE_BALANCED,
 }
 
+var BackupVolumeSettings dbo.VolumeSettings = dbo.VolumeSettings{
+	Backup:        constants.BACKUP_TYPE_RAID_1,
+	Encryption:    constants.ENCRYPTION_TYPE_NO_ENCRYPTION,
+	FilePartition: constants.PARTITION_TYPE_BALANCED,
+}
+
 var VolumeDBO *dbo.Volume = &dbo.Volume{
 	AbstractDatabaseObject: dbo.AbstractDatabaseObject{
 		UUID: VolumeUUID,
@@ -24,6 +30,18 @@ var VolumeDBO *dbo.Volume = &dbo.Volume{
 	Name:           "MockVolume",
 	UserUUID:       UserUUID,
 	VolumeSettings: VolumeSettings,
+	CreatedAt:      time.Time{},
+	DeletedAt:      gorm.DeletedAt{},
+	User:           *UserDBO,
+}
+
+var BackupVolumeDBO *dbo.Volume = &dbo.Volume{
+	AbstractDatabaseObject: dbo.AbstractDatabaseObject{
+		UUID: VolumeUUID,
+	},
+	Name:           "MockVolume",
+	UserUUID:       UserUUID,
+	VolumeSettings: BackupVolumeSettings,
 	CreatedAt:      time.Time{},
 	DeletedAt:      gorm.DeletedAt{},
 	User:           *UserDBO,

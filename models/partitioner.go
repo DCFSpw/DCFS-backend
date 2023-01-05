@@ -84,7 +84,7 @@ func (p *BalancedPartitioner) FetchDisks(disks []Disk) {
 	// Load disk list again in case something has changed in volume
 	p.Disks = make([]Disk, 0)
 	for _, disk := range disks {
-		if ComputeFreeSpace(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
+		if CalculateDiskSpaceFunction(disk) > uint64(p.AbstractPartitioner.Volume.BlockSize) {
 			p.Disks = append(p.Disks, disk)
 		}
 	}
@@ -259,7 +259,7 @@ func (p *ThroughputPartitioner) FetchDisks(disks []Disk) {
 
 	// Compute throughput weights and reset allocations
 	for i, disk := range p.Disks {
-		p.Weights[i] = MeasureDiskThroughput(disk)
+		p.Weights[i] = MeasureDiskThroughputFunction(disk)
 		p.Allocations[i] = 0
 	}
 
@@ -277,3 +277,6 @@ func NewThroughputPartitioner(volume *Volume) *ThroughputPartitioner {
 
 	return &p
 }
+
+var CalculateDiskSpaceFunction func(d Disk) uint64 = func(d Disk) uint64 { return ComputeFreeSpace(d) }
+var MeasureDiskThroughputFunction func(d Disk) int = func(d Disk) int { return MeasureDiskThroughput(d) }

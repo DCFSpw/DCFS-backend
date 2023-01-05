@@ -78,7 +78,7 @@ func (dr *RealDiskReadiness) isReadyPeriodicCheck(timeout time.Duration, ctx con
 		}
 
 		// run the periodic check again in the background
-		go dr.isReadyPeriodicCheck(3*time.Minute, ctx)
+		go dr.isReadyPeriodicCheck(IsReadyPeriodicCheckInterval, ctx)
 	}()
 }
 
@@ -203,3 +203,5 @@ func (vdr *VirtualDiskReadiness) IsReadyForce(ctx context.Context) bool {
 func (vdr *VirtualDiskReadiness) IsReadyForceNonBlocking(ctx context.Context) bool {
 	return vdr.forAll(func(dr DiskReadiness) bool { return dr.IsReadyForceNonBlocking(ctx) })
 }
+
+var IsReadyPeriodicCheckInterval time.Duration = 3 * time.Minute

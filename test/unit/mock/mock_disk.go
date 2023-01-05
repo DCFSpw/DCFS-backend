@@ -15,22 +15,34 @@ import (
 )
 
 type MockDisk struct {
-	UUID        uuid.UUID
-	Volume      *models.Volume
-	Name        string
-	SpeedFactor int
+	UUID            uuid.UUID
+	VirtualDiskUUID uuid.UUID
+	Volume          *models.Volume
+	Name            string
+	SpeedFactor     int
 
 	UsedSpace  uint64
 	TotalSpace uint64
 
 	CreationTime  time.Time
 	DiskReadiness *MockDiskReadiness
+
+	UploadSuccess   bool
+	DownloadSuccess bool
+	RemoveSuccess   bool
 }
 
 /* Mandatory Disk interface implementations */
 
 func (d *MockDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
+
+	if !d.UploadSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
 
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
@@ -41,6 +53,13 @@ func (d *MockDisk) Upload(blockMetadata *apicalls.BlockMetadata) *apicalls.Error
 func (d *MockDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
 	time.Sleep(time.Duration(d.SpeedFactor) * time.Millisecond)
 
+	if !d.DownloadSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
+
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
 
@@ -48,6 +67,13 @@ func (d *MockDisk) Download(blockMetadata *apicalls.BlockMetadata) *apicalls.Err
 }
 
 func (d *MockDisk) Remove(blockMetadata *apicalls.BlockMetadata) *apicalls.ErrorWrapper {
+	if !d.RemoveSuccess {
+		return &apicalls.ErrorWrapper{
+			Error: fmt.Errorf("test_error"),
+			Code:  "test_code",
+		}
+	}
+
 	*blockMetadata.Status = constants.BLOCK_STATUS_TRANSFERRED
 	blockMetadata.CompleteCallback(blockMetadata.UUID, blockMetadata.Status)
 
@@ -107,11 +133,11 @@ func (d *MockDisk) GetIsVirtualFlag() bool {
 }
 
 func (d *MockDisk) SetVirtualDiskUUID(uuid uuid.UUID) {
-	return
+	d.VirtualDiskUUID = uuid
 }
 
 func (d *MockDisk) GetVirtualDiskUUID() uuid.UUID {
-	return uuid.Nil
+	return d.VirtualDiskUUID
 }
 
 func (d *MockDisk) SetUsedSpace(usage uint64) {
@@ -186,18 +212,20 @@ func (d *MockDisk) GetResponse(_disk *dbo.Disk, ctx *gin.Context) *models.DiskRe
 	return nil
 }
 
-type MockDiskReadiness struct{}
+type MockDiskReadiness struct {
+	Readiness bool
+}
 
 func (mdr *MockDiskReadiness) IsReady(ctx context.Context) bool {
-	return true
+	return mdr.Readiness
 }
 
 func (mdr *MockDiskReadiness) IsReadyForce(ctx context.Context) bool {
-	return true
+	return mdr.Readiness
 }
 
 func (mdr *MockDiskReadiness) IsReadyForceNonBlocking(ctx context.Context) bool {
-	return true
+	return mdr.Readiness
 }
 
 func NewMockDisk() models.Disk {
@@ -205,6 +233,11 @@ func NewMockDisk() models.Disk {
 
 	d.CreationTime = time.Now()
 	d.DiskReadiness = new(MockDiskReadiness)
+	d.DiskReadiness.Readiness = true
+	d.UUID = uuid.New()
+	d.RemoveSuccess = true
+	d.DownloadSuccess = true
+	d.UploadSuccess = true
 
 	return d
 }
