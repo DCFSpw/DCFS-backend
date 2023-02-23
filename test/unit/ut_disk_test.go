@@ -33,6 +33,18 @@ func TestCreateDiskAndGetDiskDbo(t *testing.T) {
 		So(disks[0].TotalSpace, ShouldEqual, diskDBO.TotalSpace)
 		So(disks[0].CreatedAt, ShouldEqual, diskDBO.CreatedAt)
 	})
+
+	Convey("Will not be able to create disk if the type is not supported", t, func() {
+		md := models.CreateDiskMetadata{
+			Disk:   &disks[0],
+			Volume: volume,
+		}
+
+		md.Disk.Provider.Type = 100
+		
+		So(models.CreateDisk(md), ShouldEqual, nil)
+	})
+
 	Convey("The database call should be correct", t, func() {
 		So(mock.DBMock.ExpectationsWereMet(), ShouldEqual, nil)
 	})
@@ -47,6 +59,10 @@ func TestCreateDiskFromUUID(t *testing.T) {
 	//mock.DBMock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `disks` WHERE uuid = ? ORDER BY `disks`.`uuid` LIMIT 1")).
 	//	WithArgs(disks[0].UUID).
 	//	WillReturnRows(mock.DiskRow(&disks[0]))
+
+	// disable partitioner calculation of real disk space
+	oldCalculateDiskSpaceFunction := models.CalculateDiskSpaceFunction
+	models.CalculateDiskSpaceFunction = func(d models.Disk) uint64 { return uint64(2 * constants.DEFAULT_VOLUME_BLOCK_SIZE) }
 
 	Convey("CreateDiskFromUUID function works correctly", t, func() {
 		Convey("Should return nil if the disk does not exist", func() {
@@ -66,6 +82,7 @@ func TestCreateDiskFromUUID(t *testing.T) {
 
 	models.Transport.FileDownloadQueue.RemoveEnqueuedInstance(fileDBO.UUID)
 	models.Transport.ActiveVolumes.RemoveEnqueuedInstance(mock.VolumeUUID)
+	models.CalculateDiskSpaceFunction = oldCalculateDiskSpaceFunction
 }
 
 func TestComputeFreeSpace(t *testing.T) {
